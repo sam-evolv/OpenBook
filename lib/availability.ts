@@ -1,4 +1,4 @@
-import { toZonedTime, fromZonedTime, format } from 'date-fns-tz'
+import { toZonedTime, fromZonedTime } from 'date-fns-tz'
 import { addMinutes, parseISO, isWithinInterval } from 'date-fns'
 import { createClient } from './supabase/server'
 import type { AvailabilityResult, TimeSlot } from './types'
