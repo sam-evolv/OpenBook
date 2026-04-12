@@ -16,57 +16,55 @@ const BLANK: Service = {
   colour: '#D4AF37',
 }
 
-// Pre-suggested services keyed by category (from StepBasics CATEGORIES list)
+// Exact suggestions keyed by category (must match StepBasics CATEGORIES)
 const SUGGESTIONS: Record<string, Service[]> = {
   'Personal Training': [
-    { name: 'Personal Training', description: '1-on-1 tailored training session', duration_minutes: 60, price_cents: 6500, capacity: 1, colour: '#D4AF37' },
-    { name: 'Sports Massage', description: 'Deep tissue sports recovery massage', duration_minutes: 60, price_cents: 8000, capacity: 1, colour: '#C9A961' },
+    { name: 'Personal Training', description: '1-on-1 session tailored to your goals', duration_minutes: 60, price_cents: 6500, capacity: 1, colour: '#D4AF37' },
+    { name: 'Sports Massage', description: 'Deep tissue recovery massage', duration_minutes: 60, price_cents: 8000, capacity: 1, colour: '#C9A961' },
     { name: 'Group HIIT', description: 'High-intensity interval training class', duration_minutes: 45, price_cents: 2500, capacity: 10, colour: '#B8934C' },
   ],
   'Fitness & Wellness': [
-    { name: 'Personal Training', description: '1-on-1 fitness coaching session', duration_minutes: 60, price_cents: 6000, capacity: 1, colour: '#D4AF37' },
-    { name: 'Group Fitness Class', description: 'High-energy group workout', duration_minutes: 45, price_cents: 2000, capacity: 15, colour: '#C9A961' },
-    { name: 'Nutrition Consultation', description: 'Personalised diet and nutrition plan', duration_minutes: 60, price_cents: 7500, capacity: 1, colour: '#B8934C' },
+    { name: 'Personal Training', description: '1-on-1 session tailored to your goals', duration_minutes: 60, price_cents: 6500, capacity: 1, colour: '#D4AF37' },
+    { name: 'Sports Massage', description: 'Deep tissue recovery massage', duration_minutes: 60, price_cents: 8000, capacity: 1, colour: '#C9A961' },
+    { name: 'Group HIIT', description: 'High-intensity interval training class', duration_minutes: 45, price_cents: 2500, capacity: 10, colour: '#B8934C' },
+  ],
+  'Sauna & Spa': [
+    { name: 'Sauna Session', description: 'Private sauna session with towel service', duration_minutes: 60, price_cents: 2500, capacity: 4, colour: '#D4AF37' },
+    { name: 'Ice Bath + Sauna', description: 'Contrast therapy — cold plunge and sauna', duration_minutes: 75, price_cents: 3500, capacity: 2, colour: '#C9A961' },
+    { name: 'Private Hire', description: 'Exclusive full facility hire', duration_minutes: 90, price_cents: 12000, capacity: 10, colour: '#B8934C' },
   ],
   'Yoga & Pilates': [
-    { name: 'Yoga Class', description: 'All-levels group yoga session', duration_minutes: 60, price_cents: 2000, capacity: 12, colour: '#D4AF37' },
-    { name: 'Private Pilates', description: 'One-to-one reformer pilates session', duration_minutes: 55, price_cents: 8000, capacity: 1, colour: '#C9A961' },
-    { name: 'Meditation', description: 'Guided mindfulness and breathwork', duration_minutes: 45, price_cents: 1500, capacity: 15, colour: '#B8934C' },
-  ],
-  'Massage': [
-    { name: 'Swedish Massage', description: 'Relaxing full-body Swedish massage', duration_minutes: 60, price_cents: 7000, capacity: 1, colour: '#D4AF37' },
-    { name: 'Deep Tissue Massage', description: 'Targeted deep muscle relief', duration_minutes: 60, price_cents: 8000, capacity: 1, colour: '#C9A961' },
-    { name: 'Hot Stone Massage', description: 'Warm stone therapy for tension release', duration_minutes: 75, price_cents: 9500, capacity: 1, colour: '#B8934C' },
+    { name: 'Drop-in Class', description: 'All-levels group yoga or pilates class', duration_minutes: 60, price_cents: 1500, capacity: 15, colour: '#D4AF37' },
+    { name: 'Private Session', description: '1-on-1 yoga or pilates session', duration_minutes: 60, price_cents: 7000, capacity: 1, colour: '#C9A961' },
+    { name: 'Sound Bath', description: 'Guided meditation with sound healing', duration_minutes: 75, price_cents: 2000, capacity: 20, colour: '#B8934C' },
   ],
   'Hair & Beauty': [
-    { name: 'Haircut & Style', description: 'Cut, blow-dry and finish', duration_minutes: 60, price_cents: 6500, capacity: 1, colour: '#D4AF37' },
-    { name: 'Colour Treatment', description: 'Full colour with toner and finish', duration_minutes: 120, price_cents: 12000, capacity: 1, colour: '#C9A961' },
-    { name: 'Blow Dry', description: 'Wash and professional blow-dry', duration_minutes: 45, price_cents: 4000, capacity: 1, colour: '#B8934C' },
+    { name: 'Wash & Blow Dry', description: 'Shampoo, condition and professional blow-dry', duration_minutes: 45, price_cents: 4000, capacity: 1, colour: '#D4AF37' },
+    { name: 'Colour', description: 'Full colour treatment with toner and finish', duration_minutes: 120, price_cents: 8000, capacity: 1, colour: '#C9A961' },
+    { name: 'Cut & Style', description: 'Haircut, blow-dry and finish', duration_minutes: 60, price_cents: 5500, capacity: 1, colour: '#B8934C' },
   ],
   'Nail Studio': [
-    { name: 'Manicure', description: 'Shape, file, cuticle care and polish', duration_minutes: 45, price_cents: 3500, capacity: 1, colour: '#D4AF37' },
-    { name: 'Pedicure', description: 'Full foot treatment with polish', duration_minutes: 60, price_cents: 4500, capacity: 1, colour: '#C9A961' },
-    { name: 'Gel Extensions', description: 'Full set gel nail extensions', duration_minutes: 90, price_cents: 7000, capacity: 1, colour: '#B8934C' },
+    { name: 'Gel Manicure', description: 'Gel polish manicure with nail prep', duration_minutes: 45, price_cents: 4000, capacity: 1, colour: '#D4AF37' },
+    { name: 'Gel Pedicure', description: 'Gel polish pedicure with foot soak', duration_minutes: 60, price_cents: 5000, capacity: 1, colour: '#C9A961' },
+    { name: 'Acrylics', description: 'Full set acrylic nail extensions', duration_minutes: 90, price_cents: 7000, capacity: 1, colour: '#B8934C' },
   ],
   'Barbershop': [
-    { name: 'Haircut', description: 'Classic scissor or clipper cut', duration_minutes: 30, price_cents: 3000, capacity: 1, colour: '#D4AF37' },
-    { name: 'Beard Trim', description: 'Shape and define beard or stubble', duration_minutes: 20, price_cents: 2000, capacity: 1, colour: '#C9A961' },
-    { name: 'Hot Towel Shave', description: 'Traditional straight razor shave', duration_minutes: 45, price_cents: 4000, capacity: 1, colour: '#B8934C' },
+    { name: 'Signature Cut', description: 'Precision cut with clippers and scissors', duration_minutes: 30, price_cents: 2800, capacity: 1, colour: '#D4AF37' },
+    { name: 'Fade + Beard', description: 'Skin fade with beard shape and line-up', duration_minutes: 45, price_cents: 4000, capacity: 1, colour: '#C9A961' },
+    { name: 'Hot Towel Shave', description: 'Traditional straight razor shave', duration_minutes: 30, price_cents: 3000, capacity: 1, colour: '#B8934C' },
   ],
   'Health & Therapy': [
-    { name: 'Initial Consultation', description: 'Full assessment and treatment plan', duration_minutes: 60, price_cents: 9000, capacity: 1, colour: '#D4AF37' },
-    { name: 'Therapy Session', description: 'Follow-up treatment session', duration_minutes: 50, price_cents: 7500, capacity: 1, colour: '#C9A961' },
-    { name: 'Group Workshop', description: 'Educational group health workshop', duration_minutes: 90, price_cents: 3000, capacity: 12, colour: '#B8934C' },
+    { name: 'Initial Assessment', description: 'Full consultation and treatment plan', duration_minutes: 60, price_cents: 8500, capacity: 1, colour: '#D4AF37' },
+    { name: 'Follow-up', description: 'Follow-up treatment session', duration_minutes: 45, price_cents: 6500, capacity: 1, colour: '#C9A961' },
+    { name: 'Sports Massage', description: 'Targeted sports recovery massage', duration_minutes: 60, price_cents: 7000, capacity: 1, colour: '#B8934C' },
+  ],
+  'Massage': [
+    { name: 'Initial Assessment', description: 'Full consultation and treatment plan', duration_minutes: 60, price_cents: 8500, capacity: 1, colour: '#D4AF37' },
+    { name: 'Follow-up', description: 'Follow-up treatment session', duration_minutes: 45, price_cents: 6500, capacity: 1, colour: '#C9A961' },
+    { name: 'Sports Massage', description: 'Targeted sports recovery massage', duration_minutes: 60, price_cents: 7000, capacity: 1, colour: '#B8934C' },
   ],
   'Coaching': [
-    { name: 'Coaching Session', description: '1-on-1 goal-focused coaching', duration_minutes: 60, price_cents: 10000, capacity: 1, colour: '#D4AF37' },
-    { name: 'Discovery Call', description: 'Free intro call to explore working together', duration_minutes: 30, price_cents: 0, capacity: 1, colour: '#C9A961' },
-    { name: 'Group Workshop', description: 'Interactive group coaching workshop', duration_minutes: 120, price_cents: 5000, capacity: 10, colour: '#B8934C' },
-  ],
-  'Tattoo & Piercing': [
-    { name: 'Consultation', description: 'Design consultation and quote', duration_minutes: 30, price_cents: 0, capacity: 1, colour: '#D4AF37' },
-    { name: 'Small Tattoo', description: 'Small single-session tattoo', duration_minutes: 60, price_cents: 8000, capacity: 1, colour: '#C9A961' },
-    { name: 'Piercing', description: 'Professional piercing with jewellery', duration_minutes: 20, price_cents: 4000, capacity: 1, colour: '#B8934C' },
+    { name: 'Consultation', description: '1-on-1 coaching and strategy session', duration_minutes: 60, price_cents: 8000, capacity: 1, colour: '#D4AF37' },
   ],
 }
 
@@ -76,7 +74,7 @@ export default function StepServices({ data, update }: Props) {
   const [form, setForm] = useState<Service>(BLANK)
   const [adding, setAdding] = useState(false)
 
-  // Pre-populate with category suggestions if arriving with an empty list
+  // Pre-populate with category suggestions if arriving with empty list
   useEffect(() => {
     if (data.services.length === 0 && data.category) {
       const suggestions = SUGGESTIONS[data.category]
@@ -96,12 +94,14 @@ export default function StepServices({ data, update }: Props) {
     update({ services: data.services.filter((_, idx) => idx !== i) })
   }
 
+  const hasSuggestions = !!(data.category && SUGGESTIONS[data.category])
+
   return (
     <div>
       <h2 className="text-2xl font-bold text-white mb-1">Add your services</h2>
       <p className="text-sm mb-8" style={{ color: tokens.text2 }}>
-        {data.category && SUGGESTIONS[data.category]
-          ? `Pre-loaded suggestions for ${data.category} — edit or add your own.`
+        {hasSuggestions
+          ? `Pre-loaded for ${data.category} — remove any that don't apply or add your own.`
           : 'You can add more later from the dashboard.'}
       </p>
 
@@ -112,7 +112,7 @@ export default function StepServices({ data, update }: Props) {
             className="flex items-center justify-between rounded-xl px-4 py-3"
             style={{ background: tokens.surface1, border: `1px solid ${tokens.border}` }}
           >
-            <div>
+            <div className="min-w-0 mr-3">
               <div className="text-sm font-medium text-white">{s.name}</div>
               <div className="text-xs mt-0.5" style={{ color: tokens.text2 }}>
                 {s.duration_minutes}min · {formatPrice(s.price_cents)}
@@ -126,7 +126,7 @@ export default function StepServices({ data, update }: Props) {
             </div>
             <button
               onClick={() => removeService(i)}
-              className="text-xs px-2 py-1 rounded-lg transition-colors hover:bg-red-500/10"
+              className="shrink-0 text-xs px-2 py-1 rounded-lg transition-colors hover:bg-red-500/10"
               style={{ color: tokens.text3 }}
             >
               Remove
@@ -154,7 +154,7 @@ export default function StepServices({ data, update }: Props) {
             <textarea
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
-              placeholder="Short description shown on your booking page"
+              placeholder="Short description shown to clients on your booking page"
               rows={2}
               className="field resize-none"
             />
@@ -171,19 +171,23 @@ export default function StepServices({ data, update }: Props) {
                 step={15}
               />
             </Field>
-            <Field label="Price (€)">
-              <input
-                type="number"
-                value={form.price_cents / 100}
-                onChange={(e) => setForm({ ...form, price_cents: Math.round(Number(e.target.value) * 100) })}
-                className="field"
-                min={0}
-                step={0.5}
-              />
+            <Field label="Price">
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium select-none" style={{ color: 'rgba(255,255,255,0.4)' }}>€</span>
+                <input
+                  type="number"
+                  value={form.price_cents / 100}
+                  onChange={(e) => setForm({ ...form, price_cents: Math.round(Number(e.target.value) * 100) })}
+                  className="field"
+                  style={{ paddingLeft: '26px' }}
+                  min={0}
+                  step={0.5}
+                />
+              </div>
             </Field>
           </div>
 
-          <Field label="Group capacity (1 = 1-on-1)">
+          <Field label="Max persons (1 = 1-on-1)">
             <input
               type="number"
               value={form.capacity}

@@ -12,8 +12,22 @@ import {
   MessageSquare,
   Globe,
   Settings,
-  Zap,
 } from 'lucide-react'
+
+function OpenBookLogo() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden>
+      <circle cx="8" cy="8" r="7" stroke="#D4AF37" strokeWidth="1.2" />
+      <circle cx="8" cy="8" r="3.5" stroke="#D4AF37" strokeWidth="1.2" />
+      <circle cx="8" cy="8" r="1" fill="#D4AF37" />
+      {/* Cardinal lines */}
+      <line x1="8" y1="1" x2="8" y2="4.5" stroke="#D4AF37" strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="8" y1="11.5" x2="8" y2="15" stroke="#D4AF37" strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="1" y1="8" x2="4.5" y2="8" stroke="#D4AF37" strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="11.5" y1="8" x2="15" y2="8" stroke="#D4AF37" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  )
+}
 import { cn } from '@/lib/utils'
 
 interface NavItem {
@@ -112,8 +126,8 @@ export function Sidebar() {
     <aside className="fixed inset-y-0 left-0 z-40 w-[228px] flex flex-col bg-sidebar border-r border-white/5">
       {/* Logo */}
       <div className="flex items-center gap-3 px-4 h-[52px] border-b border-white/5 shrink-0">
-        <div className="flex items-center justify-center w-7 h-7 rounded-[8px] bg-brand-500 shrink-0">
-          <Zap size={14} className="text-black" strokeWidth={2.5} />
+        <div className="flex items-center justify-center w-7 h-7 rounded-[8px] shrink-0" style={{ background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.25)' }}>
+          <OpenBookLogo />
         </div>
         <div className="min-w-0">
           <p className="text-[13px] font-semibold text-white leading-tight tracking-tight">

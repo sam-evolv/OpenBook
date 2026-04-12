@@ -20,7 +20,10 @@ export interface OnboardingData {
   description: string
   address: string
   city: string
+  website: string
+  instagram_handle: string
   primaryColour: string
+  buffer_minutes: number
   services: Array<{
     name: string
     description: string
@@ -34,6 +37,12 @@ export interface OnboardingData {
     is_open: boolean
     open_time: string
     close_time: string
+  }>
+  closures: Array<{
+    date: string
+    name: string
+    is_bank_holiday: boolean
+    closed: boolean
   }>
   packages: Array<{
     name: string
@@ -52,15 +61,32 @@ const DEFAULT_HOURS = Array.from({ length: 7 }, (_, i) => ({
   close_time: '18:00',
 }))
 
+const BANK_HOLIDAYS_2026 = [
+  { date: '2026-01-01', name: "New Year's Day" },
+  { date: '2026-02-02', name: "St. Brigid's Day" },
+  { date: '2026-03-17', name: "St. Patrick's Day" },
+  { date: '2026-04-06', name: 'Easter Monday' },
+  { date: '2026-05-04', name: 'May Bank Holiday' },
+  { date: '2026-06-01', name: 'June Bank Holiday' },
+  { date: '2026-08-03', name: 'August Bank Holiday' },
+  { date: '2026-10-26', name: 'October Bank Holiday' },
+  { date: '2026-12-25', name: 'Christmas Day' },
+  { date: '2026-12-26', name: "St. Stephen's Day" },
+]
+
 const DEFAULT_DATA: OnboardingData = {
   name: '',
   category: '',
   description: '',
   address: '',
   city: '',
+  website: '',
+  instagram_handle: '',
   primaryColour: '#D4AF37',
+  buffer_minutes: 0,
   services: [],
   hours: DEFAULT_HOURS,
+  closures: BANK_HOLIDAYS_2026.map((h) => ({ ...h, is_bank_holiday: true, closed: true })),
   packages: [],
 }
 
@@ -89,7 +115,10 @@ export default function OnboardingFlow({ userId }: { userId: string }) {
         description: data.description,
         address: data.address,
         city: data.city,
+        website: data.website || null,
+        instagram_handle: data.instagram_handle || null,
         primary_colour: data.primaryColour,
+        buffer_minutes: data.buffer_minutes,
         is_live: true,
       })
       .select()
@@ -116,6 +145,19 @@ export default function OnboardingFlow({ userId }: { userId: string }) {
     if (data.packages.length > 0) {
       await supabase.from('packages').insert(
         data.packages.map((p) => ({ ...p, business_id: business.id }))
+      )
+    }
+
+    // Insert closures (only those marked closed)
+    const closuresToSave = data.closures.filter((c) => c.closed)
+    if (closuresToSave.length > 0) {
+      await supabase.from('business_closures').insert(
+        closuresToSave.map((c) => ({
+          business_id: business.id,
+          date: c.date,
+          name: c.name,
+          is_bank_holiday: c.is_bank_holiday,
+        }))
       )
     }
 

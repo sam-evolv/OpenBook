@@ -2,9 +2,10 @@ import { tokens } from '@/lib/types'
 import type { OnboardingData } from './OnboardingFlow'
 
 const CATEGORIES = [
-  'Hair & Beauty', 'Fitness & Wellness', 'Health & Therapy',
-  'Yoga & Pilates', 'Personal Training', 'Massage', 'Nail Studio',
-  'Barbershop', 'Tattoo & Piercing', 'Coaching', 'Other',
+  'Personal Training', 'Fitness & Wellness', 'Sauna & Spa',
+  'Yoga & Pilates', 'Massage', 'Health & Therapy',
+  'Hair & Beauty', 'Nail Studio', 'Barbershop',
+  'Tattoo & Piercing', 'Coaching', 'Other',
 ]
 
 interface Props { data: OnboardingData; update: (p: Partial<OnboardingData>) => void }
@@ -71,6 +72,30 @@ export default function StepBasics({ data, update }: Props) {
             />
           </Field>
         </div>
+
+        <Field label="Website (optional)">
+          <input
+            type="url"
+            value={data.website ?? ''}
+            onChange={(e) => update({ website: e.target.value })}
+            placeholder="https://yourbusiness.com"
+            className="field"
+          />
+        </Field>
+
+        <Field label="Instagram (optional)">
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm select-none" style={{ color: 'rgba(255,255,255,0.35)' }}>@</span>
+            <input
+              type="text"
+              value={data.instagram_handle ?? ''}
+              onChange={(e) => update({ instagram_handle: e.target.value.replace(/^@/, '') })}
+              placeholder="yourbusiness"
+              className="field"
+              style={{ paddingLeft: '28px' }}
+            />
+          </div>
+        </Field>
       </div>
 
       <style jsx>{`
