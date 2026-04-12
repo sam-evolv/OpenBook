@@ -43,6 +43,9 @@ export const mockDashboardStats: DashboardStats = {
 
 export const mockMessages: Array<{ id: string; customerId: string; customerName: string; preview: string; timestamp: string; unread: boolean }> = []
 
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function getBusinessBySlug(_slug: string): Business | undefined { return undefined }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function getCustomerById(_id: string): Customer | undefined { return undefined }
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 export function getServiceById(_id: string): Service | undefined { return undefined }

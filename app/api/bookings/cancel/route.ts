@@ -4,7 +4,7 @@ import { stripe } from '@/lib/stripe'
 
 export async function POST(req: NextRequest) {
   const supabase = await createClient()
-  const { booking_id, reason }: { booking_id: string; reason?: string } = await req.json()
+  const { booking_id }: { booking_id: string } = await req.json()
 
   if (!booking_id) {
     return NextResponse.json({ error: 'booking_id required' }, { status: 400 })

@@ -2,7 +2,9 @@ import { Resend } from 'resend'
 import { format, parseISO } from 'date-fns'
 import type { ReminderTarget } from './types'
 
-const resend = new Resend(process.env.RESEND_API_KEY!)
+function getResend() {
+  return new Resend(process.env.RESEND_API_KEY!)
+}
 
 /**
  * Send a booking reminder via email (Resend) and SMS (Twilio).
@@ -21,7 +23,7 @@ export async function sendReminder(target: ReminderTarget): Promise<void> {
 
   // Email
   if (customers.email) {
-    await resend.emails.send({
+    await getResend().emails.send({
       from: 'OpenBook <bookings@openbook.ai>',
       to: customers.email,
       subject,

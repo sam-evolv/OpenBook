@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 import {
   createConnectAccount,
@@ -29,7 +29,7 @@ export async function GET() {
 }
 
 /** POST /api/stripe/connect — start Stripe Connect onboarding */
-export async function POST(req: NextRequest) {
+export async function POST() {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })

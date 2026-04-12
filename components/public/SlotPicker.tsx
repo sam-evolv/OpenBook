@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import type { Business, Service, TimeSlot } from '@/lib/types'
-import { format, addDays, parseISO, startOfDay } from 'date-fns'
+import { format, addDays, parseISO } from 'date-fns'
 
 interface StaffMember { id: string; name: string; avatar_url: string | null }
 

@@ -13,13 +13,13 @@ export function Topbar({ title }: TopbarProps) {
 
   return (
     <>
-      <header className="flex items-center justify-between px-6 h-[52px] border-b border-gray-100 bg-white shrink-0">
-        <h1 className="text-[15px] font-semibold text-gray-900">{title}</h1>
+      <header className="flex items-center justify-between px-6 h-[52px] border-b border-white/[0.07] bg-surface shrink-0">
+        <h1 className="text-[15px] font-semibold text-white">{title}</h1>
 
         <div className="flex items-center gap-3">
           {/* Notification bell */}
           <button
-            className="relative flex items-center justify-center w-8 h-8 rounded-premium text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-all duration-150 ease-premium focus-visible:ring-2 focus-visible:ring-brand-500"
+            className="relative flex items-center justify-center w-8 h-8 rounded-premium text-gray-400 hover:text-gray-200 hover:bg-white/5 transition-all duration-150 ease-premium focus-visible:ring-2 focus-visible:ring-brand-500"
             aria-label="Notifications"
           >
             <Bell size={16} />

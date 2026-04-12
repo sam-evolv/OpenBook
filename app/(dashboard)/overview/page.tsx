@@ -1,12 +1,12 @@
 import { createClient } from '@/lib/supabase/server'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { RevenueChart } from '@/components/dashboard/RevenueChart'
-import { formatPrice, formatDate, formatTime } from '@/lib/utils'
+import { formatPrice, formatTime } from '@/lib/utils'
 import {
   DollarSign, CalendarCheck, Users, Clock,
 } from 'lucide-react'
 import { tokens } from '@/lib/types'
-import { startOfDay, endOfDay, startOfWeek, subDays, format } from 'date-fns'
+import { startOfDay, endOfDay, subDays, format } from 'date-fns'
 
 export const dynamic = 'force-dynamic'
 
