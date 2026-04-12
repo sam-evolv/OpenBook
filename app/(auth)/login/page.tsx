@@ -49,9 +49,8 @@ export default function LoginPage() {
   const inputStyle = {
     background: tokens.surface2,
     border: `1px solid ${tokens.border2}`,
-    // @ts-expect-error custom prop
     '--tw-ring-color': tokens.gold,
-  }
+  } as React.CSSProperties
 
   return (
     <div

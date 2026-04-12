@@ -23,6 +23,7 @@ export interface OnboardingData {
   primaryColour: string
   services: Array<{
     name: string
+    description: string
     duration_minutes: number
     price_cents: number
     capacity: number

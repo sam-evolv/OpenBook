@@ -19,8 +19,8 @@ const config: Config = {
           700: '#B8934C',
         },
         sidebar: '#0f1115',
-        surface: '#ffffff',
-        'surface-2': '#f3f4f6',
+        surface: '#111111',
+        'surface-2': '#080808',
       },
       borderRadius: {
         premium: '12px',
