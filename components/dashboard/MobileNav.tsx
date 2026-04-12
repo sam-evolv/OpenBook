@@ -17,7 +17,7 @@ export function MobileNav() {
   const pathname = usePathname()
 
   return (
-    <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-white border-t border-gray-200 flex h-14 safe-area-pb">
+    <nav className="md:hidden fixed bottom-0 inset-x-0 z-40 bg-surface border-t border-white/[0.07] flex h-14 safe-area-pb">
       {tabs.map((tab) => {
         const isActive = pathname === tab.href || pathname.startsWith(tab.href + '/')
         return (
@@ -26,7 +26,7 @@ export function MobileNav() {
             href={tab.href}
             className={cn(
               'flex-1 flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium transition-colors duration-150',
-              isActive ? 'text-brand-500' : 'text-gray-400'
+              isActive ? 'text-brand-500' : 'text-white/30'
             )}
           >
             <tab.icon size={18} />

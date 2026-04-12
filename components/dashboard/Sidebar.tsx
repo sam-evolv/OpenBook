@@ -95,7 +95,7 @@ function NavSection({
 }) {
   return (
     <div className="space-y-0.5">
-      <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-600">
+      <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-white/25">
         {label}
       </p>
       {items.map((item) => (
@@ -119,7 +119,6 @@ export function Sidebar() {
           <p className="text-[13px] font-semibold text-white leading-tight tracking-tight">
             OpenBook AI
           </p>
-          <p className="text-[10px] text-gray-600 leading-tight">by OpenHouse Suite</p>
         </div>
       </div>
 
@@ -141,7 +140,7 @@ export function Sidebar() {
             <p className="text-[12px] font-semibold text-gray-200 truncate leading-tight">
               Evolv Performance
             </p>
-            <p className="text-[10px] text-gray-600 leading-tight">Pro Plan</p>
+            <p className="text-[10px] text-white/25 leading-tight">Pro Plan</p>
           </div>
         </div>
 
