@@ -1,180 +1,191 @@
-import {
-  DollarSign,
-  CalendarCheck,
-  Users,
-  Package,
-  Clock,
-  UserCheck,
-  CreditCard,
-} from 'lucide-react'
+import { createClient } from '@/lib/supabase/server'
 import { StatCard } from '@/components/dashboard/StatCard'
-import { ScheduleItem } from '@/components/dashboard/ScheduleItem'
 import { RevenueChart } from '@/components/dashboard/RevenueChart'
+import { formatPrice, formatDate, formatTime } from '@/lib/utils'
 import {
-  mockDashboardStats,
-  mockBookings,
-  getCustomerById,
-  getServiceById,
-} from '@/lib/mock-data'
-import { formatCurrency } from '@/lib/utils'
+  DollarSign, CalendarCheck, Users, Clock,
+} from 'lucide-react'
+import { tokens } from '@/lib/types'
+import { startOfDay, endOfDay, startOfWeek, subDays, format } from 'date-fns'
 
-const TODAY = '2026-04-12'
+export const dynamic = 'force-dynamic'
 
-export default function OverviewPage() {
-  const stats = mockDashboardStats
-  const todayBookings = mockBookings
-    .filter((b) => b.date === TODAY)
-    .sort((a, b) => a.time.localeCompare(b.time))
+export default async function OverviewPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-  const todayRevenue = todayBookings.reduce((sum, b) => sum + b.price, 0)
+  const { data: business } = await supabase
+    .from('businesses')
+    .select('id, name')
+    .eq('owner_id', user!.id)
+    .single()
+
+  if (!business) return null
+
+  const now = new Date()
+  const todayStart = startOfDay(now).toISOString()
+  const todayEnd = endOfDay(now).toISOString()
+
+  // Today's bookings with service + customer
+  const { data: todayBookings } = await supabase
+    .from('bookings')
+    .select(`
+      id, starts_at, ends_at, status, price_cents,
+      services:service_id ( name, colour ),
+      customers:customer_id ( name )
+    `)
+    .eq('business_id', business.id)
+    .gte('starts_at', todayStart)
+    .lte('starts_at', todayEnd)
+    .neq('status', 'cancelled')
+    .order('starts_at')
+
+  const revenueToday = (todayBookings ?? []).reduce((s, b) => s + b.price_cents, 0)
+
+  // Weekly revenue — last 7 days
+  const weeklyRevenue: number[] = []
+  for (let i = 6; i >= 0; i--) {
+    const d = subDays(now, i)
+    const { data: dayBookings } = await supabase
+      .from('bookings')
+      .select('price_cents')
+      .eq('business_id', business.id)
+      .gte('starts_at', startOfDay(d).toISOString())
+      .lte('starts_at', endOfDay(d).toISOString())
+      .in('status', ['confirmed', 'completed'])
+    weeklyRevenue.push((dayBookings ?? []).reduce((s, b) => s + b.price_cents, 0))
+  }
+
+  // Active clients count
+  const { count: activeClients } = await supabase
+    .from('bookings')
+    .select('customer_id', { count: 'exact', head: true })
+    .eq('business_id', business.id)
+    .gte('starts_at', subDays(now, 30).toISOString())
+
+  // Upcoming this week
+  const { count: upcomingCount } = await supabase
+    .from('bookings')
+    .select('id', { count: 'exact', head: true })
+    .eq('business_id', business.id)
+    .eq('status', 'confirmed')
+    .gte('starts_at', now.toISOString())
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Stats grid */}
+      {/* Stats */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
           label="Revenue today"
-          value={formatCurrency(stats.revenueToday)}
+          value={formatPrice(revenueToday)}
           icon={DollarSign}
           iconBg="bg-brand-500/15"
           iconColor="text-brand-500"
-          trend={{ value: '+12% vs last Sun', direction: 'up' }}
         />
         <StatCard
           label="Bookings today"
-          value={String(stats.bookingsToday)}
+          value={String(todayBookings?.length ?? 0)}
           icon={CalendarCheck}
-          iconBg="bg-blue-50"
-          iconColor="text-blue-600"
-          trend={{ value: '+2 vs yesterday', direction: 'up' }}
+          iconBg="bg-blue-500/15"
+          iconColor="text-blue-400"
         />
         <StatCard
           label="Active clients"
-          value={String(stats.activeClients)}
+          value={String(activeClients ?? 0)}
           icon={Users}
-          iconBg="bg-emerald-50"
-          iconColor="text-emerald-600"
-          trend={{ value: '+5 this month', direction: 'up' }}
+          iconBg="bg-emerald-500/15"
+          iconColor="text-emerald-400"
+          trend={{ value: 'Last 30 days', direction: 'neutral' }}
         />
         <StatCard
-          label="Package revenue"
-          value={formatCurrency(stats.packageRevenue)}
-          icon={Package}
-          iconBg="bg-violet-50"
-          iconColor="text-violet-600"
-          trend={{ value: 'This week', direction: 'neutral' }}
+          label="Upcoming"
+          value={String(upcomingCount ?? 0)}
+          icon={Clock}
+          iconBg="bg-amber-500/15"
+          iconColor="text-amber-400"
+          trend={{ value: 'Confirmed bookings', direction: 'neutral' }}
         />
       </div>
 
-      {/* Main content row */}
+      {/* Main row */}
       <div className="flex gap-6">
         {/* Today's schedule */}
-        <div className="flex-1 min-w-0 bg-white rounded-premium border border-gray-100 shadow-card">
-          <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-100">
+        <div
+          className="flex-1 min-w-0 rounded-premium"
+          style={{
+            background: tokens.surface1,
+            border: `1px solid ${tokens.border}`,
+          }}
+        >
+          <div
+            className="flex items-center justify-between px-5 py-4"
+            style={{ borderBottom: `1px solid ${tokens.border}` }}
+          >
             <div>
-              <h2 className="text-[14px] font-semibold text-gray-900">Today&apos;s schedule</h2>
-              <p className="text-[11px] text-gray-400 mt-0.5">
-                Sunday, 12 April · {todayBookings.length} bookings ·{' '}
-                {formatCurrency(todayRevenue)}
+              <h2 className="text-sm font-semibold text-white">Today&apos;s schedule</h2>
+              <p className="text-xs mt-0.5" style={{ color: tokens.text2 }}>
+                {format(now, 'EEEE, d MMMM')} · {todayBookings?.length ?? 0} bookings · {formatPrice(revenueToday)}
               </p>
             </div>
-            <span className="inline-flex items-center h-5 px-2 rounded-full bg-brand-500/10 text-[10px] font-semibold text-brand-500">
-              {todayBookings.filter((b) => b.status === 'confirmed' || b.status === 'checked-in').length} active
-            </span>
           </div>
 
-          <div className="divide-y divide-gray-50 py-1">
-            {todayBookings.map((booking) => {
-              const customer = getCustomerById(booking.customerId)
-              const service = getServiceById(booking.serviceId)
-              if (!customer || !service) return null
+          <div className="divide-y" style={{ borderColor: tokens.border }}>
+            {(todayBookings ?? []).length === 0 && (
+              <p className="px-5 py-8 text-sm text-center" style={{ color: tokens.text3 }}>
+                No bookings today
+              </p>
+            )}
+            {(todayBookings ?? []).map((b) => {
+              const service = b.services as { name: string; colour: string } | null
+              const customer = b.customers as { name: string } | null
               return (
-                <ScheduleItem
-                  key={booking.id}
-                  booking={booking}
-                  customerName={customer.name}
-                  serviceName={service.name}
-                  serviceColor={service.color}
-                />
+                <div key={b.id} className="flex items-center gap-4 px-5 py-3.5">
+                  <div
+                    className="w-1 h-10 rounded-full shrink-0"
+                    style={{ background: service?.colour ?? tokens.gold }}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium text-white truncate">
+                      {customer?.name ?? 'Unknown'}
+                    </div>
+                    <div className="text-xs mt-0.5" style={{ color: tokens.text2 }}>
+                      {service?.name} · {formatTime(b.starts_at.split('T')[1]?.slice(0, 5) ?? '')}
+                    </div>
+                  </div>
+                  <span
+                    className="text-xs font-medium px-2 py-1 rounded-lg shrink-0"
+                    style={{
+                      background: b.status === 'confirmed' ? `${tokens.gold}15` : `${tokens.surface2}`,
+                      color: b.status === 'confirmed' ? tokens.gold : tokens.text2,
+                    }}
+                  >
+                    {b.status}
+                  </span>
+                </div>
               )
             })}
           </div>
         </div>
 
-        {/* Right column */}
-        <div className="w-[340px] shrink-0 space-y-4">
-          {/* Revenue chart card */}
-          <div className="bg-white rounded-premium border border-gray-100 shadow-card p-4">
+        {/* Weekly revenue chart */}
+        <div className="w-72 shrink-0 space-y-4">
+          <div
+            className="rounded-premium p-5"
+            style={{ background: tokens.surface1, border: `1px solid ${tokens.border}` }}
+          >
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h2 className="text-[13px] font-semibold text-gray-900">Weekly revenue</h2>
-                <p className="text-[11px] text-gray-400">This week</p>
+                <h2 className="text-sm font-semibold text-white">Weekly revenue</h2>
+                <p className="text-xs" style={{ color: tokens.text2 }}>Last 7 days</p>
               </div>
-              <span className="text-[20px] font-bold text-gray-900">
-                {formatCurrency(stats.weeklyRevenue.reduce((a, b) => a + b, 0))}
+              <span className="text-lg font-bold text-white">
+                {formatPrice(weeklyRevenue.reduce((a, b) => a + b, 0))}
               </span>
             </div>
-            <RevenueChart data={stats.weeklyRevenue} />
-          </div>
-
-          {/* Panel stats */}
-          <div className="bg-white rounded-premium border border-gray-100 shadow-card divide-y divide-gray-50">
-            <PanelStat
-              icon={Clock}
-              iconBg="bg-amber-50"
-              iconColor="text-amber-600"
-              label="Upcoming this week"
-              value={String(stats.upcomingCount)}
-              sub="bookings confirmed"
-            />
-            <PanelStat
-              icon={UserCheck}
-              iconBg="bg-rose-50"
-              iconColor="text-rose-500"
-              label="Waitlist"
-              value={String(stats.waitlistCount)}
-              sub="clients waiting"
-            />
-            <PanelStat
-              icon={CreditCard}
-              iconBg="bg-violet-50"
-              iconColor="text-violet-600"
-              label="Package credits sold"
-              value={formatCurrency(stats.packageRevenue)}
-              sub="this week"
-            />
+            <RevenueChart data={weeklyRevenue} />
           </div>
         </div>
       </div>
-    </div>
-  )
-}
-
-function PanelStat({
-  icon: Icon,
-  iconBg,
-  iconColor,
-  label,
-  value,
-  sub,
-}: {
-  icon: React.ElementType
-  iconBg: string
-  iconColor: string
-  label: string
-  value: string
-  sub: string
-}) {
-  return (
-    <div className="flex items-center gap-3 px-4 py-3 hover:bg-gray-50 transition-colors duration-150">
-      <div className={`flex items-center justify-center w-8 h-8 rounded-premium shrink-0 ${iconBg}`}>
-        <Icon size={14} className={iconColor} />
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-[12px] font-medium text-gray-700 truncate">{label}</p>
-        <p className="text-[11px] text-gray-400">{sub}</p>
-      </div>
-      <span className="text-[15px] font-bold text-gray-900 shrink-0">{value}</span>
     </div>
   )
 }

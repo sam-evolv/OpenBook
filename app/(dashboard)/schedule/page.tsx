@@ -1,126 +1,124 @@
-'use client'
-
-import { useState } from 'react'
+import { createClient } from '@/lib/supabase/server'
+import { tokens } from '@/lib/types'
+import { formatPrice } from '@/lib/utils'
+import { format, startOfDay, endOfDay, addDays } from 'date-fns'
 import { ScheduleItem } from '@/components/dashboard/ScheduleItem'
-import { mockBookings, getCustomerById, getServiceById } from '@/lib/mock-data'
-import { formatCurrency } from '@/lib/utils'
-import { cn } from '@/lib/utils'
 
-// Build a 7-day strip starting from Monday of the current week
-function getWeekDays(referenceDate: Date) {
-  const days: { date: Date; label: string; shortDay: string; isoDate: string }[] = []
-  const day = referenceDate.getDay()
-  const monday = new Date(referenceDate)
-  monday.setDate(referenceDate.getDate() - ((day + 6) % 7))
+export const dynamic = 'force-dynamic'
 
-  for (let i = 0; i < 7; i++) {
-    const d = new Date(monday)
-    d.setDate(monday.getDate() + i)
-    days.push({
-      date: d,
-      label: d.toLocaleDateString('en-IE', { weekday: 'short' }),
-      shortDay: d.toLocaleDateString('en-IE', { weekday: 'short' }),
-      isoDate: d.toISOString().split('T')[0],
-    })
-  }
-  return days
-}
+export default async function SchedulePage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-const TODAY = new Date('2026-04-12')
+  const { data: business } = await supabase
+    .from('businesses')
+    .select('id')
+    .eq('owner_id', user!.id)
+    .single()
 
-export default function SchedulePage() {
-  const weekDays = getWeekDays(TODAY)
-  const todayIso = TODAY.toISOString().split('T')[0]
-  const [selectedDate, setSelectedDate] = useState(todayIso)
+  const today = new Date()
+  const weekDays = Array.from({ length: 7 }, (_, i) => addDays(today, i - today.getDay() + 1))
 
-  const dayBookings = mockBookings
-    .filter((b) => b.date === selectedDate)
-    .sort((a, b) => a.time.localeCompare(b.time))
+  // Fetch bookings for the whole week
+  const { data: weekBookings } = await supabase
+    .from('bookings')
+    .select(`
+      id, starts_at, ends_at, status, price_cents,
+      services:service_id ( name, colour ),
+      customers:customer_id ( name )
+    `)
+    .eq('business_id', business!.id)
+    .gte('starts_at', startOfDay(weekDays[0]).toISOString())
+    .lte('starts_at', endOfDay(weekDays[6]).toISOString())
+    .neq('status', 'cancelled')
+    .order('starts_at')
 
-  const dayRevenue = dayBookings.reduce((sum, b) => sum + b.price, 0)
-
-  const selectedDay = weekDays.find((d) => d.isoDate === selectedDate)
-  const selectedDateObj = selectedDay ? selectedDay.date : TODAY
+  const todayStr = format(today, 'yyyy-MM-dd')
+  const todayBookings = (weekBookings ?? []).filter(
+    (b) => b.starts_at.startsWith(todayStr)
+  )
+  const todayRevenue = todayBookings.reduce((s, b) => s + b.price_cents, 0)
 
   return (
     <div className="space-y-4 animate-fade-in">
       {/* Week strip */}
-      <div className="bg-white rounded-premium border border-gray-100 shadow-card p-3">
+      <div
+        className="rounded-2xl p-3"
+        style={{ background: tokens.surface1, border: `1px solid ${tokens.border}` }}
+      >
         <div className="flex gap-2">
           {weekDays.map((day) => {
-            const isSelected = day.isoDate === selectedDate
-            const isToday = day.isoDate === todayIso
-            const hasBookings = mockBookings.some((b) => b.date === day.isoDate)
-
+            const dayStr = format(day, 'yyyy-MM-dd')
+            const isToday = dayStr === todayStr
+            const count = (weekBookings ?? []).filter((b) => b.starts_at.startsWith(dayStr)).length
             return (
-              <button
-                key={day.isoDate}
-                onClick={() => setSelectedDate(day.isoDate)}
-                className={cn(
-                  'relative flex-1 flex flex-col items-center py-2 px-1 rounded-premium text-center transition-all duration-150 ease-premium focus-visible:ring-2 focus-visible:ring-brand-500',
-                  isSelected
-                    ? 'bg-brand-500 text-black'
-                    : 'hover:bg-gray-50 text-gray-500'
-                )}
+              <div
+                key={dayStr}
+                className="relative flex-1 flex flex-col items-center py-2 px-1 rounded-xl text-center"
+                style={{
+                  background: isToday ? tokens.gold : 'transparent',
+                }}
               >
-                <span className={cn('text-[10px] font-semibold uppercase tracking-wide mb-1', isSelected ? 'text-black/70' : 'text-gray-400')}>
-                  {day.shortDay}
+                <span
+                  className="text-[10px] font-semibold uppercase tracking-wide mb-1"
+                  style={{ color: isToday ? '#000' : tokens.text3 }}
+                >
+                  {format(day, 'EEE')}
                 </span>
-                <span className={cn('text-[16px] font-bold leading-none', isSelected ? 'text-black' : 'text-gray-900')}>
-                  {day.date.getDate()}
+                <span
+                  className="text-base font-bold"
+                  style={{ color: isToday ? '#000' : tokens.text1 }}
+                >
+                  {format(day, 'd')}
                 </span>
-                {/* Today dot */}
-                {isToday && (
-                  <span className={cn(
-                    'absolute bottom-1.5 w-1 h-1 rounded-full',
-                    isSelected ? 'bg-black/30' : 'bg-brand-500'
-                  )} />
+                {count > 0 && (
+                  <span
+                    className="absolute bottom-1.5 w-1 h-1 rounded-full"
+                    style={{ background: isToday ? '#000' : tokens.gold }}
+                  />
                 )}
-                {/* Has bookings dot */}
-                {hasBookings && !isToday && !isSelected && (
-                  <span className="absolute bottom-1.5 w-1 h-1 rounded-full bg-gray-300" />
-                )}
-              </button>
+              </div>
             )
           })}
         </div>
       </div>
 
-      {/* Day panel */}
-      <div className="bg-white rounded-premium border border-gray-100 shadow-card">
-        <div className="flex items-center justify-between px-4 py-3.5 border-b border-gray-100">
+      {/* Today's schedule */}
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{ background: tokens.surface1, border: `1px solid ${tokens.border}` }}
+      >
+        <div
+          className="flex items-center justify-between px-5 py-4"
+          style={{ borderBottom: `1px solid ${tokens.border}` }}
+        >
           <div>
-            <h2 className="text-[14px] font-semibold text-gray-900">
-              {selectedDateObj.toLocaleDateString('en-IE', { weekday: 'long', day: 'numeric', month: 'long' })}
+            <h2 className="text-sm font-semibold text-white">
+              {format(today, 'EEEE, d MMMM')}
             </h2>
-            <p className="text-[11px] text-gray-400 mt-0.5">
-              {dayBookings.length} booking{dayBookings.length !== 1 ? 's' : ''}{' '}
-              {dayBookings.length > 0 && `· ${formatCurrency(dayRevenue)}`}
+            <p className="text-xs mt-0.5" style={{ color: tokens.text2 }}>
+              {todayBookings.length} booking{todayBookings.length !== 1 ? 's' : ''}
+              {todayBookings.length > 0 && ` · ${formatPrice(todayRevenue)}`}
             </p>
           </div>
         </div>
 
-        {dayBookings.length === 0 ? (
-          <div className="flex flex-col items-center justify-center py-16 text-center">
-            <div className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center mb-3">
-              <span className="text-gray-400 text-lg">—</span>
-            </div>
-            <p className="text-[13px] font-medium text-gray-500">No bookings</p>
-            <p className="text-[12px] text-gray-400 mt-1">Nothing scheduled for this day</p>
+        {todayBookings.length === 0 ? (
+          <div className="py-16 text-center">
+            <p className="text-sm" style={{ color: tokens.text3 }}>No bookings today</p>
           </div>
         ) : (
-          <div className="divide-y divide-gray-50 py-1">
-            {dayBookings.map((booking) => {
-              const customer = getCustomerById(booking.customerId)
-              const service = getServiceById(booking.serviceId)
-              if (!customer || !service) return null
+          <div className="divide-y" style={{ borderColor: tokens.border }}>
+            {todayBookings.map((b) => {
+              const service = b.services as { name: string; colour: string | null } | null
+              const customer = b.customers as { name: string | null } | null
               return (
                 <ScheduleItem
-                  key={booking.id}
-                  booking={booking}
-                  customerName={customer.name}
-                  serviceName={service.name}
-                  serviceColor={service.color}
+                  key={b.id}
+                  booking={b as unknown as import('@/lib/types').Booking}
+                  customerName={customer?.name ?? 'Unknown'}
+                  serviceName={service?.name ?? ''}
+                  serviceColor={service?.colour ?? tokens.gold}
                 />
               )
             })}
