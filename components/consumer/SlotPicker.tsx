@@ -1,7 +1,7 @@
 'use client'
 
 import { ArrowLeft } from 'lucide-react'
-import { cn, getDurationLabel, formatCurrency } from '@/lib/utils'
+import { cn, getDurationLabel, formatPrice } from '@/lib/utils'
 import type { Service, TimeSlot } from '@/lib/types'
 
 interface SlotPickerProps {
@@ -23,7 +23,6 @@ export function SlotPicker({
 }: SlotPickerProps) {
   return (
     <div className="space-y-4 animate-fade-in">
-      {/* Back + service header */}
       <div className="flex items-center gap-3">
         <button
           onClick={onBack}
@@ -36,18 +35,17 @@ export function SlotPicker({
         <div className="flex items-center gap-2.5 flex-1 min-w-0">
           <div
             className="w-2.5 h-2.5 rounded-full shrink-0"
-            style={{ backgroundColor: service.color }}
+            style={{ backgroundColor: service.colour ?? '#D4AF37' }}
           />
           <div className="min-w-0">
             <p className="text-[14px] font-bold text-white truncate">{service.name}</p>
             <p className="text-[12px] text-white/60">
-              {getDurationLabel(service.duration)} · {formatCurrency(service.price)}
+              {getDurationLabel(service.duration_minutes)} · {formatPrice(service.price_cents)}
             </p>
           </div>
         </div>
       </div>
 
-      {/* Slots grid */}
       <div>
         <p className="text-[11px] font-semibold uppercase tracking-wider text-white/50 mb-3">
           Available today — pick a time
@@ -75,7 +73,6 @@ export function SlotPicker({
         </div>
       </div>
 
-      {/* Confirm button */}
       {selectedSlot && (
         <button
           onClick={onConfirm}

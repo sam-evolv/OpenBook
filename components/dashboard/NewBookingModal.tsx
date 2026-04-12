@@ -2,43 +2,47 @@
 
 import { useState } from 'react'
 import * as Dialog from '@radix-ui/react-dialog'
-import { X, Search, ChevronDown } from 'lucide-react'
-import { mockCustomers, mockServices, mockTimeSlots } from '@/lib/mock-data'
-import { cn, getDurationLabel, formatCurrency } from '@/lib/utils'
+import { X, ChevronDown } from 'lucide-react'
+import { cn, getDurationLabel, formatPrice } from '@/lib/utils'
+import type { Service, Customer } from '@/lib/types'
 
 interface NewBookingModalProps {
   open: boolean
   onClose: () => void
+  services?: Service[]
+  customers?: Customer[]
 }
 
-export function NewBookingModal({ open, onClose }: NewBookingModalProps) {
-  const [clientSearch, setClientSearch] = useState('')
+export function NewBookingModal({ open, onClose, services = [], customers = [] }: NewBookingModalProps) {
   const [selectedCustomerId, setSelectedCustomerId] = useState('')
   const [selectedServiceId, setSelectedServiceId] = useState('')
-  const [selectedDate, setSelectedDate] = useState(
-    new Date().toISOString().split('T')[0]
-  )
+  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0])
   const [selectedTime, setSelectedTime] = useState('')
   const [notes, setNotes] = useState('')
-  const [showClientDropdown, setShowClientDropdown] = useState(false)
 
-  const filteredCustomers = mockCustomers.filter((c) =>
-    c.name.toLowerCase().includes(clientSearch.toLowerCase())
-  )
+  const selectedService = services.find((s) => s.id === selectedServiceId)
 
-  const selectedCustomer = mockCustomers.find((c) => c.id === selectedCustomerId)
-  const selectedService = mockServices.find((s) => s.id === selectedServiceId)
-  const availableSlots = mockTimeSlots.filter((s) => s.available)
-
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    // In real app: call Supabase insert
+    if (!selectedCustomerId || !selectedServiceId || !selectedTime) return
+
+    await fetch('/api/bookings/create', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        service_id: selectedServiceId,
+        customer_id: selectedCustomerId,
+        starts_at: `${selectedDate}T${selectedTime}:00`,
+        notes,
+        source: 'dashboard',
+      }),
+    })
+
     onClose()
     resetForm()
   }
 
   function resetForm() {
-    setClientSearch('')
     setSelectedCustomerId('')
     setSelectedServiceId('')
     setSelectedDate(new Date().toISOString().split('T')[0])
@@ -54,184 +58,123 @@ export function NewBookingModal({ open, onClose }: NewBookingModalProps) {
   return (
     <Dialog.Root open={open} onOpenChange={(v) => !v && handleClose()}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm data-[state=open]:animate-fade-in" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white rounded-premium shadow-premium p-6 data-[state=open]:animate-slide-up focus:outline-none">
-          {/* Header */}
+        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-fade-in" />
+        <Dialog.Content
+          className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 w-full max-w-md rounded-2xl p-6 data-[state=open]:animate-slide-up focus:outline-none"
+          style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.14)' }}
+        >
           <div className="flex items-center justify-between mb-5">
-            <Dialog.Title className="text-[15px] font-semibold text-gray-900">
+            <Dialog.Title className="text-[15px] font-semibold text-white">
               New Booking
             </Dialog.Title>
             <Dialog.Close
               onClick={handleClose}
-              className="flex items-center justify-center w-7 h-7 rounded-premium text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-150 ease-premium focus-visible:ring-2 focus-visible:ring-brand-500"
+              className="flex items-center justify-center w-7 h-7 rounded-xl text-white/40 hover:text-white hover:bg-white/10 transition-all"
             >
               <X size={14} />
             </Dialog.Close>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Client search */}
-            <div className="relative">
-              <label className="block text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1.5">
-                Client
-              </label>
+            <Field label="Client">
               <div className="relative">
-                <Search
-                  size={14}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-                />
-                <input
-                  type="text"
-                  placeholder="Search clients..."
-                  value={selectedCustomer ? selectedCustomer.name : clientSearch}
-                  onChange={(e) => {
-                    setClientSearch(e.target.value)
-                    setSelectedCustomerId('')
-                    setShowClientDropdown(true)
-                  }}
-                  onFocus={() => setShowClientDropdown(true)}
-                  className="w-full h-9 pl-8 pr-3 text-[13px] border border-gray-200 rounded-card bg-white text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all duration-150"
-                />
-              </div>
-
-              {showClientDropdown && filteredCustomers.length > 0 && !selectedCustomerId && (
-                <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-card shadow-premium z-10 max-h-40 overflow-y-auto">
-                  {filteredCustomers.map((c) => (
-                    <button
-                      key={c.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedCustomerId(c.id)
-                        setClientSearch(c.name)
-                        setShowClientDropdown(false)
-                      }}
-                      className="w-full flex items-center gap-2.5 px-3 py-2 text-left hover:bg-gray-50 transition-colors duration-100"
-                    >
-                      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-brand-500/15 shrink-0">
-                        <span className="text-[9px] font-bold text-brand-500">
-                          {c.name.split(' ').map((n) => n[0]).join('')}
-                        </span>
-                      </div>
-                      <div>
-                        <p className="text-[12px] font-medium text-gray-900">{c.name}</p>
-                        <p className="text-[11px] text-gray-400">{c.email}</p>
-                      </div>
-                    </button>
+                <select
+                  value={selectedCustomerId}
+                  onChange={(e) => setSelectedCustomerId(e.target.value)}
+                  className="select"
+                >
+                  <option value="">Select client…</option>
+                  {customers.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name ?? c.email ?? c.id}
+                    </option>
                   ))}
-                </div>
-              )}
-            </div>
+                </select>
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
+              </div>
+            </Field>
 
-            {/* Service */}
-            <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1.5">
-                Service
-              </label>
+            <Field label="Service">
               <div className="relative">
                 <select
                   value={selectedServiceId}
                   onChange={(e) => setSelectedServiceId(e.target.value)}
-                  className="w-full h-9 pl-3 pr-8 text-[13px] border border-gray-200 rounded-card bg-white text-gray-900 appearance-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all duration-150"
+                  className="select"
                 >
-                  <option value="">Select a service...</option>
-                  {mockServices.map((s) => (
+                  <option value="">Select service…</option>
+                  {services.map((s) => (
                     <option key={s.id} value={s.id}>
-                      {s.name} — {getDurationLabel(s.duration)} · {formatCurrency(s.price)}
+                      {s.name} — {getDurationLabel(s.duration_minutes)} · {formatPrice(s.price_cents)}
                     </option>
                   ))}
                 </select>
-                <ChevronDown
-                  size={14}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                />
+                <ChevronDown size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-white/40 pointer-events-none" />
               </div>
-            </div>
+            </Field>
 
-            {/* Date + Time row */}
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1.5">
-                  Date
-                </label>
+              <Field label="Date">
                 <input
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="w-full h-9 px-3 text-[13px] border border-gray-200 rounded-card bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all duration-150"
+                  className="select"
                 />
-              </div>
-              <div>
-                <label className="block text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1.5">
-                  Time
-                </label>
-                <div className="relative">
-                  <select
-                    value={selectedTime}
-                    onChange={(e) => setSelectedTime(e.target.value)}
-                    className="w-full h-9 pl-3 pr-8 text-[13px] border border-gray-200 rounded-card bg-white text-gray-900 appearance-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all duration-150"
-                  >
-                    <option value="">Pick time...</option>
-                    {availableSlots.map((s) => (
-                      <option key={s.time} value={s.time}>
-                        {s.time}
-                      </option>
-                    ))}
-                  </select>
-                  <ChevronDown
-                    size={14}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
-                  />
-                </div>
-              </div>
+              </Field>
+              <Field label="Time">
+                <input
+                  type="time"
+                  value={selectedTime}
+                  onChange={(e) => setSelectedTime(e.target.value)}
+                  className="select"
+                />
+              </Field>
             </div>
 
-            {/* Notes */}
-            <div>
-              <label className="block text-[11px] font-semibold uppercase tracking-wide text-gray-500 mb-1.5">
-                Notes{' '}
-                <span className="normal-case font-normal text-gray-400">(optional)</span>
-              </label>
+            <Field label="Notes (optional)">
               <textarea
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                placeholder="Any notes for this booking..."
+                placeholder="Any notes for this booking…"
                 rows={3}
-                className="w-full px-3 py-2 text-[13px] border border-gray-200 rounded-card bg-white text-gray-900 placeholder-gray-400 resize-none focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all duration-150"
+                className="select resize-none"
               />
-            </div>
+            </Field>
 
-            {/* Summary pill */}
             {selectedService && (
-              <div className="flex items-center gap-2 p-3 bg-brand-500/8 rounded-card border border-brand-500/20">
+              <div
+                className="flex items-center gap-2 p-3 rounded-xl"
+                style={{ background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.2)' }}
+              >
                 <div
                   className="w-2 h-2 rounded-full shrink-0"
-                  style={{ backgroundColor: selectedService.color }}
+                  style={{ backgroundColor: selectedService.colour ?? '#D4AF37' }}
                 />
-                <p className="text-[12px] text-gray-700 flex-1">
-                  {selectedService.name} · {getDurationLabel(selectedService.duration)}
+                <p className="text-[12px] text-white/70 flex-1">
+                  {selectedService.name} · {getDurationLabel(selectedService.duration_minutes)}
                 </p>
-                <p className="text-[13px] font-semibold text-gray-900">
-                  {formatCurrency(selectedService.price)}
+                <p className="text-[13px] font-semibold text-white">
+                  {formatPrice(selectedService.price_cents)}
                 </p>
               </div>
             )}
 
-            {/* Actions */}
-            <div className="flex items-center gap-2 pt-1">
+            <div className="flex gap-2 pt-1">
               <button
                 type="button"
                 onClick={handleClose}
-                className="flex-1 h-9 rounded-premium text-[13px] font-medium text-gray-600 border border-gray-200 hover:bg-gray-50 active:bg-gray-100 transition-all duration-150 ease-premium focus-visible:ring-2 focus-visible:ring-brand-500"
+                className="flex-1 h-9 rounded-xl text-[13px] font-medium text-white/60 transition-all"
+                style={{ border: '1px solid rgba(255,255,255,0.14)', background: 'transparent' }}
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 className={cn(
-                  'flex-1 h-9 rounded-premium text-[13px] font-semibold transition-all duration-150 ease-premium focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2',
+                  'flex-1 h-9 rounded-xl text-[13px] font-semibold transition-all',
                   selectedCustomerId && selectedServiceId && selectedTime
-                    ? 'bg-brand-500 text-black hover:bg-brand-600 active:bg-brand-700 shadow-gold'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    ? 'bg-brand-500 text-black'
+                    : 'bg-white/10 text-white/40 cursor-not-allowed'
                 )}
                 disabled={!selectedCustomerId || !selectedServiceId || !selectedTime}
               >
@@ -239,8 +182,37 @@ export function NewBookingModal({ open, onClose }: NewBookingModalProps) {
               </button>
             </div>
           </form>
+
+          <style jsx>{`
+            .select {
+              width: 100%;
+              height: 36px;
+              padding: 0 12px;
+              background: rgba(255,255,255,0.07);
+              border: 1px solid rgba(255,255,255,0.12);
+              border-radius: 12px;
+              color: white;
+              font-size: 13px;
+              outline: none;
+              appearance: none;
+            }
+            .select option { background: #1a1a1a; }
+            .select::placeholder { color: rgba(255,255,255,0.3); }
+            textarea.select { height: auto; padding: 10px 12px; }
+          `}</style>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
+  )
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div>
+      <label className="block text-[11px] font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
+        {label}
+      </label>
+      {children}
+    </div>
   )
 }

@@ -61,3 +61,27 @@ export function getDurationLabel(minutes: number): string {
   const m = minutes % 60
   return m > 0 ? `${h}h ${m}min` : `${h}h`
 }
+
+/** Format cents to a currency string — money is always stored as cents */
+export function formatPrice(cents: number, currency = 'EUR'): string {
+  return new Intl.NumberFormat('en-IE', {
+    style: 'currency',
+    currency,
+    minimumFractionDigits: 2,
+  }).format(cents / 100)
+}
+
+/** Generate a URL-safe slug from a business name */
+export function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/[\s_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+/** Clamp a number between min and max */
+export function clamp(value: number, min: number, max: number): number {
+  return Math.min(Math.max(value, min), max)
+}

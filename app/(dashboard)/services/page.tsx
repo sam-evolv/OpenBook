@@ -1,55 +1,82 @@
-'use client'
+import { createClient } from '@/lib/supabase/server'
+import { tokens } from '@/lib/types'
+import { formatPrice, getDurationLabel } from '@/lib/utils'
 
-import { Plus, Pencil } from 'lucide-react'
-import { mockServices } from '@/lib/mock-data'
-import { formatCurrency, getDurationLabel } from '@/lib/utils'
+export const dynamic = 'force-dynamic'
 
-export default function ServicesPage() {
+export default async function ServicesPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { data: business } = await supabase
+    .from('businesses')
+    .select('id')
+    .eq('owner_id', user!.id)
+    .single()
+
+  const { data: services } = await supabase
+    .from('services')
+    .select('*')
+    .eq('business_id', business!.id)
+    .order('sort_order')
+
   return (
-    <div className="space-y-4 animate-fade-in">
-      {/* Header */}
-      <div className="flex justify-end">
-        <button className="inline-flex items-center gap-1.5 h-9 px-4 rounded-premium bg-brand-500 text-[13px] font-semibold text-black hover:bg-brand-600 active:bg-brand-700 transition-all duration-150 ease-premium shadow-gold focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2">
-          <Plus size={14} strokeWidth={2.5} />
-          Add Service
+    <div className="space-y-5 animate-fade-in">
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold text-white">Services</h1>
+        <button
+          className="px-4 py-2 rounded-xl text-sm font-semibold"
+          style={{ background: tokens.gold, color: '#000' }}
+        >
+          Add service
         </button>
       </div>
 
-      {/* Services list */}
-      <div className="bg-white rounded-premium border border-gray-100 shadow-card overflow-hidden">
-        <div className="divide-y divide-gray-50">
-          {mockServices.map((service) => (
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{ background: tokens.surface1, border: `1px solid ${tokens.border}` }}
+      >
+        <div className="divide-y" style={{ borderColor: tokens.border }}>
+          {(services ?? []).length === 0 && (
+            <p className="py-12 text-center text-sm" style={{ color: tokens.text3 }}>
+              No services yet — add one to start taking bookings.
+            </p>
+          )}
+          {(services ?? []).map((s) => (
             <div
-              key={service.id}
-              className="group flex items-center gap-3.5 px-4 py-3.5 hover:bg-gray-50 transition-colors duration-150"
+              key={s.id}
+              className="flex items-center gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors"
             >
-              {/* Color dot */}
               <div
-                className="w-2.5 h-2.5 rounded-full shrink-0"
-                style={{ backgroundColor: service.color }}
+                className="w-3 h-3 rounded-full shrink-0"
+                style={{ background: s.colour ?? tokens.gold }}
               />
-
-              {/* Info */}
               <div className="flex-1 min-w-0">
-                <p className="text-[14px] font-semibold text-gray-900">{service.name}</p>
-                <p className="text-[11px] text-gray-400">
-                  {getDurationLabel(service.duration)}
-                  {service.groupMax ? ` · Group up to ${service.groupMax}` : ' · 1-on-1'}
-                </p>
+                <div className="text-sm font-medium text-white">{s.name}</div>
+                {s.description && (
+                  <div className="text-xs mt-0.5 truncate" style={{ color: tokens.text3 }}>
+                    {s.description}
+                  </div>
+                )}
               </div>
-
-              {/* Price */}
-              <span className="text-[15px] font-bold text-gray-900">
-                {formatCurrency(service.price)}
-              </span>
-
-              {/* Edit */}
-              <button
-                className="opacity-0 group-hover:opacity-100 flex items-center justify-center w-7 h-7 rounded-card text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-all duration-150 focus-visible:ring-2 focus-visible:ring-brand-500"
-                aria-label={`Edit ${service.name}`}
-              >
-                <Pencil size={13} />
-              </button>
+              <div className="flex items-center gap-6 shrink-0">
+                <span className="text-sm" style={{ color: tokens.text2 }}>
+                  {getDurationLabel(s.duration_minutes)}
+                </span>
+                {(s.capacity ?? 1) > 1 && (
+                  <span
+                    className="text-xs px-2 py-0.5 rounded-lg"
+                    style={{ background: `${tokens.gold}15`, color: tokens.gold }}
+                  >
+                    {s.capacity} spots
+                  </span>
+                )}
+                <span className="text-sm font-semibold text-white">{formatPrice(s.price_cents)}</span>
+                <div
+                  className="w-2 h-2 rounded-full"
+                  style={{ background: s.is_active ? '#22c55e' : tokens.text3 }}
+                />
+              </div>
             </div>
           ))}
         </div>

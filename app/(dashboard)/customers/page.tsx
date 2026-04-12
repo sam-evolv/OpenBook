@@ -1,108 +1,102 @@
-'use client'
+import { createClient } from '@/lib/supabase/server'
+import { tokens } from '@/lib/types'
+import { formatPrice, getInitials } from '@/lib/utils'
+import { format } from 'date-fns'
 
-import { useState } from 'react'
-import { Search } from 'lucide-react'
-import { mockCustomers } from '@/lib/mock-data'
-import { formatCurrency, getInitials } from '@/lib/utils'
-import type { PackageType } from '@/lib/types'
+export const dynamic = 'force-dynamic'
 
-const avatarColors = [
-  '#D4AF37', // gold
-  '#60A5FA', // blue
-  '#34D399', // green
-  '#F87171', // red
-  '#A78BFA', // violet
-  '#FB923C', // orange
-]
+export default async function CustomersPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
 
-const packageLabels: Record<PackageType, string> = {
-  bundle: 'Bundle',
-  membership: 'Membership',
-  starter: 'Starter',
-  group: 'Group Pass',
-  none: 'Pay as you go',
-}
+  const { data: business } = await supabase
+    .from('businesses')
+    .select('id')
+    .eq('owner_id', user!.id)
+    .single()
 
-const packageStyles: Record<PackageType, string> = {
-  bundle: 'bg-brand-500/10 text-brand-600',
-  membership: 'bg-blue-50 text-blue-600',
-  starter: 'bg-emerald-50 text-emerald-600',
-  group: 'bg-rose-50 text-rose-600',
-  none: 'bg-gray-100 text-gray-500',
-}
+  // Get customers who have bookings with this business
+  const { data: bookings } = await supabase
+    .from('bookings')
+    .select('customer_id, price_cents, status, customers:customer_id(id, name, email, phone, created_at)')
+    .eq('business_id', business!.id)
+    .neq('status', 'cancelled')
 
-export default function CustomersPage() {
-  const [search, setSearch] = useState('')
+  // Aggregate by customer
+  const customerMap = new Map<string, {
+    id: string; name: string; email: string; phone: string | null
+    bookingCount: number; totalSpend: number; firstSeen: string
+  }>()
 
-  const filtered = mockCustomers.filter(
-    (c) =>
-      c.name.toLowerCase().includes(search.toLowerCase()) ||
-      c.email.toLowerCase().includes(search.toLowerCase())
-  )
+  for (const b of bookings ?? []) {
+    const c = b.customers as { id: string; name: string; email: string; phone: string | null; created_at: string } | null
+    if (!c) continue
+    const existing = customerMap.get(c.id) ?? {
+      id: c.id, name: c.name ?? '—', email: c.email ?? '—', phone: c.phone,
+      bookingCount: 0, totalSpend: 0, firstSeen: c.created_at ?? '',
+    }
+    customerMap.set(c.id, {
+      ...existing,
+      bookingCount: existing.bookingCount + 1,
+      totalSpend: existing.totalSpend + b.price_cents,
+    })
+  }
+
+  const customers = Array.from(customerMap.values()).sort((a, b) => b.totalSpend - a.totalSpend)
 
   return (
-    <div className="space-y-4 animate-fade-in">
-      {/* Search */}
-      <div className="flex justify-end">
-        <div className="relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Search clients..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="h-9 pl-8 pr-4 w-56 text-[13px] border border-gray-200 rounded-premium bg-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-500 focus:border-transparent transition-all duration-150"
-          />
-        </div>
+    <div className="space-y-5 animate-fade-in">
+      <div className="flex items-center justify-between">
+        <h1 className="text-xl font-bold text-white">Customers</h1>
+        <span className="text-sm" style={{ color: tokens.text2 }}>
+          {customers.length} clients
+        </span>
       </div>
 
-      {/* List */}
-      <div className="bg-white rounded-premium border border-gray-100 shadow-card overflow-hidden">
-        <div className="divide-y divide-gray-50">
-          {filtered.map((customer, idx) => {
-            const color = avatarColors[idx % avatarColors.length]
-            const initials = getInitials(customer.name)
-            const memberYear = new Date(customer.memberSince).getFullYear()
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{ background: tokens.surface1, border: `1px solid ${tokens.border}` }}
+      >
+        <div
+          className="hidden md:grid grid-cols-[1fr_auto_auto_auto] gap-4 px-5 py-3 text-xs font-medium uppercase tracking-wide"
+          style={{ color: tokens.text3, borderBottom: `1px solid ${tokens.border}` }}
+        >
+          <span>Client</span>
+          <span>Bookings</span>
+          <span>Total spend</span>
+          <span>Member since</span>
+        </div>
 
-            return (
-              <div
-                key={customer.id}
-                className="flex items-center gap-3.5 px-4 py-3.5 hover:bg-gray-50 cursor-pointer transition-colors duration-150"
-              >
-                {/* Avatar */}
+        <div className="divide-y" style={{ borderColor: tokens.border }}>
+          {customers.length === 0 && (
+            <p className="py-12 text-center text-sm" style={{ color: tokens.text3 }}>
+              No customers yet
+            </p>
+          )}
+          {customers.map((c) => (
+            <div
+              key={c.id}
+              className="flex md:grid md:grid-cols-[1fr_auto_auto_auto] gap-4 px-5 py-4 items-center hover:bg-white/[0.02] transition-colors"
+            >
+              <div className="flex items-center gap-3">
                 <div
-                  className="flex items-center justify-center w-9 h-9 rounded-full text-white text-[13px] font-bold shrink-0"
-                  style={{ backgroundColor: color }}
+                  className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold shrink-0"
+                  style={{ background: `${tokens.gold}20`, color: tokens.gold }}
                 >
-                  {initials}
+                  {getInitials(c.name ?? 'A')}
                 </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <p className="text-[14px] font-semibold text-gray-900">{customer.name}</p>
-                  <p className="text-[11px] text-gray-400">
-                    {customer.visitCount} visits · member since {memberYear}
-                  </p>
-                </div>
-
-                {/* Right */}
-                <div className="text-right shrink-0">
-                  <p className="text-[14px] font-bold text-gray-900">
-                    {formatCurrency(customer.totalSpend)}
-                  </p>
-                  <span className={`inline-flex items-center h-4 px-2 rounded-full text-[9px] font-semibold uppercase tracking-wide ${packageStyles[customer.packageType]}`}>
-                    {packageLabels[customer.packageType]}
-                  </span>
+                <div className="min-w-0">
+                  <div className="text-sm font-medium text-white truncate">{c.name}</div>
+                  <div className="text-xs truncate" style={{ color: tokens.text3 }}>{c.email}</div>
                 </div>
               </div>
-            )
-          })}
-
-          {filtered.length === 0 && (
-            <div className="py-16 text-center">
-              <p className="text-[13px] text-gray-400">No clients match your search</p>
+              <span className="text-sm text-white text-center">{c.bookingCount}</span>
+              <span className="text-sm font-semibold text-white">{formatPrice(c.totalSpend)}</span>
+              <span className="text-xs hidden md:block" style={{ color: tokens.text3 }}>
+                {c.firstSeen ? format(new Date(c.firstSeen), 'dd MMM yyyy') : '—'}
+              </span>
             </div>
-          )}
+          ))}
         </div>
       </div>
     </div>
