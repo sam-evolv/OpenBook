@@ -7,11 +7,12 @@ import { tokens } from '@/lib/types'
 export default function LoginPage() {
   const supabase = createClient()
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function handleSubmit(e: React.FormEvent) {
+  async function handleMagicLink(e: React.FormEvent) {
     e.preventDefault()
     setLoading(true)
     setError(null)
@@ -29,6 +30,29 @@ export default function LoginPage() {
     setLoading(false)
   }
 
+  async function handlePassword(e: React.FormEvent) {
+    e.preventDefault()
+    setLoading(true)
+    setError(null)
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+
+    if (error) {
+      setError(error.message)
+    } else {
+      window.location.href = '/overview'
+    }
+    setLoading(false)
+  }
+
+  const inputClass = 'w-full rounded-xl px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-white/20 focus:ring-1'
+  const inputStyle = {
+    background: tokens.surface2,
+    border: `1px solid ${tokens.border2}`,
+    // @ts-expect-error custom prop
+    '--tw-ring-color': tokens.gold,
+  }
+
   return (
     <div
       className="min-h-screen flex items-center justify-center px-4"
@@ -37,10 +61,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         {/* Logo */}
         <div className="text-center mb-10">
-          <span
-            className="text-2xl font-black tracking-tight"
-            style={{ color: tokens.gold }}
-          >
+          <span className="text-2xl font-black tracking-tight" style={{ color: tokens.gold }}>
             OpenBook
           </span>
           <p className="mt-2 text-sm" style={{ color: tokens.text2 }}>
@@ -81,7 +102,8 @@ export default function LoginPage() {
               We&apos;ll send you a magic link — no password needed.
             </p>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Magic link form */}
+            <form onSubmit={handleMagicLink} className="space-y-4">
               <div>
                 <label className="block text-xs font-medium mb-2" style={{ color: tokens.text2 }}>
                   Email address
@@ -92,19 +114,12 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
-                  className="w-full rounded-xl px-4 py-3 text-sm text-white outline-none transition-colors placeholder:text-white/20 focus:ring-1"
-                  style={{
-                    background: tokens.surface2,
-                    border: `1px solid ${tokens.border2}`,
-                    // @ts-expect-error custom prop
-                    '--tw-ring-color': tokens.gold,
-                  }}
+                  className={inputClass}
+                  style={inputStyle}
                 />
               </div>
 
-              {error && (
-                <p className="text-sm text-red-400">{error}</p>
-              )}
+              {error && <p className="text-sm text-red-400">{error}</p>}
 
               <button
                 type="submit"
@@ -113,6 +128,47 @@ export default function LoginPage() {
                 style={{ background: tokens.gold, color: '#000' }}
               >
                 {loading ? 'Sending…' : 'Send magic link'}
+              </button>
+            </form>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3 my-6">
+              <div className="flex-1 h-px" style={{ background: tokens.border2 }} />
+              <span className="text-xs" style={{ color: tokens.text3 }}>or sign in with password</span>
+              <div className="flex-1 h-px" style={{ background: tokens.border2 }} />
+            </div>
+
+            {/* Password form */}
+            <form onSubmit={handlePassword} className="space-y-3">
+              <input
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@example.com"
+                className={inputClass}
+                style={inputStyle}
+              />
+              <input
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Password"
+                className={inputClass}
+                style={inputStyle}
+              />
+              <button
+                type="submit"
+                disabled={loading}
+                className="w-full rounded-xl py-3 text-sm font-semibold transition-opacity disabled:opacity-50"
+                style={{
+                  background: 'transparent',
+                  border: `1px solid ${tokens.border2}`,
+                  color: tokens.text1,
+                }}
+              >
+                {loading ? 'Signing in…' : 'Sign in with password'}
               </button>
             </form>
 
