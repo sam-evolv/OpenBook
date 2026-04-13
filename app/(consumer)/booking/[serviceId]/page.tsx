@@ -129,20 +129,22 @@ function SlotPickerContent() {
               <button
                 key={idx}
                 onClick={() => handleDayChange(idx)}
-                className="active:scale-95 transition-transform duration-100"
+                className="transition-all duration-150"
                 style={{
                   flexShrink:   0,
                   height:       34,
                   paddingLeft:  14,
                   paddingRight: 14,
                   borderRadius: 20,
-                  background:   isActive ? '#D4AF37' : 'rgba(255,255,255,0.08)',
-                  border:       isActive ? 'none' : '1px solid rgba(255,255,255,0.13)',
-                  color:        isActive ? '#1a1200' : 'rgba(255,255,255,0.65)',
+                  background:   isActive ? '#D4AF37' : 'rgba(255,255,255,0.07)',
+                  border:       isActive ? 'none' : '1px solid rgba(255,255,255,0.1)',
+                  color:        isActive ? '#000000' : 'rgba(255,255,255,0.6)',
                   fontSize:     13,
-                  fontWeight:   isActive ? 700 : 500,
+                  fontWeight:   isActive ? 800 : 500,
                   whiteSpace:   'nowrap',
                   cursor:       'pointer',
+                  boxShadow:    isActive ? '0 4px 16px rgba(212,175,55,0.4)' : 'none',
+                  transform:    isActive ? 'scale(1.05)' : 'scale(1)',
                 }}
               >
                 {label}
@@ -168,7 +170,7 @@ function SlotPickerContent() {
               >
                 Morning
               </p>
-              <SlotGrid slots={morningSlots} selected={selected} onSelect={setSelected} />
+              <SlotGrid slots={morningSlots} selected={selected} onSelect={setSelected} colour={colourParam} />
             </div>
           )}
 
@@ -186,7 +188,7 @@ function SlotPickerContent() {
               >
                 Afternoon
               </p>
-              <SlotGrid slots={afternoonSlots} selected={selected} onSelect={setSelected} />
+              <SlotGrid slots={afternoonSlots} selected={selected} onSelect={setSelected} colour={colourParam} />
             </div>
           )}
 

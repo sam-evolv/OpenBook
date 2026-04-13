@@ -17,7 +17,10 @@ export default function ServiceRow({ service, onClick }: ServiceRowProps) {
         background:           'rgba(255,255,255,0.06)',
         backdropFilter:       'blur(14px)',
         WebkitBackdropFilter: 'blur(14px)',
-        border:               '1px solid rgba(255,255,255,0.1)',
+        borderTop:            '1px solid rgba(255,255,255,0.1)',
+        borderRight:          '1px solid rgba(255,255,255,0.1)',
+        borderBottom:         '1px solid rgba(255,255,255,0.1)',
+        borderLeft:           `2.5px solid ${service.colour}`,
         borderRadius:         12,
         padding:              '13px 14px',
         display:              'flex',
@@ -25,22 +28,11 @@ export default function ServiceRow({ service, onClick }: ServiceRowProps) {
         gap:                  12,
       }}
     >
-      {/* Colour dot */}
-      <div
-        style={{
-          width:        10,
-          height:       10,
-          borderRadius: 5,
-          background:   service.colour,
-          flexShrink:   0,
-        }}
-      />
-
       {/* Name + duration */}
       <div style={{ flex: 1, minWidth: 0 }}>
         <p
           style={{
-            fontSize:     13.5,
+            fontSize:     14,
             fontWeight:   700,
             color:        '#fff',
             margin:       0,
@@ -57,7 +49,7 @@ export default function ServiceRow({ service, onClick }: ServiceRowProps) {
       </div>
 
       {/* Price */}
-      <span style={{ fontSize: 16, fontWeight: 900, color: '#fff', flexShrink: 0 }}>
+      <span style={{ fontSize: 17, fontWeight: 800, color: '#fff', flexShrink: 0 }}>
         {service.price}
       </span>
 

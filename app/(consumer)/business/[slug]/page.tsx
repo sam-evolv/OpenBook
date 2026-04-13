@@ -90,7 +90,12 @@ export default function BusinessPage() {
       />
 
       {/* ── Body ── */}
-      <div style={{ background: '#080808', padding: '20px 16px 140px' }}>
+      <div
+        style={{
+          background: `linear-gradient(to bottom, ${business.primaryColour}14 0px, ${business.primaryColour}08 200px, #080808 400px)`,
+          padding:    '20px 16px 140px',
+        }}
+      >
 
         {/* Services label */}
         <p

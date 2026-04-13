@@ -81,12 +81,12 @@ export default function ExplorePage() {
           {/* Search bar */}
           <div
             style={{
-              height:               42,
-              borderRadius:         12,
+              height:               48,
+              borderRadius:         14,
               background:           'rgba(255,255,255,0.07)',
               backdropFilter:       'blur(10px)',
               WebkitBackdropFilter: 'blur(10px)',
-              border:               '1px solid rgba(255,255,255,0.11)',
+              border:               '1px solid rgba(255,255,255,0.12)',
               display:              'flex',
               alignItems:           'center',
               gap:                  10,
@@ -94,42 +94,57 @@ export default function ExplorePage() {
               marginBottom:         14,
             }}
           >
-            <Search size={15} color="rgba(255,255,255,0.38)" />
-            <span style={{ fontSize: 14, color: 'rgba(255,255,255,0.32)', fontWeight: 500 }}>
+            <Search size={16} color="rgba(255,255,255,0.4)" />
+            <span style={{ fontSize: 15, color: 'rgba(255,255,255,0.35)', fontWeight: 500 }}>
               Gyms, salons, sauna...
             </span>
           </div>
 
-          {/* Category chips */}
-          <div className="flex gap-2 overflow-x-auto scrollbar-none pb-4">
-            {CATEGORIES.map((cat) => {
-              const isActive = activeCategory === cat
-              return (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  className="active:scale-95 transition-transform duration-100"
-                  style={{
-                    flexShrink:           0,
-                    height:               30,
-                    paddingLeft:          13,
-                    paddingRight:         13,
-                    borderRadius:         20,
-                    background:           isActive ? '#D4AF37' : 'rgba(255,255,255,0.08)',
-                    backdropFilter:       isActive ? undefined : 'blur(10px)',
-                    WebkitBackdropFilter: isActive ? undefined : 'blur(10px)',
-                    border:               isActive ? 'none' : '1px solid rgba(255,255,255,0.13)',
-                    color:                isActive ? '#000' : 'rgba(255,255,255,0.55)',
-                    fontSize:             12,
-                    fontWeight:           isActive ? 700 : 500,
-                    whiteSpace:           'nowrap',
-                    cursor:               'pointer',
-                  }}
-                >
-                  {cat}
-                </button>
-              )
-            })}
+          {/* Category chips with right-edge fade */}
+          <div style={{ position: 'relative' }}>
+            <div className="flex gap-2 overflow-x-auto scrollbar-none pb-4">
+              {CATEGORIES.map((cat) => {
+                const isActive = activeCategory === cat
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setActiveCategory(cat)}
+                    className="active:scale-95 transition-transform duration-100"
+                    style={{
+                      flexShrink:           0,
+                      height:               30,
+                      paddingLeft:          13,
+                      paddingRight:         13,
+                      borderRadius:         20,
+                      background:           isActive ? '#D4AF37' : 'rgba(255,255,255,0.08)',
+                      backdropFilter:       isActive ? undefined : 'blur(10px)',
+                      WebkitBackdropFilter: isActive ? undefined : 'blur(10px)',
+                      border:               isActive ? 'none' : '1px solid rgba(255,255,255,0.13)',
+                      color:                isActive ? '#000' : 'rgba(255,255,255,0.55)',
+                      fontSize:             12,
+                      fontWeight:           isActive ? 700 : 500,
+                      whiteSpace:           'nowrap',
+                      cursor:               'pointer',
+                    }}
+                  >
+                    {cat}
+                  </button>
+                )
+              })}
+            </div>
+
+            {/* Right-edge fade overlay */}
+            <div
+              style={{
+                position:      'absolute',
+                right:         0,
+                top:           0,
+                bottom:        0,
+                width:         48,
+                background:    'linear-gradient(to right, transparent, #080812)',
+                pointerEvents: 'none',
+              }}
+            />
           </div>
         </div>
       </div>

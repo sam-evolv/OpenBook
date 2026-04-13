@@ -43,7 +43,7 @@ export default function GlassDock() {
                 key={id}
                 onClick={() => router.push(href)}
                 className="flex flex-col items-center gap-0.5 px-3 py-1.5 rounded-xl transition-all duration-200 active:scale-95"
-                style={{ background: 'transparent' }}
+                style={{ background: 'transparent', position: 'relative' }}
               >
                 <Icon
                   size={22}
@@ -63,6 +63,23 @@ export default function GlassDock() {
                 >
                   {label}
                 </span>
+
+                {/* Active indicator bar */}
+                {isActive && (
+                  <div
+                    style={{
+                      position:     'absolute',
+                      bottom:       -4,
+                      left:         '50%',
+                      transform:    'translateX(-50%)',
+                      width:        24,
+                      height:       3,
+                      borderRadius: 2,
+                      background:   '#D4AF37',
+                      boxShadow:    '0 0 8px rgba(212,175,55,0.6)',
+                    }}
+                  />
+                )}
               </button>
             )
           })}

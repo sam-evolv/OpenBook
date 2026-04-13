@@ -1,6 +1,6 @@
 'use client'
 
-import { User, Settings, Star, CalendarDays } from 'lucide-react'
+import { ChevronRight, User, Settings, Star, CalendarDays } from 'lucide-react'
 import WallpaperBackground from '@/components/consumer/WallpaperBackground'
 import GlassDock from '@/components/consumer/GlassDock'
 
@@ -20,40 +20,44 @@ export default function MePage() {
           </h1>
         </div>
 
-        {/* Avatar placeholder */}
+        {/* Avatar + sign-in */}
         <div className="flex flex-col items-center px-5 pt-4 pb-8">
           <div
             style={{
               width:          80,
               height:         80,
               borderRadius:   40,
-              background:     'rgba(212,175,55,0.12)',
-              border:         '2px solid rgba(212,175,55,0.3)',
+              background:     'rgba(255,255,255,0.08)',
+              border:         '1px solid rgba(212,175,55,0.3)',
               display:        'flex',
               alignItems:     'center',
               justifyContent: 'center',
-              marginBottom:   12,
+              marginBottom:   14,
             }}
           >
             <User size={36} color="#D4AF37" strokeWidth={1.5} />
           </div>
-          <p style={{ fontSize: 17, fontWeight: 700, color: '#fff', margin: 0 }}>Sign in to OpenBook</p>
-          <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.38)', marginTop: 4 }}>
+
+          <p style={{ fontSize: 20, fontWeight: 800, color: '#fff', margin: 0, letterSpacing: '-0.02em' }}>
+            Sign in to OpenBook
+          </p>
+          <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.45)', marginTop: 5 }}>
             Manage bookings &amp; favourites
           </p>
+
           <button
             style={{
-              marginTop:    16,
-              height:       40,
-              paddingLeft:  24,
-              paddingRight: 24,
-              borderRadius: 12,
+              marginTop:    18,
+              height:       52,
+              width:        '100%',
+              borderRadius: 14,
               background:   '#D4AF37',
               color:        '#000',
-              fontSize:     14,
+              fontSize:     16,
               fontWeight:   700,
               border:       'none',
               cursor:       'pointer',
+              letterSpacing: '-0.01em',
             }}
           >
             Sign in
@@ -68,34 +72,40 @@ export default function MePage() {
               className="text-left active:scale-[0.98] transition-transform duration-150 w-full"
               style={{
                 background:           'rgba(255,255,255,0.06)',
-                backdropFilter:       'blur(14px)',
-                WebkitBackdropFilter: 'blur(14px)',
-                border:               '1px solid rgba(255,255,255,0.1)',
-                borderRadius:         12,
-                padding:              '14px 16px',
+                backdropFilter:       'blur(12px)',
+                WebkitBackdropFilter: 'blur(12px)',
+                border:               '1px solid rgba(255,255,255,0.09)',
+                borderRadius:         16,
+                padding:              '16px 18px',
                 display:              'flex',
                 alignItems:           'center',
                 gap:                  14,
               }}
             >
+              {/* Icon circle */}
               <div
                 style={{
-                  width:          38,
-                  height:         38,
-                  borderRadius:   12,
-                  background:     'rgba(212,175,55,0.1)',
+                  width:          36,
+                  height:         36,
+                  borderRadius:   '50%',
+                  background:     'rgba(212,175,55,0.15)',
                   display:        'flex',
                   alignItems:     'center',
                   justifyContent: 'center',
                   flexShrink:     0,
                 }}
               >
-                <Icon size={18} color="#D4AF37" strokeWidth={1.8} />
+                <Icon size={17} color="#D4AF37" strokeWidth={1.8} />
               </div>
+
+              {/* Labels */}
               <div style={{ flex: 1, minWidth: 0 }}>
-                <p style={{ fontSize: 14, fontWeight: 700, color: '#fff', margin: 0 }}>{label}</p>
-                <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.4)', margin: '1px 0 0' }}>{sub}</p>
+                <p style={{ fontSize: 15, fontWeight: 600, color: '#fff', margin: 0 }}>{label}</p>
+                <p style={{ fontSize: 13, color: 'rgba(255,255,255,0.4)', margin: '1px 0 0' }}>{sub}</p>
               </div>
+
+              {/* Chevron */}
+              <ChevronRight size={16} color="rgba(255,255,255,0.25)" strokeWidth={2} />
             </button>
           ))}
         </div>
