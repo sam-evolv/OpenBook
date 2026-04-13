@@ -1,26 +1,25 @@
 import { redirect } from 'next/navigation'
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
+import { createClient } from '@/lib/supabase/server'
 import LandingPage from '@/components/landing/LandingPage'
+
+export const dynamic = 'force-dynamic'
 
 export default async function Home() {
   try {
-    const cookieStore = cookies()
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          get(name: string) {
-            return cookieStore.get(name)?.value
-          },
-        },
-      }
-    )
+    const supabase = await createClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (user) redirect('/overview')
-  } catch {
-    // If auth check fails for any reason, show landing page
+  } catch (err) {
+    // Next.js redirect() and notFound() throw special errors that MUST be
+    // re-thrown — swallowing them causes a 500 on Netlify's runtime.
+    if (
+      typeof (err as Record<string, unknown>)?.digest === 'string' &&
+      ((err as Record<string, unknown>).digest as string).startsWith('NEXT_')
+    ) {
+      throw err
+    }
+    // All other errors (Supabase unavailable, missing env vars, cookie
+    // context issues): fall through and render the landing page.
   }
 
   return <LandingPage />
