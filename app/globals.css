@@ -49,4 +49,60 @@ body {
   .scrollbar-none::-webkit-scrollbar {
     display: none;
   }
+
+  /* ── Consumer app glass utilities ── */
+
+  .wallpaper {
+    min-height: 100vh;
+    background: linear-gradient(160deg, #0a0a0f 0%, #0d0d14 50%, #080808 100%);
+    position: relative;
+  }
+
+  .glass {
+    background: rgba(255, 255, 255, 0.07);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.11);
+  }
+
+  .glass-card {
+    background: rgba(255, 255, 255, 0.06);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 14px;
+  }
+
+  .glass-dock {
+    background: rgba(14, 14, 20, 0.84);
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45),
+                0 1px 0 rgba(255, 255, 255, 0.06) inset;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: rgba(255, 255, 255, 0.42);
+  }
+
+  .icon-label {
+    font-size: 10px;
+    font-weight: 600;
+    color: rgba(255, 255, 255, 0.6);
+    text-align: center;
+    line-height: 1.2;
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
 }
