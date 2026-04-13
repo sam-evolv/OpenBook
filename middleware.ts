@@ -1,14 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createServerClient } from '@supabase/ssr'
+import { cookies } from 'next/headers'
 
 // When true, all auth redirects are skipped so you can browse the dashboard
 // without a real session during local development.
 const DEV_BYPASS = process.env.NODE_ENV === 'development'
 
-<<<<<<< Updated upstream
-// Routes that require an authenticated session.
-const PROTECTED = [
-=======
 // ── Consumer public routes ─────────────────────────────────────────────────
 // These are accessible without authentication — bypass Supabase entirely.
 const CONSUMER_PUBLIC = [
@@ -31,10 +28,9 @@ const CONSUMER_PROTECTED = [
 // ── Dashboard protected routes ─────────────────────────────────────────────
 // These require a business/dashboard session → redirect to /login if absent.
 const DASHBOARD_PROTECTED = [
->>>>>>> Stashed changes
   '/overview', '/calendar', '/bookings', '/services', '/packages',
   '/staff', '/customers', '/analytics', '/messages', '/reviews',
-  '/schedule', '/settings',
+  '/schedule', '/settings', '/onboarding',
 ]
 
 function matchesPrefix(pathname: string, prefixes: string[]) {
@@ -42,8 +38,6 @@ function matchesPrefix(pathname: string, prefixes: string[]) {
 }
 
 export async function middleware(req: NextRequest) {
-<<<<<<< Updated upstream
-=======
   const { pathname } = req.nextUrl
 
   // ── Consumer public routes — no Supabase needed ──
@@ -52,7 +46,6 @@ export async function middleware(req: NextRequest) {
   }
 
   // ── For all auth-aware routes, create the Supabase client ──
->>>>>>> Stashed changes
   const res = NextResponse.next()
 
   const supabase = createServerClient(
@@ -77,13 +70,6 @@ export async function middleware(req: NextRequest) {
   // In development, skip all auth redirects.
   if (DEV_BYPASS) return res
 
-<<<<<<< Updated upstream
-  // Redirect unauthenticated users away from protected pages.
-  if (!user && isProtected(req.nextUrl.pathname)) {
-    const loginUrl = req.nextUrl.clone()
-    loginUrl.pathname = '/login'
-    return NextResponse.redirect(loginUrl)
-=======
   // ── Consumer protected — redirect to /welcome if not logged in ──
   if (!user && matchesPrefix(pathname, CONSUMER_PROTECTED)) {
     const url = req.nextUrl.clone()
@@ -97,7 +83,6 @@ export async function middleware(req: NextRequest) {
     const url = req.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
->>>>>>> Stashed changes
   }
 
   return res

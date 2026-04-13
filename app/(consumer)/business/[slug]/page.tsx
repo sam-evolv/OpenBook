@@ -345,13 +345,9 @@ export default function BusinessPage() {
               <ServiceRow
                 key={service.name}
                 service={service}
-<<<<<<< Updated upstream
-                onClick={() => router.push(`/booking/${slugify(service.name)}`)}
-=======
                 onClick={() => {
                   router.push(`/booking/${slugify(service.name)}?${buildBookingQs(service)}`)
                 }}
->>>>>>> Stashed changes
               />
             ))
           )}
@@ -435,14 +431,10 @@ export default function BusinessPage() {
           }}
         >
           <button
-<<<<<<< Updated upstream
-            onClick={() => router.push(`/booking/${firstServiceSlug}`)}
-=======
             onClick={() => {
               if (!firstService) return
               router.push(`/booking/${firstServiceSlug}?${buildBookingQs(firstService)}`)
             }}
->>>>>>> Stashed changes
             className="active:scale-[0.97] transition-transform duration-150"
             style={{
               width:        '100%',
