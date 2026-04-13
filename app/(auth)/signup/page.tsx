@@ -5,7 +5,6 @@ import { createClient } from '@/lib/supabase/client'
 import { tokens } from '@/lib/types'
 
 export default function SignupPage() {
-  const supabase = createClient()
   const [email, setEmail] = useState('')
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
@@ -16,6 +15,7 @@ export default function SignupPage() {
     setLoading(true)
     setError(null)
 
+    const supabase = createClient()
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: { emailRedirectTo: `${window.location.origin}/onboarding` },
