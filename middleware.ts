@@ -7,7 +7,9 @@ const DEV_BYPASS = process.env.NODE_ENV === 'development'
 
 // Consumer app routes — publicly accessible, no auth required.
 // These bypass Supabase entirely (faster, no session overhead).
+// '/' is the marketing landing page — public, no auth gate.
 const CONSUMER_PREFIXES = [
+  '/',
   '/home',
   '/explore',
   '/business',

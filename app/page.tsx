@@ -1,7 +1,15 @@
 import { redirect } from 'next/navigation'
+import { createClient } from '@/lib/supabase/server'
+import LandingPage from '@/components/landing/LandingPage'
 
-// Root redirects to the dashboard overview.
-// app/(dashboard)/overview/page.tsx is the actual overview page.
-export default function RootPage() {
-  redirect('/overview')
+// Root: show landing page for guests, redirect dashboard users straight to /overview.
+export default async function RootPage() {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (user) {
+    redirect('/overview')
+  }
+
+  return <LandingPage />
 }
