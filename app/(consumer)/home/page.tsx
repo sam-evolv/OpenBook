@@ -25,7 +25,7 @@ export default function HomePage() {
 
   return (
     <WallpaperBackground>
-      <div className="min-h-screen pb-32">
+      <div className="min-h-screen pb-32" style={{ position: 'relative', zIndex: 1 }}>
 
         {/* ── Header: wordmark + search ── */}
         <div
@@ -38,30 +38,18 @@ export default function HomePage() {
           }}
         >
           <div className="flex items-center justify-between">
-            <div className="flex flex-col" style={{ gap: 1 }}>
-              <span
-                style={{
-                  fontSize:      22,
-                  fontWeight:    900,
-                  color:         '#fff',
-                  letterSpacing: '-0.03em',
-                  lineHeight:    1,
-                }}
-              >
-                OpenBook
-                <span style={{ color: '#D4AF37', marginLeft: 4 }}>AI</span>
-              </span>
-              <span
-                style={{
-                  fontSize:      11,
-                  color:         'rgba(255,255,255,0.38)',
-                  fontWeight:    500,
-                  letterSpacing: '0.04em',
-                }}
-              >
-                YOUR BEAUTY & WELLNESS WORLD
-              </span>
-            </div>
+            <span
+              style={{
+                fontSize:      22,
+                fontWeight:    900,
+                color:         '#fff',
+                letterSpacing: '-0.03em',
+                lineHeight:    1,
+              }}
+            >
+              OpenBook
+              <span style={{ color: '#D4AF37', marginLeft: 4 }}>AI</span>
+            </span>
 
             <button
               onClick={() => router.push('/explore')}
@@ -82,6 +70,9 @@ export default function HomePage() {
             </button>
           </div>
         </div>
+
+        {/* ── Icon sections — capped at iPhone width ── */}
+        <div className="max-w-[390px] mx-auto">
 
         {/* ── Favourites section ── */}
         <div className="px-5 pt-8">
@@ -253,6 +244,7 @@ export default function HomePage() {
           </button>
         </div>
 
+        </div>{/* end max-w-[390px] */}
       </div>
 
       <GlassDock />

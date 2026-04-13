@@ -6,7 +6,7 @@ import { Home, Search, CalendarDays, Wallet, User } from 'lucide-react'
 type TabId = 'home' | 'explore' | 'bookings' | 'wallet' | 'me'
 
 const TABS: { id: TabId; label: string; icon: React.ElementType; href: string }[] = [
-  { id: 'home',     label: 'Home',     icon: Home,          href: '/home'    },
+  { id: 'home',     label: 'OpenBook', icon: Home,          href: '/home'    },
   { id: 'explore',  label: 'Explore',  icon: Search,        href: '/explore' },
   { id: 'bookings', label: 'Bookings', icon: CalendarDays,  href: '/bookings'},
   { id: 'wallet',   label: 'Wallet',   icon: Wallet,        href: '/wallet'  },
@@ -58,8 +58,9 @@ export default function GlassDock() {
                   style={{
                     fontSize:      10,
                     fontWeight:    isActive ? 700 : 500,
-                    color:         isActive ? '#D4AF37' : 'rgba(255,255,255,0.38)',
+                    color:         isActive ? '#D4AF37' : 'rgba(255,255,255,0.75)',
                     letterSpacing: '0.02em',
+                    textShadow:    '0 1px 3px rgba(0,0,0,0.6)',
                   }}
                 >
                   {label}

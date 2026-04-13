@@ -35,6 +35,8 @@ export default function LiquidGlassIcon({
           /* Blurs the wallpaper behind */
           backdropFilter:       'blur(22px)',
           WebkitBackdropFilter: 'blur(22px)',
+          /* Base glass tint */
+          background:           'rgba(255,255,255,0.08)',
           /* Outer ring + depth shadow */
           border:               '1px solid rgba(255,255,255,0.22)',
           boxShadow:            '0 8px 28px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.28)',
@@ -46,7 +48,7 @@ export default function LiquidGlassIcon({
             position:   'absolute',
             inset:      0,
             background: primaryColour,
-            opacity:    0.22,
+            opacity:    0.45,
           }}
         />
 

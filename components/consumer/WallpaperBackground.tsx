@@ -18,11 +18,11 @@ export default function WallpaperBackground({ children, className = '' }: Wallpa
           inset:      0,
           zIndex:     0,
           background: `
-            radial-gradient(ellipse 110% 65% at 10% -10%, rgba(139,92,246,0.72) 0%, transparent 58%),
-            radial-gradient(ellipse 80%  55% at 90% -8%,  rgba(37,99,235,0.55)  0%, transparent 55%),
-            radial-gradient(ellipse 70%  50% at 60% 110%, rgba(16,185,129,0.28) 0%, transparent 58%),
-            radial-gradient(ellipse 50%  40% at 30% 70%,  rgba(99,102,241,0.18) 0%, transparent 50%),
-            #05051a
+            radial-gradient(ellipse at 25% 15%, #1a3a6b 0%, transparent 55%),
+            radial-gradient(ellipse at 78% 55%, #2d1b4e 0%, transparent 50%),
+            radial-gradient(ellipse at 50% 88%, #0d2d1a 0%, transparent 50%),
+            radial-gradient(ellipse at 88% 8%,  #3b1a0a 0%, transparent 45%),
+            #080812
           `,
         }}
       />
