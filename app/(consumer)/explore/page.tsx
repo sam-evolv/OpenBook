@@ -1,18 +1,64 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { ChevronLeft, Search, Star } from 'lucide-react'
 import WallpaperBackground from '@/components/consumer/WallpaperBackground'
 import GlassDock from '@/components/consumer/GlassDock'
 import { MOCK_BUSINESSES, MockBusiness } from '@/lib/mock-businesses'
+import { createClient } from '@/lib/supabase/client'
 
 const CATEGORIES = ['All', 'Gym', 'Sauna', 'Salon', 'Barber', 'Massage', 'Physio', 'Yoga', 'Tattoo']
 
-const TRENDING_POOL = MOCK_BUSINESSES.slice(0, 4)
-const NEARBY_POOL   = MOCK_BUSINESSES.slice(4)
+/* ── Types ── */
+interface DisplayBusiness {
+  slug: string
+  name: string
+  type: string
+  rating: string
+  priceRange: string
+  primaryColour: string
+  categories: string[]
+  img: string
+  distance?: string
+}
 
-function matchesCategory(b: MockBusiness, category: string): boolean {
+function mockToDisplay(b: MockBusiness): DisplayBusiness {
+  return {
+    slug:         b.slug,
+    name:         b.name,
+    type:         b.type,
+    rating:       b.rating,
+    priceRange:   b.priceRange,
+    primaryColour: b.primaryColour,
+    categories:   b.categories,
+    img:          b.img,
+    distance:     b.distance,
+  }
+}
+
+function dbToDisplay(b: {
+  slug: string
+  name: string
+  category: string
+  primary_colour: string | null
+  hero_image_url: string | null
+  city: string | null
+}): DisplayBusiness {
+  return {
+    slug:         b.slug,
+    name:         b.name,
+    type:         b.category,
+    rating:       '5.0',
+    priceRange:   '€€',
+    primaryColour: b.primary_colour ?? '#D4AF37',
+    categories:   [b.category],
+    img:          b.hero_image_url ?? '',
+    distance:     b.city ?? undefined,
+  }
+}
+
+function matchesCategory(b: DisplayBusiness, category: string): boolean {
   if (category === 'All') return true
   const lc = category.toLowerCase()
   return (
@@ -21,21 +67,98 @@ function matchesCategory(b: MockBusiness, category: string): boolean {
   )
 }
 
+/* ── Skeleton card ── */
+function SkeletonCard({ wide }: { wide?: boolean }) {
+  if (wide) {
+    return (
+      <div
+        style={{
+          borderRadius:         14,
+          background:           'rgba(255,255,255,0.06)',
+          border:               '1px solid rgba(255,255,255,0.1)',
+          display:              'flex',
+          height:               70,
+          overflow:             'hidden',
+        }}
+      >
+        <div style={{ width: 70, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
+        <div style={{ flex: 1, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <div style={{ height: 12, width: '60%', borderRadius: 6, background: 'rgba(255,255,255,0.08)' }} />
+          <div style={{ height: 10, width: '40%', borderRadius: 6, background: 'rgba(255,255,255,0.06)' }} />
+        </div>
+      </div>
+    )
+  }
+  return (
+    <div
+      style={{
+        borderRadius: 16,
+        overflow:     'hidden',
+        background:   'rgba(255,255,255,0.06)',
+        border:       '1px solid rgba(255,255,255,0.1)',
+      }}
+    >
+      <div style={{ height: 90, background: 'rgba(255,255,255,0.08)' }} />
+      <div style={{ padding: '9px 10px 11px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ height: 10, width: '70%', borderRadius: 6, background: 'rgba(255,255,255,0.08)' }} />
+        <div style={{ height: 10, width: '45%', borderRadius: 6, background: 'rgba(255,255,255,0.06)' }} />
+      </div>
+    </div>
+  )
+}
+
 export default function ExplorePage() {
   const router = useRouter()
   const [activeCategory, setActiveCategory] = useState('All')
+  const [businesses,     setBusinesses]     = useState<DisplayBusiness[]>([])
+  const [loading,        setLoading]        = useState(true)
+
+  /* ── Fetch live businesses from Supabase ── */
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      try {
+        const supabase = createClient()
+        const { data } = await supabase
+          .from('businesses')
+          .select('slug, name, category, primary_colour, hero_image_url, city')
+          .eq('is_live', true)
+          .order('name')
+
+        if (!cancelled) {
+          if (data && data.length > 0) {
+            setBusinesses(data.map(dbToDisplay))
+          } else {
+            // Fall back to mock data
+            setBusinesses(MOCK_BUSINESSES.map(mockToDisplay))
+          }
+        }
+      } catch {
+        if (!cancelled) {
+          setBusinesses(MOCK_BUSINESSES.map(mockToDisplay))
+        }
+      } finally {
+        if (!cancelled) setLoading(false)
+      }
+    }
+    load()
+    return () => { cancelled = true }
+  }, [])
+
+  const trendingPool = businesses.slice(0, 4)
+  const nearbyPool   = businesses.slice(4)
 
   const filteredTrending = useMemo(
-    () => TRENDING_POOL.filter((b) => matchesCategory(b, activeCategory)),
-    [activeCategory]
+    () => trendingPool.filter((b) => matchesCategory(b, activeCategory)),
+    [trendingPool, activeCategory]
   )
 
   const filteredNearby = useMemo(
-    () => NEARBY_POOL.filter((b) => matchesCategory(b, activeCategory)),
-    [activeCategory]
+    () => nearbyPool.filter((b) => matchesCategory(b, activeCategory)),
+    [nearbyPool, activeCategory]
   )
 
-  const noResults = filteredTrending.length === 0 && filteredNearby.length === 0
+  const noResults = !loading && filteredTrending.length === 0 && filteredNearby.length === 0
 
   return (
     <WallpaperBackground>
@@ -137,7 +260,25 @@ export default function ExplorePage() {
       {/* ── Content ── */}
       <div className="px-4 pt-5 pb-32">
 
-        {filteredTrending.length > 0 && (
+        {/* Loading skeletons */}
+        {loading && (
+          <>
+            <div className="mb-6">
+              <div style={{ height: 12, width: 120, borderRadius: 6, background: 'rgba(255,255,255,0.08)', marginBottom: 12 }} />
+              <div className="grid grid-cols-2 gap-3">
+                {[0,1,2,3].map((i) => <SkeletonCard key={i} />)}
+              </div>
+            </div>
+            <div>
+              <div style={{ height: 12, width: 100, borderRadius: 6, background: 'rgba(255,255,255,0.08)', marginBottom: 12 }} />
+              <div className="flex flex-col gap-3">
+                {[0,1,2].map((i) => <SkeletonCard key={i} wide />)}
+              </div>
+            </div>
+          </>
+        )}
+
+        {!loading && filteredTrending.length > 0 && (
           <section className="mb-6">
             <p className="section-label mb-3">Trending near you</p>
             <div className="grid grid-cols-2 gap-3">
@@ -155,13 +296,25 @@ export default function ExplorePage() {
                     border:               '1px solid rgba(255,255,255,0.1)',
                   }}
                 >
-                  <div style={{ height: 90, position: 'relative', overflow: 'hidden' }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={b.img}
-                      alt={b.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                    />
+                  <div style={{ height: 90, position: 'relative', overflow: 'hidden', background: b.img ? undefined : b.primaryColour + '33' }}>
+                    {b.img ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={b.img}
+                        alt={b.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: '100%', height: '100%',
+                        background: `linear-gradient(135deg, ${b.primaryColour}44 0%, #080808 100%)`,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <span style={{ fontSize: 28, fontWeight: 900, color: b.primaryColour, opacity: 0.6 }}>
+                          {b.name.slice(0, 2).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
                     <div
                       style={{
                         position:   'absolute',
@@ -207,7 +360,7 @@ export default function ExplorePage() {
           </section>
         )}
 
-        {filteredNearby.length > 0 && (
+        {!loading && filteredNearby.length > 0 && (
           <section>
             <p className="section-label mb-3">All nearby</p>
             <div className="flex flex-col gap-3">
@@ -227,13 +380,24 @@ export default function ExplorePage() {
                     flexDirection:        'row',
                   }}
                 >
-                  <div style={{ width: 70, height: 70, flexShrink: 0 }}>
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={b.img}
-                      alt={b.name}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
-                    />
+                  <div style={{ width: 70, height: 70, flexShrink: 0, background: b.primaryColour + '22' }}>
+                    {b.img ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={b.img}
+                        alt={b.name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                      />
+                    ) : (
+                      <div style={{
+                        width: '100%', height: '100%',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      }}>
+                        <span style={{ fontSize: 20, fontWeight: 900, color: b.primaryColour }}>
+                          {b.name.slice(0, 2).toUpperCase()}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   <div
                     style={{

@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { addMinutes, parseISO } from 'date-fns'
+import { addMinutes, parseISO, format } from 'date-fns'
 import { createClient } from '@/lib/supabase/server'
 import { createBookingPaymentIntent } from '@/lib/stripe'
+import { sendBookingConfirmation } from '@/lib/email'
 import type { CreateBookingPayload } from '@/lib/types'
 
 export async function POST(req: NextRequest) {
@@ -66,6 +67,31 @@ export async function POST(req: NextRequest) {
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+
+  // Send confirmation email (fire-and-forget — don't block the response)
+  try {
+    const { data: customer } = await supabase
+      .from('customers')
+      .select('name, email')
+      .eq('id', customer_id)
+      .single()
+
+    if (customer?.email) {
+      const dateTimeStr = format(parseISO(starts_at), "EEE d MMM 'at' h:mm aaa")
+      const priceStr    = `€${(service.price_cents / 100).toFixed(0)}`
+
+      void sendBookingConfirmation({
+        to:           customer.email,
+        customerName: customer.name ?? 'there',
+        serviceName:  service.name,
+        businessName: business?.name ?? 'your business',
+        dateTime:     dateTimeStr,
+        price:        priceStr,
+      })
+    }
+  } catch {
+    // Email failure must never break booking creation
   }
 
   return NextResponse.json({ booking }, { status: 201 })

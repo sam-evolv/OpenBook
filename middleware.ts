@@ -5,21 +5,56 @@ import { createServerClient } from '@supabase/ssr'
 // without a real session during local development.
 const DEV_BYPASS = process.env.NODE_ENV === 'development'
 
+<<<<<<< Updated upstream
 // Routes that require an authenticated session.
 const PROTECTED = [
+=======
+// ── Consumer public routes ─────────────────────────────────────────────────
+// These are accessible without authentication — bypass Supabase entirely.
+const CONSUMER_PUBLIC = [
+  '/home',
+  '/explore',
+  '/business',
+  '/welcome',
+  '/auth/callback',
+]
+
+// ── Consumer protected routes ──────────────────────────────────────────────
+// These require a consumer auth session → redirect to /welcome if absent.
+const CONSUMER_PROTECTED = [
+  '/booking',
+  '/consumer-bookings',
+  '/wallet',
+  '/me',
+]
+
+// ── Dashboard protected routes ─────────────────────────────────────────────
+// These require a business/dashboard session → redirect to /login if absent.
+const DASHBOARD_PROTECTED = [
+>>>>>>> Stashed changes
   '/overview', '/calendar', '/bookings', '/services', '/packages',
   '/staff', '/customers', '/analytics', '/messages', '/reviews',
   '/schedule', '/settings',
 ]
 
-function isProtected(pathname: string) {
-  return PROTECTED.some((p) => pathname === p || pathname.startsWith(p + '/'))
+function matchesPrefix(pathname: string, prefixes: string[]) {
+  return prefixes.some((p) => pathname === p || pathname.startsWith(p + '/'))
 }
 
 export async function middleware(req: NextRequest) {
+<<<<<<< Updated upstream
+=======
+  const { pathname } = req.nextUrl
+
+  // ── Consumer public routes — no Supabase needed ──
+  if (matchesPrefix(pathname, CONSUMER_PUBLIC)) {
+    return NextResponse.next()
+  }
+
+  // ── For all auth-aware routes, create the Supabase client ──
+>>>>>>> Stashed changes
   const res = NextResponse.next()
 
-  // Always refresh the Supabase session cookie so it doesn't expire mid-session.
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -36,17 +71,33 @@ export async function middleware(req: NextRequest) {
     }
   )
 
-  // Refresh session (important for expiry rotation).
+  // Refresh session (important for cookie rotation).
   const { data: { user } } = await supabase.auth.getUser()
 
   // In development, skip all auth redirects.
   if (DEV_BYPASS) return res
 
+<<<<<<< Updated upstream
   // Redirect unauthenticated users away from protected pages.
   if (!user && isProtected(req.nextUrl.pathname)) {
     const loginUrl = req.nextUrl.clone()
     loginUrl.pathname = '/login'
     return NextResponse.redirect(loginUrl)
+=======
+  // ── Consumer protected — redirect to /welcome if not logged in ──
+  if (!user && matchesPrefix(pathname, CONSUMER_PROTECTED)) {
+    const url = req.nextUrl.clone()
+    url.pathname = '/welcome'
+    url.searchParams.set('redirect', pathname)
+    return NextResponse.redirect(url)
+  }
+
+  // ── Dashboard protected — redirect to /login if not logged in ──
+  if (!user && matchesPrefix(pathname, DASHBOARD_PROTECTED)) {
+    const url = req.nextUrl.clone()
+    url.pathname = '/login'
+    return NextResponse.redirect(url)
+>>>>>>> Stashed changes
   }
 
   return res
