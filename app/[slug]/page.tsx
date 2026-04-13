@@ -10,8 +10,8 @@ const RESERVED = new Set([
   'onboarding', 'settings', 'booking', 'bookings', 'wallet', 'me',
   'welcome', 'health', 'index.html', 'checkout', 'pricing', 'shop',
   'donate', 'register', 'billing', 'payment', 'account',
-  'trace.axd', 'swagger.json', 'swagger-ui.html',
-  'info.php', 'config.json', '.env', 'nodesync', 'exec',
+  'trace.axd', 'swagger.json', 'info.php', '.env',
+  'nodesync', 'exec', 'config.json',
 ])
 
 function isReserved(slug: string): boolean {
