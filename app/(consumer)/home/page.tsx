@@ -28,6 +28,8 @@ export default function HomePage() {
   const router = useRouter()
   // Set of slugs that have an active flash sale
   const [flashSaleSlugs, setFlashSaleSlugs] = useState<Set<string>>(new Set())
+  // Map of slug → processed logo URL
+  const [logoUrls, setLogoUrls] = useState<Record<string, string>>({})
 
   /* ── Fetch active flash sales for all displayed businesses ── */
   useEffect(() => {
@@ -37,13 +39,20 @@ export default function HomePage() {
         const supabase = createClient()
         const slugs = ALL_PLACES.map((p) => p.slug)
 
-        // Fetch all businesses in one query
+        // Fetch all businesses in one query — include logo_url
         const { data: bizList } = await supabase
           .from('businesses')
-          .select('id, slug')
+          .select('id, slug, logo_url')
           .in('slug', slugs)
 
         if (cancelled || !bizList || bizList.length === 0) return
+
+        // Build logo URL map
+        const logos: Record<string, string> = {}
+        for (const biz of bizList) {
+          if (biz.logo_url) logos[biz.slug] = biz.logo_url
+        }
+        if (!cancelled) setLogoUrls(logos)
 
         const now = new Date().toISOString()
 
@@ -153,6 +162,7 @@ export default function HomePage() {
                   isFavourite={item.isFavourite}
                   badge={flashSaleSlugs.has(item.slug) ? undefined : item.badge}
                   flashSale={flashSaleSlugs.has(item.slug)}
+                  logoUrl={logoUrls[item.slug] ?? null}
                   onClick={() => router.push(item.href)}
                 />
               </div>
@@ -191,6 +201,7 @@ export default function HomePage() {
                   isFavourite={item.isFavourite}
                   badge={flashSaleSlugs.has(item.slug) ? undefined : item.badge}
                   flashSale={flashSaleSlugs.has(item.slug)}
+                  logoUrl={logoUrls[item.slug] ?? null}
                   onClick={() => router.push(item.href)}
                 />
               </div>

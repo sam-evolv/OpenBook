@@ -21,6 +21,7 @@ export interface OnboardingData {
   address: string
   city: string
   primaryColour: string
+  logoUrl: string
   services: Array<{
     name: string
     description: string
@@ -59,6 +60,7 @@ const DEFAULT_DATA: OnboardingData = {
   address: '',
   city: '',
   primaryColour: '#D4AF37',
+  logoUrl: '',
   services: [],
   hours: DEFAULT_HOURS,
   packages: [],
@@ -82,15 +84,16 @@ export default function OnboardingFlow({ userId }: { userId: string }) {
     const { data: business, error } = await supabase
       .from('businesses')
       .insert({
-        owner_id: userId,
-        name: data.name,
+        owner_id:       userId,
+        name:           data.name,
         slug,
-        category: data.category,
-        description: data.description,
-        address: data.address,
-        city: data.city,
+        category:       data.category,
+        description:    data.description,
+        address:        data.address,
+        city:           data.city,
         primary_colour: data.primaryColour,
-        is_live: true,
+        logo_url:       data.logoUrl || null,
+        is_live:        true,
       })
       .select()
       .single()
@@ -171,7 +174,7 @@ export default function OnboardingFlow({ userId }: { userId: string }) {
           </div>
 
           {step === 0 && <StepBasics {...stepProps} />}
-          {step === 1 && <StepBrand {...stepProps} />}
+          {step === 1 && <StepBrand {...stepProps} userId={userId} />}
           {step === 2 && <StepServices {...stepProps} />}
           {step === 3 && <StepHours {...stepProps} />}
           {step === 4 && <StepPackages {...stepProps} />}

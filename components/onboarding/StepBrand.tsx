@@ -1,5 +1,7 @@
 import { tokens } from '@/lib/types'
 import type { OnboardingData } from './OnboardingFlow'
+import { LogoUpload } from '@/components/dashboard/LogoUpload'
+import LiquidGlassIcon from '@/components/consumer/LiquidGlassIcon'
 
 const PRESET_COLOURS = [
   '#D4AF37', '#E8C547', '#C9A227',
@@ -8,17 +10,56 @@ const PRESET_COLOURS = [
   '#FFFFFF',
 ]
 
-interface Props { data: OnboardingData; update: (p: Partial<OnboardingData>) => void }
+interface Props {
+  data:   OnboardingData
+  update: (p: Partial<OnboardingData>) => void
+  userId: string
+}
 
-export default function StepBrand({ data, update }: Props) {
+export default function StepBrand({ data, update, userId }: Props) {
+  const businessInitials = (data.name || 'B')
+    .split(' ')
+    .map((w: string) => w[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2)
+
   return (
     <div>
       <h2 className="text-2xl font-bold text-white mb-1">Brand your booking page</h2>
       <p className="text-sm mb-8" style={{ color: tokens.text2 }}>
-        Pick an accent colour — your customers will see this when they book.
+        Upload a logo and pick an accent colour — your customers see this when they book.
       </p>
 
-      <div className="space-y-6">
+      <div className="space-y-7">
+
+        {/* ── Logo upload ── */}
+        <div>
+          <label className="block text-xs font-medium mb-3" style={{ color: tokens.text2 }}>
+            Business logo
+          </label>
+          <div className="flex items-center gap-5">
+            <LogoUpload
+              currentLogoUrl={data.logoUrl || null}
+              userId={userId}
+              onUploaded={(url) => update({ logoUrl: url })}
+            />
+            {/* Live icon preview — shows exactly how it will look on the home screen */}
+            <div>
+              <p className="text-[11px] mb-2" style={{ color: tokens.text3 }}>
+                Home screen preview
+              </p>
+              <LiquidGlassIcon
+                initials={businessInitials}
+                primaryColour={data.primaryColour}
+                label={data.name || 'Your Business'}
+                logoUrl={data.logoUrl || null}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ── Accent colour ── */}
         <div>
           <label className="block text-xs font-medium mb-3" style={{ color: tokens.text2 }}>
             Accent colour
@@ -30,8 +71,8 @@ export default function StepBrand({ data, update }: Props) {
                 onClick={() => update({ primaryColour: colour })}
                 className="w-9 h-9 rounded-xl transition-transform hover:scale-110"
                 style={{
-                  background: colour,
-                  outline: data.primaryColour === colour ? `2px solid white` : 'none',
+                  background:    colour,
+                  outline:       data.primaryColour === colour ? '2px solid white' : 'none',
                   outlineOffset: 2,
                 }}
               />
@@ -47,22 +88,55 @@ export default function StepBrand({ data, update }: Props) {
           </div>
         </div>
 
-        {/* Live preview */}
+        {/* ── Booking page preview ── */}
         <div>
           <label className="block text-xs font-medium mb-3" style={{ color: tokens.text2 }}>
-            Preview
+            Booking page preview
           </label>
           <div
             className="rounded-2xl p-5"
             style={{ background: tokens.surface1, border: `1px solid ${tokens.border}` }}
           >
             <div className="flex items-center gap-3 mb-4">
-              <div
-                className="w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-black text-lg"
-                style={{ background: data.primaryColour }}
-              >
-                {(data.name || 'B')[0]}
-              </div>
+              {/* Logo or coloured initial square */}
+              {data.logoUrl ? (
+                <div
+                  style={{
+                    width:        48,
+                    height:       48,
+                    borderRadius: 12,
+                    overflow:     'hidden',
+                    flexShrink:   0,
+                    position:     'relative',
+                    border:       '1px solid rgba(255,255,255,0.12)',
+                  }}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={data.logoUrl}
+                    alt="Logo"
+                    style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
+                  />
+                  <div
+                    style={{
+                      position:     'absolute',
+                      top:          0,
+                      left:         0,
+                      right:        0,
+                      height:       '42%',
+                      background:   'linear-gradient(to bottom, rgba(255,255,255,0.20) 0%, transparent 100%)',
+                      borderRadius: '11px 11px 60% 60% / 11px 11px 32px 32px',
+                    }}
+                  />
+                </div>
+              ) : (
+                <div
+                  className="w-12 h-12 rounded-2xl flex items-center justify-center font-bold text-black text-lg shrink-0"
+                  style={{ background: data.primaryColour }}
+                >
+                  {(data.name || 'B')[0]}
+                </div>
+              )}
               <div>
                 <div className="font-semibold text-white text-sm">{data.name || 'Your Business'}</div>
                 <div className="text-xs" style={{ color: tokens.text2 }}>{data.city || 'Dublin'}</div>
@@ -76,6 +150,7 @@ export default function StepBrand({ data, update }: Props) {
             </button>
           </div>
         </div>
+
       </div>
     </div>
   )

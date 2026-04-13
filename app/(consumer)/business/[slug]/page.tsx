@@ -150,6 +150,7 @@ export default function BusinessPage() {
   const [activeCategory, setActiveCategory] = useState('All')
   const [scrollY,        setScrollY]        = useState(0)
   const [flashSale,      setFlashSale]      = useState<ActiveFlashSale | null>(null)
+  const [logoUrl,        setLogoUrl]        = useState<string | null>(null)
   const containerRef = useRef<HTMLDivElement>(null)
 
   /* ── Scroll tracking ── */
@@ -161,21 +162,25 @@ export default function BusinessPage() {
     return () => container.removeEventListener('scroll', handleScroll)
   }, [])
 
-  /* ── Fetch active flash sale for this business ── */
+  /* ── Fetch business data (logo + flash sale) ── */
   useEffect(() => {
     let cancelled = false
-    async function fetchFlashSale() {
+    async function fetchBusinessData() {
       try {
         const supabase = createClient()
-        // Look up real business by slug to get its UUID
+        // Look up real business by slug — get both id and logo_url in one query
         const { data: biz } = await supabase
           .from('businesses')
-          .select('id')
+          .select('id, logo_url')
           .eq('slug', slug)
           .single()
 
         if (cancelled || !biz) return
 
+        // Set logo immediately
+        if (biz.logo_url) setLogoUrl(biz.logo_url)
+
+        // Fetch active flash sale
         const res  = await fetch(`/api/flash-sales/active?businessId=${biz.id}`)
         if (cancelled || !res.ok) return
         const json = await res.json()
@@ -183,10 +188,10 @@ export default function BusinessPage() {
           setFlashSale(json.data[0])
         }
       } catch {
-        // Silently ignore — flash sale is a nice-to-have
+        // Silently ignore — these are progressive enhancements
       }
     }
-    fetchFlashSale()
+    fetchBusinessData()
     return () => { cancelled = true }
   }, [slug])
 
@@ -259,6 +264,7 @@ export default function BusinessPage() {
         isFav={isFav}
         onBack={() => router.back()}
         onToggleFav={() => setIsFav((v) => !v)}
+        logoUrl={logoUrl}
       />
 
       {/* ── Body ── */}

@@ -4,11 +4,13 @@ import { ChevronLeft, Star } from 'lucide-react'
 import type { MockBusiness } from '@/lib/mock-businesses'
 
 interface BusinessHeroProps {
-  business:      MockBusiness
-  scrollY:       number
-  isFav:         boolean
-  onBack:        () => void
-  onToggleFav:   () => void
+  business:    MockBusiness
+  scrollY:     number
+  isFav:       boolean
+  onBack:      () => void
+  onToggleFav: () => void
+  /** Processed logo URL — shows a small glass icon next to the business name */
+  logoUrl?:    string | null
 }
 
 export default function BusinessHero({
@@ -17,23 +19,24 @@ export default function BusinessHero({
   isFav,
   onBack,
   onToggleFav,
+  logoUrl,
 }: BusinessHeroProps) {
   return (
     <div style={{ height: 280, position: 'relative', overflow: 'hidden', flexShrink: 0 }}>
       {/* Parallax background */}
       <div
         style={{
-          position:            'absolute',
-          top:                 -24,
-          left:                0,
-          right:               0,
-          bottom:              -24,
-          backgroundImage:     `url(${business.heroImage})`,
-          backgroundSize:      'cover',
-          backgroundPosition:  'center',
-          filter:              business.heroFilter,
-          transform:           `translateY(${scrollY * 0.22}px)`,
-          zIndex:              0,
+          position:           'absolute',
+          top:                -24,
+          left:               0,
+          right:              0,
+          bottom:             -24,
+          backgroundImage:    `url(${business.heroImage})`,
+          backgroundSize:     'cover',
+          backgroundPosition: 'center',
+          filter:             business.heroFilter,
+          transform:          `translateY(${scrollY * 0.22}px)`,
+          zIndex:             0,
         }}
       />
 
@@ -113,43 +116,98 @@ export default function BusinessHero({
       >
         <p
           style={{
-            fontSize:        10,
-            fontWeight:      800,
-            letterSpacing:   '0.12em',
-            textTransform:   'uppercase',
-            color:           business.primaryColour,
-            margin:          '0 0 3px',
+            fontSize:      10,
+            fontWeight:    800,
+            letterSpacing: '0.12em',
+            textTransform: 'uppercase',
+            color:         business.primaryColour,
+            margin:        '0 0 3px',
           }}
         >
           {business.eyebrow}
         </p>
-        <h1
-          style={{
-            fontSize:      29,
-            fontWeight:    900,
-            color:         '#fff',
-            letterSpacing: '-0.03em',
-            lineHeight:    0.95,
-            margin:        0,
-          }}
-        >
-          {business.nameLine1}
-        </h1>
-        <h1
-          style={{
-            fontSize:      29,
-            fontWeight:    900,
-            color:         business.primaryColour,
-            letterSpacing: '-0.03em',
-            lineHeight:    0.95,
-            marginBottom:  9,
-          }}
-        >
-          {business.nameLine2}
-        </h1>
+
+        {/* Name row — logo icon (44px) + name text side by side */}
+        <div style={{ display: 'flex', alignItems: 'flex-end', gap: 10, marginBottom: 9 }}>
+          {logoUrl && (
+            <div
+              style={{
+                width:                44,
+                height:               44,
+                borderRadius:         11,
+                overflow:             'hidden',
+                flexShrink:           0,
+                position:             'relative',
+                backdropFilter:       'blur(10px)',
+                WebkitBackdropFilter: 'blur(10px)',
+                border:               '1px solid rgba(255,255,255,0.22)',
+                boxShadow:            '0 4px 14px rgba(0,0,0,0.35)',
+                // Align icon to bottom of the text block
+                marginBottom:         2,
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={logoUrl}
+                alt={business.name}
+                style={{
+                  position:  'absolute',
+                  inset:     0,
+                  width:     '100%',
+                  height:    '100%',
+                  objectFit: 'cover',
+                  display:   'block',
+                  opacity:   0.92,
+                }}
+              />
+              {/* Specular highlight — the glass finish on top of the logo */}
+              <div
+                style={{
+                  position:     'absolute',
+                  top:          0,
+                  left:         0,
+                  right:        0,
+                  height:       '45%',
+                  background:   'linear-gradient(to bottom, rgba(255,255,255,0.28) 0%, transparent 100%)',
+                  borderRadius: '10px 10px 60% 60% / 10px 10px 28px 28px',
+                  pointerEvents: 'none',
+                }}
+              />
+            </div>
+          )}
+
+          <div>
+            <h1
+              style={{
+                fontSize:      29,
+                fontWeight:    900,
+                color:         '#fff',
+                letterSpacing: '-0.03em',
+                lineHeight:    0.95,
+                margin:        0,
+              }}
+            >
+              {business.nameLine1}
+            </h1>
+            <h1
+              style={{
+                fontSize:      29,
+                fontWeight:    900,
+                color:         business.primaryColour,
+                letterSpacing: '-0.03em',
+                lineHeight:    0.95,
+                margin:        0,
+              }}
+            >
+              {business.nameLine2}
+            </h1>
+          </div>
+        </div>
+
         <p style={{ fontSize: 12, color: 'rgba(255,255,255,0.52)', margin: '0 0 10px' }}>
           {business.meta}
         </p>
+
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
           {business.pills.map((pill) => (
             <span
