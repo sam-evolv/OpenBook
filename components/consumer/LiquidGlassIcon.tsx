@@ -26,17 +26,17 @@ export default function LiquidGlassIcon({
       {/* ── Icon shell ── */}
       <div
         style={{
-          width:                68,
-          height:               68,
-          borderRadius:         18,
+          width:                'clamp(68px, 18vw, 76px)',
+          height:               'clamp(68px, 18vw, 76px)',
+          borderRadius:         'clamp(18px, 4.5vw, 20px)',
           position:             'relative',
           overflow:             'hidden',
           flexShrink:           0,
           /* Blurs the wallpaper behind */
           backdropFilter:       'blur(22px)',
           WebkitBackdropFilter: 'blur(22px)',
-          /* Base glass tint */
-          background:           'rgba(255,255,255,0.08)',
+          /* Base glass tint — kept minimal so colour tint reads true */
+          background:           'rgba(255,255,255,0.04)',
           /* Outer ring + depth shadow */
           border:               '1px solid rgba(255,255,255,0.22)',
           boxShadow:            '0 8px 28px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.28)',
@@ -48,7 +48,7 @@ export default function LiquidGlassIcon({
             position:   'absolute',
             inset:      0,
             background: primaryColour,
-            opacity:    0.45,
+            opacity:    0.60,
           }}
         />
 
