@@ -12,6 +12,7 @@ const CONSUMER_PREFIXES = [
   '/explore',
   '/business',
   '/booking',
+  '/consumer-bookings',
   '/wallet',
   '/me',
   '/welcome',

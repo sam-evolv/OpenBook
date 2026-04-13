@@ -8,7 +8,7 @@ type TabId = 'home' | 'explore' | 'bookings' | 'wallet' | 'me'
 const TABS: { id: TabId; label: string; icon: React.ElementType; href: string }[] = [
   { id: 'home',     label: 'OpenBook', icon: Home,          href: '/home'    },
   { id: 'explore',  label: 'Explore',  icon: Search,        href: '/explore' },
-  { id: 'bookings', label: 'Bookings', icon: CalendarDays,  href: '/bookings'},
+  { id: 'bookings', label: 'Bookings', icon: CalendarDays,  href: '/consumer-bookings'},
   { id: 'wallet',   label: 'Wallet',   icon: Wallet,        href: '/wallet'  },
   { id: 'me',       label: 'Me',       icon: User,          href: '/me'      },
 ]
