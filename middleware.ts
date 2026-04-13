@@ -5,11 +5,29 @@ import { createServerClient } from '@supabase/ssr'
 // without a real session during local development.
 const DEV_BYPASS = process.env.NODE_ENV === 'development'
 
+// Consumer app routes — publicly accessible, no auth required.
+// These bypass Supabase entirely (faster, no session overhead).
+const CONSUMER_PREFIXES = [
+  '/home',
+  '/explore',
+  '/business',
+  '/booking',
+  '/wallet',
+  '/me',
+  '/welcome',
+]
+
+function isConsumer(pathname: string) {
+  return CONSUMER_PREFIXES.some(
+    (p) => pathname === p || pathname.startsWith(p + '/')
+  )
+}
+
 // Routes that require an authenticated session.
 const PROTECTED = [
   '/overview', '/calendar', '/bookings', '/services', '/packages',
   '/staff', '/customers', '/analytics', '/messages', '/reviews',
-  '/schedule', '/settings',
+  '/schedule', '/settings', '/onboarding',
 ]
 
 function isProtected(pathname: string) {
@@ -17,6 +35,11 @@ function isProtected(pathname: string) {
 }
 
 export async function middleware(req: NextRequest) {
+  const { pathname } = req.nextUrl
+
+  // Consumer routes are public — skip Supabase entirely.
+  if (isConsumer(pathname)) return NextResponse.next()
+
   const res = NextResponse.next()
 
   // Always refresh the Supabase session cookie so it doesn't expire mid-session.
@@ -43,7 +66,7 @@ export async function middleware(req: NextRequest) {
   if (DEV_BYPASS) return res
 
   // Redirect unauthenticated users away from protected pages.
-  if (!user && isProtected(req.nextUrl.pathname)) {
+  if (!user && isProtected(pathname)) {
     const loginUrl = req.nextUrl.clone()
     loginUrl.pathname = '/login'
     return NextResponse.redirect(loginUrl)
