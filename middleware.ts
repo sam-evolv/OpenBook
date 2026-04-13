@@ -7,9 +7,9 @@ const DEV_BYPASS = process.env.NODE_ENV === 'development'
 
 // ── Consumer public routes ─────────────────────────────────────────────────
 // These are accessible without authentication — bypass Supabase entirely.
-// '/' is the marketing landing page — public, no auth gate.
+// NOTE: '/' is intentionally NOT in this list — it is handled separately
+// below so that authenticated users are redirected to /overview.
 const CONSUMER_PUBLIC = [
-  '/',
   '/home',
   '/explore',
   '/business',
@@ -40,6 +40,36 @@ function matchesPrefix(pathname: string, prefixes: string[]) {
 
 export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
+
+  // ── Landing page: public for guests, redirect to /overview for signed-in ──
+  // Handled here (not in app/page.tsx) because req.cookies is reliable on
+  // Netlify's runtime; cookies() from next/headers is not.
+  if (pathname === '/') {
+    if (DEV_BYPASS) return NextResponse.next()
+    const res = NextResponse.next()
+    try {
+      const supabase = createServerClient(
+        process.env.NEXT_PUBLIC_SUPABASE_URL!,
+        process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+        {
+          cookies: {
+            getAll: () => req.cookies.getAll(),
+            setAll: (cookiesToSet) => {
+              cookiesToSet.forEach(({ name, value, options }) => {
+                req.cookies.set(name, value)
+                res.cookies.set(name, value, options)
+              })
+            },
+          },
+        }
+      )
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) return NextResponse.redirect(new URL('/overview', req.url))
+    } catch {
+      // Auth check failed — serve landing page as normal
+    }
+    return res
+  }
 
   // ── Consumer public routes — no Supabase needed ──
   if (matchesPrefix(pathname, CONSUMER_PUBLIC)) {
