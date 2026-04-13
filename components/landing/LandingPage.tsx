@@ -1,7 +1,9 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { createClient } from '@/lib/supabase/client'
 
 /* ── Design tokens ── */
 const GOLD        = '#D4AF37'
@@ -182,8 +184,17 @@ function PhoneFrame({ width = 320, compact = false }: { width?: number; compact?
    Main component
 ════════════════════════════════════════════════════════════ */
 export default function LandingPage() {
+  const router = useRouter()
   const [scrolled,    setScrolled]    = useState(false)
   const [activeStep,  setActiveStep]  = useState(0)
+
+  // Client-side auth redirect — logged-in users go straight to /overview
+  useEffect(() => {
+    const supabase = createClient()
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) router.replace('/overview')
+    })
+  }, [router])
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
