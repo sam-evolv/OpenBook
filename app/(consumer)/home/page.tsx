@@ -31,7 +31,7 @@ export default function HomePage() {
         <div
           className="sticky top-0 z-20 px-5 pt-12 pb-4"
           style={{
-            background:           'rgba(5,5,26,0.55)',
+            background:           'rgba(8,8,8,0.85)',
             backdropFilter:       'blur(20px)',
             WebkitBackdropFilter: 'blur(20px)',
             borderBottom:         '1px solid rgba(255,255,255,0.06)',
