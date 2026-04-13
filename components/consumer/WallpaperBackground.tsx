@@ -15,7 +15,7 @@ export default function WallpaperBackground({ children, className = '' }: Wallpa
         background: 'linear-gradient(160deg, #0a0a0f 0%, #0d0d14 50%, #080808 100%)',
       }}
     >
-      {/* Subtle gold ambient glow at top */}
+      {/* Subtle gold ambient glow */}
       <div
         className="absolute inset-0 pointer-events-none"
         style={{
