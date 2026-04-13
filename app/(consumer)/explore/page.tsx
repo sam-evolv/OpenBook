@@ -12,49 +12,49 @@ const CATEGORIES = ['All', 'Gym', 'Sauna', 'Salon', 'Barber', 'Massage', 'Physio
 
 /* ── Types ── */
 interface DisplayBusiness {
-  slug: string
-  name: string
-  type: string
-  rating: string
-  priceRange: string
+  slug:          string
+  name:          string
+  type:          string
+  rating:        string
+  priceRange:    string
   primaryColour: string
-  categories: string[]
-  img: string
-  distance?: string
+  categories:    string[]
+  img:           string
+  distance?:     string
 }
 
 function mockToDisplay(b: MockBusiness): DisplayBusiness {
   return {
-    slug:         b.slug,
-    name:         b.name,
-    type:         b.type,
-    rating:       b.rating,
-    priceRange:   b.priceRange,
+    slug:          b.slug,
+    name:          b.name,
+    type:          b.type,
+    rating:        b.rating,
+    priceRange:    b.priceRange,
     primaryColour: b.primaryColour,
-    categories:   b.categories,
-    img:          b.img,
-    distance:     b.distance,
+    categories:    b.categories,
+    img:           b.img,
+    distance:      b.distance,
   }
 }
 
 function dbToDisplay(b: {
-  slug: string
-  name: string
-  category: string
+  slug:           string
+  name:           string
+  category:       string
   primary_colour: string | null
   hero_image_url: string | null
-  city: string | null
+  city:           string | null
 }): DisplayBusiness {
   return {
-    slug:         b.slug,
-    name:         b.name,
-    type:         b.category,
-    rating:       '5.0',
-    priceRange:   '€€',
+    slug:          b.slug,
+    name:          b.name,
+    type:          b.category,
+    rating:        '5.0',
+    priceRange:    '€€',
     primaryColour: b.primary_colour ?? '#D4AF37',
-    categories:   [b.category],
-    img:          b.hero_image_url ?? '',
-    distance:     b.city ?? undefined,
+    categories:    [b.category],
+    img:           b.hero_image_url ?? '',
+    distance:      b.city ?? undefined,
   }
 }
 
@@ -67,18 +67,43 @@ function matchesCategory(b: DisplayBusiness, category: string): boolean {
   )
 }
 
+/* ── Flash Sale pill ── */
+function FlashSalePill() {
+  return (
+    <span
+      style={{
+        display:       'inline-flex',
+        alignItems:    'center',
+        gap:           3,
+        fontSize:      10,
+        fontWeight:    700,
+        color:         '#D4AF37',
+        background:    'rgba(212,175,55,0.15)',
+        border:        '1px solid rgba(212,175,55,0.35)',
+        borderRadius:  100,
+        padding:       '2px 7px',
+        letterSpacing: '0.02em',
+        lineHeight:    1.4,
+        flexShrink:    0,
+      }}
+    >
+      ⚡ Flash sale on now
+    </span>
+  )
+}
+
 /* ── Skeleton card ── */
 function SkeletonCard({ wide }: { wide?: boolean }) {
   if (wide) {
     return (
       <div
         style={{
-          borderRadius:         14,
-          background:           'rgba(255,255,255,0.06)',
-          border:               '1px solid rgba(255,255,255,0.1)',
-          display:              'flex',
-          height:               70,
-          overflow:             'hidden',
+          borderRadius: 14,
+          background:   'rgba(255,255,255,0.06)',
+          border:       '1px solid rgba(255,255,255,0.1)',
+          display:      'flex',
+          height:       70,
+          overflow:     'hidden',
         }}
       >
         <div style={{ width: 70, background: 'rgba(255,255,255,0.08)', flexShrink: 0 }} />
@@ -112,6 +137,7 @@ export default function ExplorePage() {
   const [activeCategory, setActiveCategory] = useState('All')
   const [businesses,     setBusinesses]     = useState<DisplayBusiness[]>([])
   const [loading,        setLoading]        = useState(true)
+  const [flashSaleSlugs, setFlashSaleSlugs] = useState<Set<string>>(new Set())
 
   /* ── Fetch live businesses from Supabase ── */
   useEffect(() => {
@@ -144,6 +170,37 @@ export default function ExplorePage() {
     load()
     return () => { cancelled = true }
   }, [])
+
+  /* ── Fetch active flash sales ── */
+  useEffect(() => {
+    if (loading) return
+    let cancelled = false
+    async function fetchFlashSales() {
+      try {
+        const supabase = createClient()
+        const now = new Date().toISOString()
+
+        const { data: sales } = await supabase
+          .from('flash_sales')
+          .select('businesses:business_id ( slug )')
+          .eq('status', 'active')
+          .gt('expires_at', now)
+
+        if (cancelled) return
+
+        const slugs = new Set<string>()
+        for (const sale of sales ?? []) {
+          const biz = sale.businesses as { slug: string } | null
+          if (biz?.slug) slugs.add(biz.slug)
+        }
+        setFlashSaleSlugs(slugs)
+      } catch {
+        // Silently ignore
+      }
+    }
+    fetchFlashSales()
+    return () => { cancelled = true }
+  }, [loading])
 
   const trendingPool = businesses.slice(0, 4)
   const nearbyPool   = businesses.slice(4)
@@ -278,6 +335,7 @@ export default function ExplorePage() {
           </>
         )}
 
+        {/* Trending grid */}
         {!loading && filteredTrending.length > 0 && (
           <section className="mb-6">
             <p className="section-label mb-3">Trending near you</p>
@@ -293,7 +351,9 @@ export default function ExplorePage() {
                     background:           'rgba(255,255,255,0.06)',
                     backdropFilter:       'blur(14px)',
                     WebkitBackdropFilter: 'blur(14px)',
-                    border:               '1px solid rgba(255,255,255,0.1)',
+                    border:               flashSaleSlugs.has(b.slug)
+                      ? '1px solid rgba(212,175,55,0.4)'
+                      : '1px solid rgba(255,255,255,0.1)',
                   }}
                 >
                   <div style={{ height: 90, position: 'relative', overflow: 'hidden', background: b.img ? undefined : b.primaryColour + '33' }}>
@@ -340,18 +400,21 @@ export default function ExplorePage() {
                     <p style={{ fontSize: 11, color: 'rgba(255,255,255,0.38)', margin: '0 0 5px' }}>
                       {b.type}
                     </p>
-                    <div
-                      style={{
-                        display:    'flex',
-                        alignItems: 'center',
-                        gap:        4,
-                        fontSize:   12,
-                        fontWeight: 700,
-                        color:      '#fff',
-                      }}
-                    >
-                      <Star size={10} fill={b.primaryColour} color={b.primaryColour} />
-                      <span>{b.rating} · {b.priceRange}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4 }}>
+                      <div
+                        style={{
+                          display:    'flex',
+                          alignItems: 'center',
+                          gap:        4,
+                          fontSize:   12,
+                          fontWeight: 700,
+                          color:      '#fff',
+                        }}
+                      >
+                        <Star size={10} fill={b.primaryColour} color={b.primaryColour} />
+                        <span>{b.rating} · {b.priceRange}</span>
+                      </div>
+                      {flashSaleSlugs.has(b.slug) && <FlashSalePill />}
                     </div>
                   </div>
                 </button>
@@ -360,6 +423,7 @@ export default function ExplorePage() {
           </section>
         )}
 
+        {/* All nearby list */}
         {!loading && filteredNearby.length > 0 && (
           <section>
             <p className="section-label mb-3">All nearby</p>
@@ -375,9 +439,11 @@ export default function ExplorePage() {
                     background:           'rgba(255,255,255,0.06)',
                     backdropFilter:       'blur(14px)',
                     WebkitBackdropFilter: 'blur(14px)',
-                    border:               '1px solid rgba(255,255,255,0.1)',
-                    display:              'flex',
-                    flexDirection:        'row',
+                    border:               flashSaleSlugs.has(b.slug)
+                      ? '1px solid rgba(212,175,55,0.4)'
+                      : '1px solid rgba(255,255,255,0.1)',
+                    display:      'flex',
+                    flexDirection: 'row',
                   }}
                 >
                   <div style={{ width: 70, height: 70, flexShrink: 0, background: b.primaryColour + '22' }}>
@@ -423,22 +489,23 @@ export default function ExplorePage() {
                     >
                       {b.name}
                     </p>
-                    <div className="flex gap-1.5 flex-wrap">
-                      {b.categories.slice(0, 3).map((cat) => (
+                    <div className="flex gap-1.5 flex-wrap items-center">
+                      {b.categories.slice(0, 2).map((cat) => (
                         <span
                           key={cat}
                           style={{
-                            fontSize:   10,
-                            color:      'rgba(255,255,255,0.58)',
-                            background: 'rgba(255,255,255,0.09)',
-                            border:     '1px solid rgba(255,255,255,0.13)',
+                            fontSize:     10,
+                            color:        'rgba(255,255,255,0.58)',
+                            background:   'rgba(255,255,255,0.09)',
+                            border:       '1px solid rgba(255,255,255,0.13)',
                             borderRadius: 6,
-                            padding:    '1px 6px',
+                            padding:      '1px 6px',
                           }}
                         >
                           {cat}
                         </span>
                       ))}
+                      {flashSaleSlugs.has(b.slug) && <FlashSalePill />}
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, fontWeight: 600, color: '#fff' }}>
                       <Star size={9} fill={b.primaryColour} color={b.primaryColour} />

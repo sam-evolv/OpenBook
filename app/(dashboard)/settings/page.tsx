@@ -25,6 +25,7 @@ export default async function SettingsPage() {
       {/* Quick links */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {[
+          { href: '/settings/brand', label: 'Brand & logo', desc: 'Upload your logo and set colours' },
           { href: '/settings/hours', label: 'Opening hours', desc: 'Set your weekly schedule' },
           { href: '/settings/payments', label: 'Payments', desc: 'Connect Stripe to accept cards' },
           { href: '/settings/notifications', label: 'Notifications', desc: 'Reminders & alerts' },

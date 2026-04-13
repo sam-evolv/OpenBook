@@ -1,27 +1,84 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
+import { useEffect, useState } from 'react'
 import { Search } from 'lucide-react'
 import WallpaperBackground from '@/components/consumer/WallpaperBackground'
 import GlassDock from '@/components/consumer/GlassDock'
 import LiquidGlassIcon from '@/components/consumer/LiquidGlassIcon'
+import { createClient } from '@/lib/supabase/client'
 
 /* ── Static home-screen data ── */
 const FAVOURITES = [
-  { initials: 'EP', primaryColour: '#D4AF37', label: 'Evolv',      isFavourite: true,  badge: undefined, href: '/business/evolv-performance'  },
-  { initials: 'SW', primaryColour: '#a78bfa', label: 'Saltwater',  isFavourite: true,  badge: 2,         href: '/business/saltwater-sauna'      },
-  { initials: 'NS', primaryColour: '#f472b6', label: 'Nail Studio', isFavourite: true, badge: undefined, href: '/business/the-nail-studio'       },
-  { initials: 'RB', primaryColour: '#34d399', label: 'Refresh',    isFavourite: true,  badge: undefined, href: '/business/refresh-barber'        },
+  { initials: 'EP', primaryColour: '#D4AF37', label: 'Evolv',       isFavourite: true,  badge: undefined, href: '/business/evolv-performance',  slug: 'evolv-performance'  },
+  { initials: 'SW', primaryColour: '#a78bfa', label: 'Saltwater',   isFavourite: true,  badge: 2,         href: '/business/saltwater-sauna',      slug: 'saltwater-sauna'      },
+  { initials: 'NS', primaryColour: '#f472b6', label: 'Nail Studio', isFavourite: true,  badge: undefined, href: '/business/the-nail-studio',      slug: 'the-nail-studio'      },
+  { initials: 'RB', primaryColour: '#34d399', label: 'Refresh',     isFavourite: true,  badge: undefined, href: '/business/refresh-barber',       slug: 'refresh-barber'       },
 ]
 
 const MY_PLACES = [
-  { initials: 'CP', primaryColour: '#60a5fa', label: 'Cork Physio',  isFavourite: false, badge: undefined, href: '/business/cork-physio'     },
-  { initials: 'YF', primaryColour: '#fb923c', label: 'Yoga Flow',    isFavourite: false, badge: undefined, href: '/business/yoga-flow-cork'  },
-  { initials: 'IG', primaryColour: 'rgba(255,255,255,0.7)', label: 'Iron Gym', isFavourite: false, badge: 1, href: '/business/iron-gym-cork' },
+  { initials: 'CP', primaryColour: '#60a5fa', label: 'Cork Physio',  isFavourite: false, badge: undefined, href: '/business/cork-physio',     slug: 'cork-physio'     },
+  { initials: 'YF', primaryColour: '#fb923c', label: 'Yoga Flow',    isFavourite: false, badge: undefined, href: '/business/yoga-flow-cork',  slug: 'yoga-flow-cork'  },
+  { initials: 'IG', primaryColour: 'rgba(255,255,255,0.7)', label: 'Iron Gym', isFavourite: false, badge: 1, href: '/business/iron-gym-cork', slug: 'iron-gym-cork' },
 ]
+
+const ALL_PLACES = [...FAVOURITES, ...MY_PLACES]
 
 export default function HomePage() {
   const router = useRouter()
+  // Set of slugs that have an active flash sale
+  const [flashSaleSlugs, setFlashSaleSlugs] = useState<Set<string>>(new Set())
+  // Map of slug → processed logo URL
+  const [logoUrls, setLogoUrls] = useState<Record<string, string>>({})
+
+  /* ── Fetch active flash sales for all displayed businesses ── */
+  useEffect(() => {
+    let cancelled = false
+    async function fetchFlashSales() {
+      try {
+        const supabase = createClient()
+        const slugs = ALL_PLACES.map((p) => p.slug)
+
+        // Fetch all businesses in one query — include logo_url
+        const { data: bizList } = await supabase
+          .from('businesses')
+          .select('id, slug, logo_url')
+          .in('slug', slugs)
+
+        if (cancelled || !bizList || bizList.length === 0) return
+
+        // Build logo URL map
+        const logos: Record<string, string> = {}
+        for (const biz of bizList) {
+          if (biz.logo_url) logos[biz.slug] = biz.logo_url
+        }
+        if (!cancelled) setLogoUrls(logos)
+
+        const now = new Date().toISOString()
+
+        // Check for active flash sales for all businesses in one query
+        const { data: sales } = await supabase
+          .from('flash_sales')
+          .select('business_id, businesses:business_id ( slug )')
+          .in('business_id', bizList.map((b) => b.id))
+          .eq('status', 'active')
+          .gt('expires_at', now)
+
+        if (cancelled) return
+
+        const activeSlugs = new Set<string>()
+        for (const sale of sales ?? []) {
+          const biz = sale.businesses as { slug: string } | null
+          if (biz?.slug) activeSlugs.add(biz.slug)
+        }
+        setFlashSaleSlugs(activeSlugs)
+      } catch {
+        // Silently ignore — badges are a nice-to-have
+      }
+    }
+    fetchFlashSales()
+    return () => { cancelled = true }
+  }, [])
 
   return (
     <WallpaperBackground>
@@ -103,7 +160,9 @@ export default function HomePage() {
                   primaryColour={item.primaryColour}
                   label={item.label}
                   isFavourite={item.isFavourite}
-                  badge={item.badge}
+                  badge={flashSaleSlugs.has(item.slug) ? undefined : item.badge}
+                  flashSale={flashSaleSlugs.has(item.slug)}
+                  logoUrl={logoUrls[item.slug] ?? null}
                   onClick={() => router.push(item.href)}
                 />
               </div>
@@ -140,7 +199,9 @@ export default function HomePage() {
                   primaryColour={item.primaryColour}
                   label={item.label}
                   isFavourite={item.isFavourite}
-                  badge={item.badge}
+                  badge={flashSaleSlugs.has(item.slug) ? undefined : item.badge}
+                  flashSale={flashSaleSlugs.has(item.slug)}
+                  logoUrl={logoUrls[item.slug] ?? null}
                   onClick={() => router.push(item.href)}
                 />
               </div>
