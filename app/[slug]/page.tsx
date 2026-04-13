@@ -2,16 +2,25 @@ import { notFound } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import BusinessBookingPage from '@/components/public/BusinessBookingPage'
 
-// Slugs that belong to app routes or static files — never hit Supabase.
+// Slugs that belong to app routes, static files, or common attack probes —
+// short-circuit to notFound() without touching Supabase.
 const RESERVED = new Set([
   'favicon.ico', 'favicon.png', 'robots.txt', 'sitemap.xml',
   'admin', 'api', 'login', 'signup', 'home', 'explore', 'overview',
   'onboarding', 'settings', 'booking', 'bookings', 'wallet', 'me',
-  'welcome', 'health', '.env', 'index.html', 'checkout', 'pricing', 'shop',
+  'welcome', 'health', 'index.html', 'checkout', 'pricing', 'shop',
+  'donate', 'register', 'billing', 'payment', 'account',
+  'trace.axd', 'swagger.json', 'swagger-ui.html',
+  'info.php', 'config.json', '.env', 'nodesync', 'exec',
 ])
 
 function isReserved(slug: string): boolean {
-  return RESERVED.has(slug) || slug.includes('.') || slug.startsWith('_')
+  return (
+    RESERVED.has(slug) ||
+    slug.includes('.') ||
+    slug.startsWith('_') ||
+    slug.startsWith('.')
+  )
 }
 
 interface Props {
