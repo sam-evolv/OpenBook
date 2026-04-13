@@ -646,7 +646,7 @@ export default function LandingPage() {
           </h2>
           <p style={{ fontSize: 19, color: 'rgba(255,255,255,0.50)', margin: '0 0 36px' }}>
             Get your page live in 15 minutes.<br />
-            Join Cork businesses already on OpenBook.
+            Join businesses already on OpenBook.
           </p>
           <Link
             href="/onboarding"
