@@ -1,6 +1,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { RevenueChart } from '@/components/dashboard/RevenueChart'
+import { AiInsights } from '@/components/dashboard/AiInsights'
 import { formatPrice, formatTime } from '@/lib/utils'
 import {
   DollarSign, CalendarCheck, Users, Clock,
@@ -106,6 +107,9 @@ export default async function OverviewPage() {
           trend={{ value: 'Confirmed bookings', direction: 'neutral' }}
         />
       </div>
+
+      {/* AI Insights */}
+      <AiInsights />
 
       {/* Main row */}
       <div className="flex gap-6">
