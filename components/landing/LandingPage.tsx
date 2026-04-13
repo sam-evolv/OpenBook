@@ -136,7 +136,6 @@ function PhoneFrame({ width = 320, compact = false }: { width?: number; compact?
   const pad = compact ? 16 : 28
   const iconSize = compact ? 38 : 52
   const wordmarkSize = compact ? 11 : 14
-  const labelSize = compact ? 8 : 11
   const sectionFontSize = compact ? 8 : 11
   const dockHeight = compact ? 40 : 52
 
@@ -185,7 +184,6 @@ function PhoneFrame({ width = 320, compact = false }: { width?: number; compact?
 export default function LandingPage() {
   const [scrolled,    setScrolled]    = useState(false)
   const [activeStep,  setActiveStep]  = useState(0)
-  const [mobileOpen,  setMobileOpen]  = useState(false)
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 20)
