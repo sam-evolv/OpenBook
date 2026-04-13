@@ -273,7 +273,7 @@ export default function LandingPage() {
           >
             <span style={{ display: 'inline-block', width: 6, height: 6, borderRadius: '50%', background: GOLD }} />
             <span style={{ fontSize: 12, fontWeight: 700, color: GOLD, letterSpacing: '0.08em', textTransform: 'uppercase' }}>
-              Now live · Cork, Ireland
+              Now live · Ireland
             </span>
           </div>
 
@@ -297,7 +297,7 @@ export default function LandingPage() {
 
           {/* Sub */}
           <p style={{ fontSize: 20, color: 'rgba(255,255,255,0.55)', maxWidth: 540, lineHeight: 1.65, marginTop: 24, textAlign: 'center' }}>
-            Give your Cork business a beautiful booking page and a home screen icon on every customer&apos;s phone. No marketplace. No fees on each booking.
+            Give your business a beautiful booking page and a home screen icon on every customer&apos;s phone. No marketplace. No fees on each booking.
           </p>
 
           {/* CTA row */}
@@ -609,13 +609,13 @@ export default function LandingPage() {
             Why OpenBook
           </p>
           <h2 style={{ fontSize: 'clamp(26px, 3.5vw, 36px)', fontWeight: 800, color: '#fff', margin: '0 0 28px' }}>
-            Built in Cork, for Cork businesses
+            Built in Ireland, for local businesses
           </h2>
 
           <div style={{ fontSize: 18, color: 'rgba(255,255,255,0.55)', lineHeight: 1.75 }}>
             <p style={{ marginTop: 0 }}>OpenBook wasn&apos;t designed in a startup lab.</p>
             <p>
-              It was built because booking a session at a local Cork gym or salon shouldn&apos;t
+              It was built because booking a session at a local gym or salon shouldn&apos;t
               require Instagram DMs, phone calls, or third-party apps taking a cut of every transaction.
             </p>
             <p style={{ marginBottom: 0 }}>
@@ -646,7 +646,7 @@ export default function LandingPage() {
           </h2>
           <p style={{ fontSize: 19, color: 'rgba(255,255,255,0.50)', margin: '0 0 36px' }}>
             Get your page live in 15 minutes.<br />
-            Join Cork businesses already on OpenBook.
+            Join businesses already on OpenBook.
           </p>
           <Link
             href="/onboarding"
@@ -672,7 +672,7 @@ export default function LandingPage() {
                 OpenBook<span style={{ color: GOLD, marginLeft: 2 }}>AI</span>
               </div>
               <p style={{ fontSize: 14, color: 'rgba(255,255,255,0.40)', lineHeight: 1.65, margin: '0 0 12px', maxWidth: 220 }}>
-                The booking platform for Cork businesses.
+                The booking platform for local businesses.
               </p>
               <a href="mailto:sam@openbook.ie" style={{ fontSize: 14, color: 'rgba(255,255,255,0.35)', textDecoration: 'none' }}>
                 sam@openbook.ie
