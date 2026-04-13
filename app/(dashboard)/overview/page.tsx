@@ -3,7 +3,7 @@ import { StatCard } from '@/components/dashboard/StatCard'
 import { RevenueChart } from '@/components/dashboard/RevenueChart'
 import { formatPrice, formatTime } from '@/lib/utils'
 import {
-  DollarSign, CalendarCheck, Users, Clock,
+  DollarSign, CalendarCheck, Users, Clock, Zap,
 } from 'lucide-react'
 import { tokens } from '@/lib/types'
 import { startOfDay, endOfDay, subDays, format } from 'date-fns'
@@ -70,6 +70,19 @@ export default async function OverviewPage() {
     .eq('business_id', business.id)
     .eq('status', 'confirmed')
     .gte('starts_at', now.toISOString())
+
+  // Flash sale history — last 30 days
+  const { data: flashSales } = await supabase
+    .from('flash_sales')
+    .select(`
+      id, created_at, sale_price_cents, original_price_cents,
+      discount_percent, bookings_taken, max_bookings, status, expires_at,
+      services:service_id ( name )
+    `)
+    .eq('business_id', business.id)
+    .gte('created_at', subDays(now, 30).toISOString())
+    .order('created_at', { ascending: false })
+    .limit(10)
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -185,6 +198,123 @@ export default async function OverviewPage() {
             <RevenueChart data={weeklyRevenue} />
           </div>
         </div>
+      </div>
+
+      {/* ── Flash Sale History ── */}
+      <div
+        className="rounded-premium"
+        style={{ background: tokens.surface1, border: `1px solid ${tokens.border}` }}
+      >
+        <div
+          className="flex items-center gap-2.5 px-5 py-4"
+          style={{ borderBottom: `1px solid ${tokens.border}` }}
+        >
+          <Zap size={15} fill={tokens.gold} color={tokens.gold} />
+          <div>
+            <h2 className="text-sm font-semibold text-white">Flash Sales</h2>
+            <p className="text-xs mt-0.5" style={{ color: tokens.text2 }}>
+              Last 30 days · {flashSales?.length ?? 0} campaigns
+            </p>
+          </div>
+        </div>
+
+        {(!flashSales || flashSales.length === 0) ? (
+          <div className="px-5 py-10 text-center">
+            <Zap size={28} className="mx-auto mb-3 opacity-20" color={tokens.gold} />
+            <p className="text-sm" style={{ color: tokens.text3 }}>No flash sales yet</p>
+            <p className="text-xs mt-1" style={{ color: tokens.text3 }}>
+              Use the ⚡ Flash Sale button above to push your first offer.
+            </p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr style={{ borderBottom: `1px solid ${tokens.border}` }}>
+                  {['Service', 'Discount', 'Slots filled', 'Revenue', 'Sent'].map((h) => (
+                    <th
+                      key={h}
+                      className="px-5 py-3 text-left text-[11px] font-semibold uppercase tracking-wide"
+                      style={{ color: tokens.text3 }}
+                    >
+                      {h}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y" style={{ borderColor: tokens.border }}>
+                {flashSales.map((sale) => {
+                  const service      = sale.services as { name: string } | null
+                  const revenue      = sale.bookings_taken * sale.sale_price_cents
+                  const isActive     = sale.status === 'active' && new Date(sale.expires_at) > now
+                  const fillRate     = sale.max_bookings > 0
+                    ? Math.round((sale.bookings_taken / sale.max_bookings) * 100)
+                    : 0
+
+                  return (
+                    <tr key={sale.id} className="hover:bg-white/[0.02] transition-colors">
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-2">
+                          {isActive && (
+                            <span
+                              className="shrink-0 inline-flex items-center gap-1 text-[10px] font-bold px-1.5 py-0.5 rounded-md"
+                              style={{ background: `${tokens.gold}18`, color: tokens.gold }}
+                            >
+                              ⚡ Live
+                            </span>
+                          )}
+                          <span className="text-sm font-medium text-white">
+                            {service?.name ?? '—'}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span
+                          className="text-sm font-bold"
+                          style={{ color: tokens.gold }}
+                        >
+                          {sale.discount_percent}% off
+                        </span>
+                        <p className="text-xs mt-0.5" style={{ color: tokens.text3 }}>
+                          {formatPrice(sale.sale_price_cents)} vs {formatPrice(sale.original_price_cents)}
+                        </p>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-2">
+                          <div
+                            className="h-1.5 w-16 rounded-full overflow-hidden"
+                            style={{ background: 'rgba(255,255,255,0.08)' }}
+                          >
+                            <div
+                              className="h-full rounded-full"
+                              style={{
+                                width:      `${fillRate}%`,
+                                background: fillRate === 100 ? '#10b981' : tokens.gold,
+                              }}
+                            />
+                          </div>
+                          <span className="text-sm text-white">
+                            {sale.bookings_taken}/{sale.max_bookings}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className="text-sm font-semibold text-white">
+                          {revenue > 0 ? formatPrice(revenue) : '—'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className="text-sm" style={{ color: tokens.text2 }}>
+                          {format(new Date(sale.created_at!), 'dd MMM, HH:mm')}
+                        </span>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   )

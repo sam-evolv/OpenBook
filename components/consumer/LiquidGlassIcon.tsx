@@ -1,12 +1,13 @@
 'use client'
 
 interface LiquidGlassIconProps {
-  initials:     string
+  initials:      string
   primaryColour: string
-  label:        string
-  isFavourite?: boolean
-  badge?:       number
-  onClick?:     () => void
+  label:         string
+  isFavourite?:  boolean
+  badge?:        number
+  flashSale?:    boolean
+  onClick?:      () => void
 }
 
 export default function LiquidGlassIcon({
@@ -15,6 +16,7 @@ export default function LiquidGlassIcon({
   label,
   isFavourite = false,
   badge,
+  flashSale = false,
   onClick,
 }: LiquidGlassIconProps) {
   return (
@@ -112,8 +114,31 @@ export default function LiquidGlassIcon({
           </span>
         </div>
 
-        {/* Badge */}
-        {badge !== undefined && badge > 0 && (
+        {/* Flash Sale badge — ⚡ in red, takes priority */}
+        {flashSale && (
+          <div
+            style={{
+              position:       'absolute',
+              top:            4,
+              right:          4,
+              width:          20,
+              height:         20,
+              borderRadius:   10,
+              background:     '#ef4444',
+              border:         '1.5px solid rgba(5,5,26,0.6)',
+              display:        'flex',
+              alignItems:     'center',
+              justifyContent: 'center',
+              fontSize:       11,
+              lineHeight:     1,
+            }}
+          >
+            ⚡
+          </div>
+        )}
+
+        {/* Numeric badge */}
+        {!flashSale && badge !== undefined && badge > 0 && (
           <div
             style={{
               position:       'absolute',
