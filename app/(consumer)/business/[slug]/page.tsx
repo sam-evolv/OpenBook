@@ -147,7 +147,14 @@ export default function BusinessPage() {
               <ServiceRow
                 key={service.name}
                 service={service}
-                onClick={() => router.push(`/booking/${slugify(service.name)}`)}
+                onClick={() => {
+                  const qs = new URLSearchParams({
+                    business: business.name,
+                    price:    String(service.price).replace(/[^0-9.]/g, ''),
+                    colour:   business.primaryColour,
+                  })
+                  router.push(`/booking/${slugify(service.name)}?${qs.toString()}`)
+                }}
               />
             ))
           )}
@@ -225,7 +232,15 @@ export default function BusinessPage() {
           }}
         >
           <button
-            onClick={() => router.push(`/booking/${firstServiceSlug}`)}
+            onClick={() => {
+              const firstService = business.services[0]
+              const qs = new URLSearchParams({
+                business: business.name,
+                price:    firstService ? String(firstService.price).replace(/[^0-9.]/g, '') : '',
+                colour:   business.primaryColour,
+              })
+              router.push(`/booking/${firstServiceSlug}?${qs.toString()}`)
+            }}
             className="active:scale-[0.97] transition-transform duration-150"
             style={{
               width:        '100%',
