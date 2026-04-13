@@ -10,15 +10,33 @@ export async function generateMetadata({ params }: Props) {
   const supabase = await createClient()
   const { data: business } = await supabase
     .from('businesses')
-    .select('name, description')
+    .select('name, description, hero_image_url, city, category')
     .eq('slug', params.slug)
     .eq('is_live', true)
     .single()
 
   if (!business) return {}
+
+  const title       = `Book ${business.name}`
+  const description = business.description ?? `Book your appointment with ${business.name} in ${business.city ?? 'Ireland'}.`
+
   return {
-    title: `Book ${business.name}`,
-    description: business.description ?? `Book your appointment with ${business.name}`,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type:   'website',
+      images: business.hero_image_url
+        ? [{ url: business.hero_image_url, width: 1200, height: 630, alt: business.name }]
+        : [],
+    },
+    twitter: {
+      card:        'summary_large_image',
+      title,
+      description,
+      images:      business.hero_image_url ? [business.hero_image_url] : [],
+    },
   }
 }
 

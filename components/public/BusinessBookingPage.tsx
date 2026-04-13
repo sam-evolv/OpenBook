@@ -205,6 +205,28 @@ export default function BusinessBookingPage({ business, services, reviews, staff
           </section>
         )}
       </div>
+
+      {/* ── Powered by footer ── */}
+      <div
+        style={{
+          borderTop:  '1px solid rgba(255,255,255,0.07)',
+          padding:    '20px 16px',
+          textAlign:  'center',
+        }}
+      >
+        <p
+          style={{
+            fontSize:      12,
+            color:         'rgba(255,255,255,0.22)',
+            margin:        0,
+            letterSpacing: '0.01em',
+          }}
+        >
+          Powered by{' '}
+          <span style={{ color: 'rgba(255,255,255,0.38)', fontWeight: 600 }}>OpenBook</span>
+          <span style={{ color: '#D4AF37', fontWeight: 600 }}> AI</span>
+        </p>
+      </div>
     </div>
   )
 }
