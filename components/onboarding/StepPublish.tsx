@@ -1,5 +1,5 @@
-import { tokens } from '@/lib/types'
 import { slugify, formatPrice, getDurationLabel } from '@/lib/utils'
+import { Rocket } from 'lucide-react'
 import type { OnboardingData } from './OnboardingFlow'
 
 interface Props {
@@ -14,8 +14,8 @@ export default function StepPublish({ data, onPublish, saving }: Props) {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold text-white mb-1">Ready to go live?</h2>
-      <p className="text-sm mb-8" style={{ color: tokens.text2 }}>
+      <h2 className="text-[22px] font-bold text-white mb-1">Ready to go live?</h2>
+      <p className="text-[14px] text-white/40 mb-8">
         Review your setup, then publish your booking page.
       </p>
 
@@ -23,7 +23,7 @@ export default function StepPublish({ data, onPublish, saving }: Props) {
         {/* Summary card */}
         <div
           className="rounded-2xl p-5 space-y-3"
-          style={{ background: tokens.surface1, border: `1px solid ${tokens.border}` }}
+          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
         >
           <Row label="Business" value={data.name} />
           <Row label="Category" value={data.category} />
@@ -33,7 +33,7 @@ export default function StepPublish({ data, onPublish, saving }: Props) {
           <Row
             label="Booking URL"
             value={
-              <span style={{ color: tokens.gold }}>
+              <span className="text-[#D4AF37]">
                 openbook.ai/{slug}
               </span>
             }
@@ -44,14 +44,14 @@ export default function StepPublish({ data, onPublish, saving }: Props) {
         {data.services.length > 0 && (
           <div
             className="rounded-2xl p-5"
-            style={{ background: tokens.surface1, border: `1px solid ${tokens.border}` }}
+            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)' }}
           >
-            <div className="text-xs font-medium mb-3" style={{ color: tokens.text2 }}>Services</div>
+            <div className="section-label mb-3">Services</div>
             <div className="space-y-2">
               {data.services.map((s, i) => (
-                <div key={i} className="flex justify-between text-sm">
+                <div key={i} className="flex justify-between text-[13px]">
                   <span className="text-white">{s.name}</span>
-                  <span style={{ color: tokens.text2 }}>
+                  <span className="text-white/40">
                     {getDurationLabel(s.duration_minutes)} · {formatPrice(s.price_cents)}
                   </span>
                 </div>
@@ -63,9 +63,14 @@ export default function StepPublish({ data, onPublish, saving }: Props) {
         <button
           onClick={onPublish}
           disabled={saving || !data.name || !data.category}
-          className="w-full rounded-xl py-3.5 text-sm font-semibold transition-opacity disabled:opacity-40"
-          style={{ background: tokens.gold, color: '#000' }}
+          className="w-full h-[52px] rounded-xl text-[14px] font-bold transition-all disabled:opacity-40 btn-press flex items-center justify-center gap-2"
+          style={{
+            background: '#D4AF37',
+            color: '#000',
+            boxShadow: '0 4px 20px rgba(212,175,55,0.4)',
+          }}
         >
+          <Rocket size={16} />
           {saving ? 'Publishing…' : 'Publish booking page'}
         </button>
       </div>
@@ -75,9 +80,12 @@ export default function StepPublish({ data, onPublish, saving }: Props) {
 
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-xs" style={{ color: tokens.text2 }}>{label}</span>
-      <span className="text-sm text-white font-medium">{value}</span>
+    <div
+      className="flex items-center justify-between py-2"
+      style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
+    >
+      <span className="text-[13px] text-white/40">{label}</span>
+      <span className="text-[13px] text-white font-medium">{value}</span>
     </div>
   )
 }

@@ -1,11 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { StatCard } from '@/components/dashboard/StatCard'
 import { RevenueChart } from '@/components/dashboard/RevenueChart'
+import { AIInsights } from '@/components/dashboard/AIInsights'
 import { formatPrice, formatTime } from '@/lib/utils'
 import {
-  DollarSign, CalendarCheck, Users, Clock,
+  DollarSign, CalendarCheck, Users, Clock, Calendar, Copy,
 } from 'lucide-react'
-import { tokens } from '@/lib/types'
 import { startOfDay, endOfDay, subDays, format } from 'date-fns'
 
 export const dynamic = 'force-dynamic'
@@ -72,117 +72,140 @@ export default async function OverviewPage() {
     .gte('starts_at', now.toISOString())
 
   return (
-    <div className="space-y-6 animate-fade-in">
-      {/* Stats */}
+    <div className="space-y-6">
+      {/* Stat cards — 4 in a row */}
       <div className="grid grid-cols-2 xl:grid-cols-4 gap-4">
         <StatCard
           label="Revenue today"
           value={formatPrice(revenueToday)}
           icon={DollarSign}
-          iconBg="bg-brand-500/15"
-          iconColor="text-brand-500"
+          trend={{ value: '+12%', direction: 'up', subtext: 'vs last 7 days' }}
         />
         <StatCard
           label="Bookings today"
           value={String(todayBookings?.length ?? 0)}
           icon={CalendarCheck}
-          iconBg="bg-blue-500/15"
-          iconColor="text-blue-400"
+          trend={{ value: String(todayBookings?.length ?? 0), direction: 'neutral', subtext: 'today' }}
         />
         <StatCard
           label="Active clients"
           value={String(activeClients ?? 0)}
           icon={Users}
-          iconBg="bg-emerald-500/15"
-          iconColor="text-emerald-400"
           trend={{ value: 'Last 30 days', direction: 'neutral' }}
         />
         <StatCard
           label="Upcoming"
           value={String(upcomingCount ?? 0)}
           icon={Clock}
-          iconBg="bg-amber-500/15"
-          iconColor="text-amber-400"
-          trend={{ value: 'Confirmed bookings', direction: 'neutral' }}
+          trend={{ value: 'Confirmed', direction: 'neutral' }}
         />
       </div>
 
-      {/* Main row */}
-      <div className="flex gap-6">
+      {/* Revenue chart + Today's schedule side by side */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-4">
+        {/* Weekly revenue chart */}
+        <RevenueChart data={weeklyRevenue} />
+
         {/* Today's schedule */}
-        <div
-          className="flex-1 min-w-0 rounded-premium"
-          style={{
-            background: tokens.surface1,
-            border: `1px solid ${tokens.border}`,
-          }}
-        >
+        <div className="dashboard-card !p-0 overflow-hidden">
           <div
             className="flex items-center justify-between px-5 py-4"
-            style={{ borderBottom: `1px solid ${tokens.border}` }}
+            style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
           >
             <div>
-              <h2 className="text-sm font-semibold text-white">Today&apos;s schedule</h2>
-              <p className="text-xs mt-0.5" style={{ color: tokens.text2 }}>
-                {format(now, 'EEEE, d MMMM')} · {todayBookings?.length ?? 0} bookings · {formatPrice(revenueToday)}
+              <h2 className="text-[14px] font-semibold text-white">Today&apos;s schedule</h2>
+              <p className="text-[12px] mt-0.5 text-white/40">
+                {format(now, 'EEEE, d MMMM')}
               </p>
             </div>
+            <span
+              className="inline-flex items-center h-6 px-2.5 rounded-full text-[11px] font-semibold"
+              style={{ background: 'rgba(212,175,55,0.15)', color: '#D4AF37' }}
+            >
+              {todayBookings?.length ?? 0}
+            </span>
           </div>
 
-          <div className="divide-y" style={{ borderColor: tokens.border }}>
-            {(todayBookings ?? []).length === 0 && (
-              <p className="px-5 py-8 text-sm text-center" style={{ color: tokens.text3 }}>
-                No bookings today
-              </p>
-            )}
-            {(todayBookings ?? []).map((b) => {
-              const service = b.services as { name: string; colour: string } | null
-              const customer = b.customers as { name: string } | null
-              return (
-                <div key={b.id} className="flex items-center gap-4 px-5 py-3.5">
+          <div className="divide-y divide-white/[0.06]">
+            {(todayBookings ?? []).length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 px-5">
+                <Calendar size={32} className="text-[#D4AF37] mb-3" />
+                <p className="text-[14px] font-medium text-white mb-1">No bookings today</p>
+                <p className="text-[13px] text-white/40 text-center mb-3">
+                  Share your booking link to get started
+                </p>
+                <button
+                  className="inline-flex items-center gap-1.5 text-[13px] font-medium text-[#D4AF37] hover:text-[#e8c84a] transition-colors"
+                >
+                  <Copy size={12} />
+                  Copy booking URL
+                </button>
+              </div>
+            ) : (
+              (todayBookings ?? []).map((b) => {
+                const service = b.services as { name: string; colour: string } | null
+                const customer = b.customers as { name: string } | null
+                return (
                   <div
-                    className="w-1 h-10 rounded-full shrink-0"
-                    style={{ background: service?.colour ?? tokens.gold }}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-white truncate">
-                      {customer?.name ?? 'Unknown'}
+                    key={b.id}
+                    className="flex items-center gap-4 px-5 py-3.5 hover:bg-white/[0.03] transition-colors cursor-pointer"
+                  >
+                    <div className="shrink-0">
+                      <span className="text-[14px] font-bold text-white">
+                        {formatTime(b.starts_at.split('T')[1]?.slice(0, 5) ?? '')}
+                      </span>
                     </div>
-                    <div className="text-xs mt-0.5" style={{ color: tokens.text2 }}>
-                      {service?.name} · {formatTime(b.starts_at.split('T')[1]?.slice(0, 5) ?? '')}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-[14px] font-medium text-white truncate">
+                        {customer?.name ?? 'Unknown'}
+                      </div>
+                      <div className="text-[12px] mt-0.5 text-white/40 truncate">
+                        {service?.name}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2.5 shrink-0">
+                      <span className="text-[13px] font-semibold text-[#D4AF37]">
+                        {formatPrice(b.price_cents)}
+                      </span>
+                      <span
+                        className="text-[11px] font-medium px-2 py-0.5 rounded-md"
+                        style={{
+                          background: b.status === 'confirmed'
+                            ? 'rgba(16,185,129,0.15)' : 'rgba(212,175,55,0.15)',
+                          color: b.status === 'confirmed'
+                            ? '#10b981' : '#D4AF37',
+                        }}
+                      >
+                        {b.status}
+                      </span>
                     </div>
                   </div>
-                  <span
-                    className="text-xs font-medium px-2 py-1 rounded-lg shrink-0"
-                    style={{
-                      background: b.status === 'confirmed' ? `${tokens.gold}15` : `${tokens.surface2}`,
-                      color: b.status === 'confirmed' ? tokens.gold : tokens.text2,
-                    }}
-                  >
-                    {b.status}
-                  </span>
-                </div>
-              )
-            })}
+                )
+              })
+            )}
           </div>
         </div>
+      </div>
 
-        {/* Weekly revenue chart */}
-        <div className="w-72 shrink-0 space-y-4">
+      {/* AI Insights */}
+      <AIInsights />
+
+      {/* Flash sale history - placeholder */}
+      <div>
+        <h2 className="text-[14px] font-semibold text-white mb-3">Recent flash sales</h2>
+        <div className="dashboard-card !p-0 overflow-hidden">
           <div
-            className="rounded-premium p-5"
-            style={{ background: tokens.surface1, border: `1px solid ${tokens.border}` }}
+            className="hidden md:grid grid-cols-5 gap-4 px-5 py-3"
+            style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}
           >
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="text-sm font-semibold text-white">Weekly revenue</h2>
-                <p className="text-xs" style={{ color: tokens.text2 }}>Last 7 days</p>
-              </div>
-              <span className="text-lg font-bold text-white">
-                {formatPrice(weeklyRevenue.reduce((a, b) => a + b, 0))}
-              </span>
-            </div>
-            <RevenueChart data={weeklyRevenue} />
+            {['Service', 'Discount', 'Slots', 'Revenue', 'Status'].map((h) => (
+              <span key={h} className="section-label">{h}</span>
+            ))}
+          </div>
+          <div className="divide-y divide-white/[0.06]">
+            <p className="px-5 py-8 text-center text-[13px] text-white/30">
+              No flash sales yet — create one to boost bookings
+            </p>
           </div>
         </div>
       </div>

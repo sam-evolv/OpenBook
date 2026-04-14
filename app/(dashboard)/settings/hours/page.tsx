@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { tokens } from '@/lib/types'
 
 const DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
@@ -41,7 +40,6 @@ export default function HoursPage() {
       if (data && data.length > 0) {
         setHours(data as HourRow[])
       } else {
-        // Defaults
         setHours(
           Array.from({ length: 7 }, (_, i) => ({
             day_of_week: i,
@@ -62,7 +60,6 @@ export default function HoursPage() {
   async function save() {
     if (!businessId) return
     setSaving(true)
-    // Upsert all rows
     await supabase.from('business_hours').upsert(
       hours.map((h) => ({ ...h, business_id: businessId })),
       { onConflict: 'id' }
@@ -73,30 +70,31 @@ export default function HoursPage() {
   }
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-white">Opening hours</h1>
+        <div>
+          <h2 className="text-[15px] font-semibold text-white">Opening Hours</h2>
+          <p className="text-[13px] text-white/40 mt-0.5">Set when customers can book appointments</p>
+        </div>
         <button
           onClick={save}
           disabled={saving}
-          className="px-4 py-2 rounded-xl text-sm font-semibold disabled:opacity-50"
-          style={{ background: tokens.gold, color: '#000' }}
+          className="h-9 px-4 rounded-xl text-[13px] font-semibold disabled:opacity-50 transition-all btn-press"
+          style={{ background: '#D4AF37', color: '#000' }}
         >
           {saved ? 'Saved!' : saving ? 'Saving…' : 'Save hours'}
         </button>
       </div>
 
-      <div
-        className="rounded-2xl overflow-hidden"
-        style={{ background: tokens.surface1, border: `1px solid ${tokens.border}` }}
-      >
-        <div className="divide-y" style={{ borderColor: tokens.border }}>
+      <div className="dashboard-card !p-0 overflow-hidden">
+        <div className="divide-y divide-white/[0.06]">
           {hours.map((h) => (
             <div key={h.day_of_week} className="flex items-center gap-4 px-5 py-4">
+              {/* Toggle */}
               <button
                 onClick={() => update(h.day_of_week, { is_open: !h.is_open })}
                 className="w-10 h-5 rounded-full transition-colors relative shrink-0"
-                style={{ background: h.is_open ? tokens.gold : tokens.surface2 }}
+                style={{ background: h.is_open ? '#D4AF37' : 'rgba(255,255,255,0.08)' }}
               >
                 <span
                   className="absolute top-0.5 w-4 h-4 rounded-full bg-white transition-transform"
@@ -104,9 +102,10 @@ export default function HoursPage() {
                 />
               </button>
 
+              {/* Day name */}
               <span
-                className="w-24 text-sm font-medium"
-                style={{ color: h.is_open ? tokens.text1 : tokens.text3 }}
+                className="w-28 text-[14px] font-medium"
+                style={{ color: h.is_open ? '#fff' : 'rgba(255,255,255,0.35)' }}
               >
                 {DAYS[h.day_of_week]}
               </span>
@@ -117,20 +116,26 @@ export default function HoursPage() {
                     type="time"
                     value={h.open_time}
                     onChange={(e) => update(h.day_of_week, { open_time: e.target.value })}
-                    className="rounded-lg px-3 py-1.5 text-sm text-white outline-none"
-                    style={{ background: tokens.surface2, border: `1px solid ${tokens.border2}` }}
+                    className="rounded-lg px-3 py-1.5 text-[13px] text-white outline-none gold-focus-ring"
+                    style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                    }}
                   />
-                  <span className="text-xs" style={{ color: tokens.text3 }}>to</span>
+                  <span className="text-[12px] text-white/30">to</span>
                   <input
                     type="time"
                     value={h.close_time}
                     onChange={(e) => update(h.day_of_week, { close_time: e.target.value })}
-                    className="rounded-lg px-3 py-1.5 text-sm text-white outline-none"
-                    style={{ background: tokens.surface2, border: `1px solid ${tokens.border2}` }}
+                    className="rounded-lg px-3 py-1.5 text-[13px] text-white outline-none gold-focus-ring"
+                    style={{
+                      background: 'rgba(255,255,255,0.04)',
+                      border: '1px solid rgba(255,255,255,0.08)',
+                    }}
                   />
                 </div>
               ) : (
-                <span className="ml-auto text-xs" style={{ color: tokens.text3 }}>Closed</span>
+                <span className="ml-auto text-[12px] text-white/30">Closed</span>
               )}
             </div>
           ))}
