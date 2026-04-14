@@ -42,7 +42,7 @@ export default function BusinessHero({
         style={{
           position:   'absolute',
           inset:      0,
-          background: business.heroGradient,
+          background: 'linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(8,8,8,0.95) 100%)',
           zIndex:     1,
         }}
       />
