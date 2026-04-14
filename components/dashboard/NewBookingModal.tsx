@@ -58,10 +58,18 @@ export function NewBookingModal({ open, onClose, services = [], customers = [] }
   return (
     <Dialog.Root open={open} onOpenChange={(v) => !v && handleClose()}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm data-[state=open]:animate-fade-in" />
+        <Dialog.Overlay
+          className="fixed inset-0 z-50 data-[state=open]:animate-fade-in"
+          style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}
+        />
         <Dialog.Content
-          className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 w-full max-w-md rounded-2xl p-6 data-[state=open]:animate-slide-up focus:outline-none"
-          style={{ background: '#111111', border: '1px solid rgba(255,255,255,0.14)' }}
+          className="fixed left-1/2 top-1/2 z-50 -translate-x-1/2 -translate-y-1/2 w-full max-w-md data-[state=open]:animate-slide-up focus:outline-none"
+          style={{
+            background: '#111111',
+            border: '1px solid rgba(255,255,255,0.08)',
+            borderRadius: 20,
+            padding: 28,
+          }}
         >
           <div className="flex items-center justify-between mb-5">
             <Dialog.Title className="text-[15px] font-semibold text-white">
@@ -69,7 +77,7 @@ export function NewBookingModal({ open, onClose, services = [], customers = [] }
             </Dialog.Title>
             <Dialog.Close
               onClick={handleClose}
-              className="flex items-center justify-center w-7 h-7 rounded-xl text-white/40 hover:text-white hover:bg-white/10 transition-all"
+              className="flex items-center justify-center w-7 h-7 rounded-lg text-white/40 hover:text-white hover:bg-white/10 transition-all"
             >
               <X size={14} />
             </Dialog.Close>
@@ -81,7 +89,7 @@ export function NewBookingModal({ open, onClose, services = [], customers = [] }
                 <select
                   value={selectedCustomerId}
                   onChange={(e) => setSelectedCustomerId(e.target.value)}
-                  className="select"
+                  className="modal-input"
                 >
                   <option value="">Select client…</option>
                   {customers.map((c) => (
@@ -99,7 +107,7 @@ export function NewBookingModal({ open, onClose, services = [], customers = [] }
                 <select
                   value={selectedServiceId}
                   onChange={(e) => setSelectedServiceId(e.target.value)}
-                  className="select"
+                  className="modal-input"
                 >
                   <option value="">Select service…</option>
                   {services.map((s) => (
@@ -118,7 +126,7 @@ export function NewBookingModal({ open, onClose, services = [], customers = [] }
                   type="date"
                   value={selectedDate}
                   onChange={(e) => setSelectedDate(e.target.value)}
-                  className="select"
+                  className="modal-input"
                 />
               </Field>
               <Field label="Time">
@@ -126,7 +134,7 @@ export function NewBookingModal({ open, onClose, services = [], customers = [] }
                   type="time"
                   value={selectedTime}
                   onChange={(e) => setSelectedTime(e.target.value)}
-                  className="select"
+                  className="modal-input"
                 />
               </Field>
             </div>
@@ -137,7 +145,7 @@ export function NewBookingModal({ open, onClose, services = [], customers = [] }
                 onChange={(e) => setNotes(e.target.value)}
                 placeholder="Any notes for this booking…"
                 rows={3}
-                className="select resize-none"
+                className="modal-input resize-none !h-auto !py-2.5"
               />
             </Field>
 
@@ -163,19 +171,24 @@ export function NewBookingModal({ open, onClose, services = [], customers = [] }
               <button
                 type="button"
                 onClick={handleClose}
-                className="flex-1 h-9 rounded-xl text-[13px] font-medium text-white/60 transition-all"
-                style={{ border: '1px solid rgba(255,255,255,0.14)', background: 'transparent' }}
+                className="flex-1 h-10 rounded-xl text-[13px] font-medium text-white/50 transition-all"
+                style={{ border: '1px solid rgba(255,255,255,0.08)' }}
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 className={cn(
-                  'flex-1 h-9 rounded-xl text-[13px] font-semibold transition-all',
+                  'flex-1 h-10 rounded-xl text-[13px] font-semibold transition-all btn-press',
                   selectedCustomerId && selectedServiceId && selectedTime
-                    ? 'bg-brand-500 text-black'
+                    ? 'text-black'
                     : 'bg-white/10 text-white/40 cursor-not-allowed'
                 )}
+                style={
+                  selectedCustomerId && selectedServiceId && selectedTime
+                    ? { background: '#D4AF37', boxShadow: '0 2px 8px rgba(212,175,55,0.3)' }
+                    : undefined
+                }
                 disabled={!selectedCustomerId || !selectedServiceId || !selectedTime}
               >
                 Create Booking
@@ -184,21 +197,25 @@ export function NewBookingModal({ open, onClose, services = [], customers = [] }
           </form>
 
           <style jsx>{`
-            .select {
+            .modal-input {
               width: 100%;
-              height: 36px;
+              height: 40px;
               padding: 0 12px;
-              background: rgba(255,255,255,0.07);
-              border: 1px solid rgba(255,255,255,0.12);
-              border-radius: 12px;
+              background: rgba(255,255,255,0.06);
+              border: 1px solid rgba(255,255,255,0.08);
+              border-radius: 10px;
               color: white;
               font-size: 13px;
               outline: none;
               appearance: none;
+              transition: border-color 150ms ease, box-shadow 150ms ease;
             }
-            .select option { background: #1a1a1a; }
-            .select::placeholder { color: rgba(255,255,255,0.3); }
-            textarea.select { height: auto; padding: 10px 12px; }
+            .modal-input:focus {
+              border-color: rgba(212,175,55,0.4);
+              box-shadow: 0 0 0 3px rgba(212,175,55,0.15);
+            }
+            .modal-input option { background: #1a1a1a; }
+            .modal-input::placeholder { color: rgba(255,255,255,0.3); }
           `}</style>
         </Dialog.Content>
       </Dialog.Portal>
@@ -209,9 +226,7 @@ export function NewBookingModal({ open, onClose, services = [], customers = [] }
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-[11px] font-semibold uppercase tracking-wide mb-1.5" style={{ color: 'rgba(255,255,255,0.4)' }}>
-        {label}
-      </label>
+      <label className="block section-label mb-1.5">{label}</label>
       {children}
     </div>
   )

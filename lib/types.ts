@@ -95,18 +95,42 @@ export interface ReminderTarget {
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 export const tokens = {
+  // Backgrounds
   bg: '#080808',
+  sidebarBg: '#050505',
   surface1: '#111111',
   surface2: '#1a1a1a',
-  border: 'rgba(255,255,255,0.07)',
-  border2: 'rgba(255,255,255,0.14)',
-  text1: '#ffffff',
-  text2: 'rgba(255,255,255,0.55)',
-  text3: 'rgba(255,255,255,0.28)',
+
+  // Borders
+  border: 'rgba(255,255,255,0.06)',
+  borderHover: 'rgba(255,255,255,0.10)',
+  borderGold: 'rgba(212,175,55,0.25)',
+
+  // Gold system
   gold: '#D4AF37',
+  goldMuted: 'rgba(212,175,55,0.7)',
+  goldSubtle: 'rgba(212,175,55,0.08)',
+  goldGlow: '0 0 20px rgba(212,175,55,0.2)',
+
+  // Text hierarchy
+  text1: '#ffffff',
+  text2: 'rgba(255,255,255,0.6)',
+  text3: 'rgba(255,255,255,0.35)',
+  textBody: 'rgba(255,255,255,0.75)',
+
+  // Card pattern
+  cardBg: '#111111',
+  cardBorder: '1px solid rgba(255,255,255,0.06)',
+  cardRadius: 16,
+  cardHoverBorder: 'rgba(255,255,255,0.10)',
+  cardHoverShadow: '0 4px 24px rgba(0,0,0,0.3)',
+
+  // Legacy compat
+  border2: 'rgba(255,255,255,0.14)',
   glassBase: 'rgba(255,255,255,0.11)',
   glassBorder: 'rgba(255,255,255,0.26)',
   glassHighlight: 'rgba(255,255,255,0.38)',
+
   fontWeights: {
     regular: '400',
     medium: '500',

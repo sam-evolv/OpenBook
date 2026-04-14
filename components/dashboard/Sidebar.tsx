@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import {
   LayoutDashboard, Calendar, BookOpen, Users,
   Dumbbell, Package, MessageSquare, Globe, Settings, Star,
+  ChevronDown, MessageCircle,
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -14,11 +15,12 @@ interface NavItem {
   icon:        React.ElementType
   badge?:      number
   badgeColor?: 'gold' | 'red'
+  external?:   boolean
 }
 
 const mainNav: NavItem[] = [
   { label: 'Overview',  href: '/overview',  icon: LayoutDashboard },
-  { label: 'Calendar',  href: '/calendar',  icon: Calendar, badge: 3, badgeColor: 'gold' },
+  { label: 'Calendar',  href: '/calendar',  icon: Calendar },
   { label: 'Bookings',  href: '/bookings',  icon: BookOpen },
   { label: 'Customers', href: '/customers', icon: Users },
 ]
@@ -34,14 +36,15 @@ const commsNav: NavItem[] = [
 ]
 
 const consumerNav: NavItem[] = [
-  { label: 'Booking Page', href: '/evolv-performance', icon: Globe },
+  { label: 'Booking Page',  href: '/evolv-performance', icon: Globe, external: true },
+  { label: 'WhatsApp Bot',  href: '/settings', icon: MessageCircle },
 ]
 
 function CompassIcon() {
   return (
     <svg viewBox="0 0 40 40" width="22" height="22" style={{ flexShrink: 0 }}>
-      <circle cx="20" cy="20" r="16" stroke="#D4AF37" strokeWidth="2.5"  fill="none" />
-      <circle cx="20" cy="20" r="9"  stroke="#D4AF37" strokeWidth="1.5"  fill="none" />
+      <circle cx="20" cy="20" r="16" stroke="#D4AF37" strokeWidth="2.5" fill="none" />
+      <circle cx="20" cy="20" r="9"  stroke="#D4AF37" strokeWidth="1.5" fill="none" />
       <circle cx="20" cy="20" r="3.5" fill="#D4AF37" />
       <line x1="20" y1="4"  x2="20" y2="11" stroke="#D4AF37" strokeWidth="2" strokeLinecap="round" />
       <line x1="20" y1="29" x2="20" y2="36" stroke="#D4AF37" strokeWidth="2" strokeLinecap="round" />
@@ -57,32 +60,34 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
   return (
     <Link
       href={item.href}
+      target={item.external ? '_blank' : undefined}
       className={cn(
-        'group relative flex items-center gap-3 px-3 py-2 rounded-premium text-sm font-medium transition-all duration-150 ease-premium',
+        'group relative flex items-center h-9 px-3 rounded-lg text-[14px] font-medium transition-all duration-150 ease-out',
         isActive
-          ? 'text-brand-500 bg-brand-500/10'
-          : 'text-gray-400 hover:text-gray-200 hover:bg-white/5',
+          ? 'text-[#D4AF37]'
+          : 'text-white/50 hover:text-white/[0.85] hover:bg-white/[0.05]',
       )}
+      style={isActive ? {
+        background: 'rgba(212,175,55,0.1)',
+        borderLeft: '2px solid #D4AF37',
+      } : undefined}
     >
-      {isActive && (
-        <span className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-brand-500 rounded-full" />
-      )}
       <item.icon
         size={16}
         className={cn(
-          'shrink-0 transition-colors duration-150',
-          isActive ? 'text-brand-500' : 'text-gray-500 group-hover:text-gray-300',
+          'shrink-0 mr-2.5 transition-colors duration-150',
+          isActive ? 'text-[#D4AF37]' : 'text-white/30 group-hover:text-white/60',
         )}
       />
-      <span className="flex-1">{item.label}</span>
+      <span className="flex-1 truncate">{item.label}</span>
 
       {item.badge !== undefined && (
         <span
           className={cn(
-            'inline-flex items-center justify-center h-4 min-w-4 px-1 rounded-full text-[10px] font-semibold leading-none',
+            'inline-flex items-center justify-center h-[18px] min-w-[18px] px-1 rounded-full text-[10px] font-semibold leading-none',
             item.badgeColor === 'red'
               ? 'bg-red-500 text-white'
-              : 'bg-brand-500/20 text-brand-500',
+              : 'bg-[rgba(212,175,55,0.2)] text-[#D4AF37]',
           )}
         >
           {item.badge}
@@ -95,7 +100,7 @@ function NavLink({ item, pathname }: { item: NavItem; pathname: string }) {
 function NavSection({ label, items, pathname }: { label: string; items: NavItem[]; pathname: string }) {
   return (
     <div className="space-y-0.5">
-      <p className="px-3 mb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-600">
+      <p className="section-label px-3 mb-1.5">
         {label}
       </p>
       {items.map((item) => (
@@ -109,35 +114,66 @@ export function Sidebar() {
   const pathname = usePathname()
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-40 w-[228px] flex flex-col bg-sidebar border-r border-white/5">
+    <aside
+      className="fixed inset-y-0 left-0 z-40 w-[220px] flex flex-col"
+      style={{
+        background: '#050505',
+        borderRight: '1px solid rgba(255,255,255,0.05)',
+      }}
+    >
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 h-[52px] border-b border-white/5 shrink-0">
+      <div
+        className="flex items-center gap-2.5 px-4 h-14 shrink-0"
+        style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}
+      >
         <CompassIcon />
-        <p className="text-[13px] font-semibold text-white leading-tight tracking-tight">
-          OpenBook AI
+        <p className="text-[13px] font-bold text-white leading-tight tracking-tight">
+          OpenBook<span className="text-[#D4AF37] ml-0.5">AI</span>
         </p>
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 overflow-y-auto scrollbar-none py-4 px-2 space-y-5">
-        <NavSection label="Main"     items={mainNav}    pathname={pathname} />
-        <NavSection label="Revenue"  items={revenueNav} pathname={pathname} />
-        <NavSection label="Comms"    items={commsNav}   pathname={pathname} />
-        <NavSection label="Consumer" items={consumerNav} pathname={pathname} />
+      {/* Business switcher */}
+      <div className="px-3 pt-3 pb-1">
+        <button
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-[10px] transition-colors duration-150 hover:bg-white/[0.07]"
+          style={{ background: 'rgba(255,255,255,0.04)' }}
+        >
+          <div className="flex-1 min-w-0 text-left">
+            <p className="text-[13px] font-medium text-white truncate">Evolv Performance</p>
+            <p className="text-[10px] text-white/35 truncate">Fitness & Wellness</p>
+          </div>
+          <ChevronDown size={14} className="text-white/30 shrink-0" />
+        </button>
+      </div>
+
+      {/* Nav sections */}
+      <nav className="flex-1 overflow-y-auto scrollbar-none py-3 px-2 space-y-5">
+        <NavSection label="Main"     items={mainNav}     pathname={pathname} />
+        <NavSection label="Revenue"  items={revenueNav}  pathname={pathname} />
+        <NavSection label="Comms"    items={commsNav}     pathname={pathname} />
+        <NavSection label="Consumer" items={consumerNav}  pathname={pathname} />
       </nav>
 
-      {/* Footer */}
-      <div className="shrink-0 border-t border-white/5 p-2 space-y-0.5">
-        <div className="flex items-center gap-2.5 px-3 py-2.5 rounded-premium hover:bg-white/5 transition-colors duration-150 cursor-pointer">
-          <div className="flex items-center justify-center w-7 h-7 rounded-[8px] bg-brand-500/20 shrink-0">
-            <span className="text-[11px] font-bold text-brand-500">EP</span>
-          </div>
-          <div className="min-w-0 flex-1">
-            <p className="text-[12px] font-semibold text-gray-200 truncate leading-tight">Evolv Performance</p>
-            <p className="text-[10px] text-gray-600 leading-tight">Pro Plan</p>
-          </div>
-        </div>
+      {/* Bottom: Settings pinned */}
+      <div className="px-2 pb-2">
         <NavLink item={{ label: 'Settings', href: '/settings', icon: Settings }} pathname={pathname} />
+      </div>
+
+      {/* User footer */}
+      <div
+        className="shrink-0 flex items-center gap-2.5 px-4 h-14"
+        style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}
+      >
+        <div
+          className="flex items-center justify-center w-8 h-8 rounded-full shrink-0"
+          style={{ background: '#D4AF37' }}
+        >
+          <span className="text-[11px] font-bold text-black">EP</span>
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-[12px] font-medium text-white/60 truncate">owner@evolv.com</p>
+        </div>
+        <Settings size={14} className="text-white/30 shrink-0 cursor-pointer hover:text-white/60 transition-colors" />
       </div>
     </aside>
   )

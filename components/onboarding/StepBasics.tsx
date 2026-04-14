@@ -1,4 +1,3 @@
-import { tokens } from '@/lib/types'
 import type { OnboardingData } from './OnboardingFlow'
 
 const CATEGORIES = [
@@ -12,8 +11,8 @@ interface Props { data: OnboardingData; update: (p: Partial<OnboardingData>) => 
 export default function StepBasics({ data, update }: Props) {
   return (
     <div>
-      <h2 className="text-2xl font-bold text-white mb-1">Tell us about your business</h2>
-      <p className="text-sm mb-8" style={{ color: tokens.text2 }}>
+      <h2 className="text-[22px] font-bold text-white mb-1">Tell us about your business</h2>
+      <p className="text-[14px] text-white/40 mb-8">
         This appears on your public booking page.
       </p>
 
@@ -24,7 +23,7 @@ export default function StepBasics({ data, update }: Props) {
             value={data.name}
             onChange={(e) => update({ name: e.target.value })}
             placeholder="e.g. Glow Studio"
-            className="field"
+            className="onb-field"
           />
         </Field>
 
@@ -32,7 +31,7 @@ export default function StepBasics({ data, update }: Props) {
           <select
             value={data.category}
             onChange={(e) => update({ category: e.target.value })}
-            className="field"
+            className="onb-field"
           >
             <option value="">Select a category…</option>
             {CATEGORIES.map((c) => (
@@ -47,7 +46,7 @@ export default function StepBasics({ data, update }: Props) {
             onChange={(e) => update({ description: e.target.value })}
             placeholder="What makes you special?"
             rows={3}
-            className="field resize-none"
+            className="onb-field resize-none !h-auto !py-3"
           />
         </Field>
 
@@ -58,7 +57,7 @@ export default function StepBasics({ data, update }: Props) {
               value={data.city}
               onChange={(e) => update({ city: e.target.value })}
               placeholder="Dublin"
-              className="field"
+              className="onb-field"
             />
           </Field>
           <Field label="Address (optional)">
@@ -67,25 +66,32 @@ export default function StepBasics({ data, update }: Props) {
               value={data.address}
               onChange={(e) => update({ address: e.target.value })}
               placeholder="14 Grafton St"
-              className="field"
+              className="onb-field"
             />
           </Field>
         </div>
       </div>
 
       <style jsx>{`
-        .field {
+        .onb-field {
           width: 100%;
-          background: ${tokens.surface2};
-          border: 1px solid ${tokens.border2};
+          height: 44px;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.08);
           border-radius: 12px;
-          padding: 12px 16px;
+          padding: 0 16px;
           color: white;
           font-size: 14px;
           outline: none;
+          transition: border-color 150ms ease, box-shadow 150ms ease;
+          appearance: none;
         }
-        .field::placeholder { color: rgba(255,255,255,0.2); }
-        .field option { background: #1a1a1a; }
+        .onb-field:focus {
+          border-color: rgba(212,175,55,0.4);
+          box-shadow: 0 0 0 3px rgba(212,175,55,0.15);
+        }
+        .onb-field::placeholder { color: rgba(255,255,255,0.25); }
+        .onb-field option { background: #1a1a1a; }
       `}</style>
     </div>
   )
@@ -94,9 +100,7 @@ export default function StepBasics({ data, update }: Props) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <label className="block text-xs font-medium mb-2" style={{ color: tokens.text2 }}>
-        {label}
-      </label>
+      <label className="block section-label mb-2">{label}</label>
       {children}
     </div>
   )

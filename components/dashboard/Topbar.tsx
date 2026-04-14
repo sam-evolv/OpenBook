@@ -1,35 +1,64 @@
 'use client'
 
 import { useState } from 'react'
-import { Bell, Plus } from 'lucide-react'
+import { Plus, Zap } from 'lucide-react'
 import { NewBookingModal } from './NewBookingModal'
+import { FlashSaleModal } from './FlashSaleModal'
 
 interface TopbarProps {
   title: string
 }
 
 export function Topbar({ title }: TopbarProps) {
-  const [modalOpen, setModalOpen] = useState(false)
+  const [bookingModalOpen, setBookingModalOpen] = useState(false)
+  const [flashSaleModalOpen, setFlashSaleModalOpen] = useState(false)
 
   return (
     <>
-      <header className="flex items-center justify-between px-6 h-[52px] border-b border-white/[0.07] bg-surface shrink-0">
-        <h1 className="text-[15px] font-semibold text-white">{title}</h1>
+      <header
+        className="flex items-center justify-between px-6 h-14 shrink-0"
+        style={{
+          background: '#080808',
+          borderBottom: '1px solid rgba(255,255,255,0.05)',
+        }}
+      >
+        <h1 className="text-[16px] font-semibold text-white">{title}</h1>
 
-        <div className="flex items-center gap-3">
-          {/* Notification bell */}
+        <div className="flex items-center gap-2">
+          {/* Flash Sale button */}
           <button
-            className="relative flex items-center justify-center w-8 h-8 rounded-premium text-gray-400 hover:text-gray-200 hover:bg-white/5 transition-all duration-150 ease-premium focus-visible:ring-2 focus-visible:ring-brand-500"
-            aria-label="Notifications"
+            onClick={() => setFlashSaleModalOpen(true)}
+            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[10px] text-[13px] font-semibold transition-all duration-150 btn-press"
+            style={{
+              background: 'rgba(212,175,55,0.1)',
+              border: '1px solid rgba(212,175,55,0.3)',
+              color: '#D4AF37',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(212,175,55,0.15)'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(212,175,55,0.1)'
+            }}
           >
-            <Bell size={16} />
-            <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 rounded-full bg-red-500" />
+            <Zap size={14} />
+            Flash Sale
           </button>
 
-          {/* New Booking */}
+          {/* New Booking button */}
           <button
-            onClick={() => setModalOpen(true)}
-            className="inline-flex items-center gap-1.5 h-8 px-3.5 rounded-premium bg-brand-500 text-[12px] font-semibold text-black hover:bg-brand-600 active:bg-brand-700 transition-all duration-150 ease-premium shadow-gold focus-visible:ring-2 focus-visible:ring-brand-500 focus-visible:ring-offset-2"
+            onClick={() => setBookingModalOpen(true)}
+            className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-[10px] text-[13px] font-bold text-black transition-all duration-150 btn-press"
+            style={{
+              background: '#D4AF37',
+              boxShadow: '0 2px 8px rgba(212,175,55,0.3)',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = '#C9A929'
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = '#D4AF37'
+            }}
           >
             <Plus size={14} strokeWidth={2.5} />
             New Booking
@@ -37,7 +66,8 @@ export function Topbar({ title }: TopbarProps) {
         </div>
       </header>
 
-      <NewBookingModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <NewBookingModal open={bookingModalOpen} onClose={() => setBookingModalOpen(false)} />
+      <FlashSaleModal open={flashSaleModalOpen} onClose={() => setFlashSaleModalOpen(false)} />
     </>
   )
 }

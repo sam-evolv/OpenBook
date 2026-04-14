@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { slugify } from '@/lib/utils'
-import { tokens } from '@/lib/types'
+import { Check } from 'lucide-react'
 import StepBasics from './StepBasics'
 import StepBrand from './StepBrand'
 import StepServices from './StepServices'
@@ -100,19 +100,16 @@ export default function OnboardingFlow({ userId }: { userId: string }) {
       return
     }
 
-    // Insert services
     if (data.services.length > 0) {
       await supabase.from('services').insert(
         data.services.map((s, i) => ({ ...s, business_id: business.id, sort_order: i }))
       )
     }
 
-    // Insert hours
     await supabase.from('business_hours').insert(
       data.hours.map((h) => ({ ...h, business_id: business.id }))
     )
 
-    // Insert packages
     if (data.packages.length > 0) {
       await supabase.from('packages').insert(
         data.packages.map((p) => ({ ...p, business_id: business.id }))
@@ -125,84 +122,114 @@ export default function OnboardingFlow({ userId }: { userId: string }) {
   const stepProps = { data, update }
 
   return (
-    <div className="min-h-screen flex" style={{ background: tokens.bg }}>
-      {/* Sidebar */}
+    <div
+      className="min-h-screen flex flex-col items-center justify-center relative"
+      style={{ background: '#080808' }}
+    >
+      {/* Subtle gold radial glow */}
       <div
-        className="hidden lg:flex flex-col w-64 p-8 gap-2 shrink-0"
-        style={{ borderRight: `1px solid ${tokens.border}` }}
-      >
-        <span className="text-lg font-black mb-8" style={{ color: tokens.gold }}>
-          OpenBook
-        </span>
-        {STEPS.map((label, i) => (
-          <div key={label} className="flex items-center gap-3 py-2">
-            <div
-              className="w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 transition-colors"
-              style={{
-                background: i < step ? tokens.gold : i === step ? `${tokens.gold}20` : tokens.surface2,
-                color: i < step ? '#000' : i === step ? tokens.gold : tokens.text3,
-                border: i === step ? `1px solid ${tokens.gold}` : 'none',
-              }}
-            >
-              {i < step ? '✓' : i + 1}
+        className="absolute top-0 left-0 w-[600px] h-[600px] pointer-events-none"
+        style={{
+          background: 'radial-gradient(circle at 0 0, rgba(212,175,55,0.06) 0%, transparent 60%)',
+        }}
+      />
+
+      {/* Progress stepper */}
+      <div className="relative z-10 flex items-center gap-0 mb-10 px-4">
+        {STEPS.map((label, i) => {
+          const isCompleted = i < step
+          const isCurrent = i === step
+
+          return (
+            <div key={label} className="flex items-center">
+              {/* Step circle */}
+              <div className="flex flex-col items-center">
+                <div
+                  className="w-8 h-8 rounded-full flex items-center justify-center text-[12px] font-bold transition-all duration-200"
+                  style={{
+                    background: isCompleted
+                      ? '#D4AF37'
+                      : isCurrent
+                      ? 'transparent'
+                      : 'rgba(255,255,255,0.06)',
+                    border: isCurrent
+                      ? '2px solid #D4AF37'
+                      : isCompleted
+                      ? '2px solid #D4AF37'
+                      : '2px solid rgba(255,255,255,0.1)',
+                    color: isCompleted
+                      ? '#000'
+                      : isCurrent
+                      ? '#D4AF37'
+                      : 'rgba(255,255,255,0.35)',
+                  }}
+                >
+                  {isCompleted ? <Check size={14} strokeWidth={3} /> : i + 1}
+                </div>
+                <span
+                  className="text-[10px] font-medium mt-1.5 whitespace-nowrap"
+                  style={{
+                    color: isCurrent ? '#D4AF37' : isCompleted ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.25)',
+                  }}
+                >
+                  {label}
+                </span>
+              </div>
+
+              {/* Connecting line */}
+              {i < STEPS.length - 1 && (
+                <div
+                  className="w-12 h-[2px] mx-2 mt-[-16px]"
+                  style={{
+                    background: i < step ? '#D4AF37' : 'rgba(255,255,255,0.08)',
+                  }}
+                />
+              )}
             </div>
-            <span
-              className="text-sm font-medium"
-              style={{ color: i === step ? tokens.text1 : tokens.text3 }}
-            >
-              {label}
-            </span>
-          </div>
-        ))}
+          )
+        })}
       </div>
 
-      {/* Content */}
-      <div className="flex-1 flex flex-col items-center justify-center p-8">
-        <div className="w-full max-w-xl">
-          {/* Mobile step indicator */}
-          <div className="flex gap-1 mb-8 lg:hidden">
-            {STEPS.map((_, i) => (
-              <div
-                key={i}
-                className="h-1 flex-1 rounded-full transition-colors"
-                style={{ background: i <= step ? tokens.gold : tokens.surface2 }}
-              />
-            ))}
-          </div>
-
+      {/* Content card */}
+      <div
+        className="relative z-10 w-full max-w-[560px] mx-auto px-4"
+      >
+        <div
+          className="rounded-[20px] p-9"
+          style={{
+            background: '#111111',
+            border: '1px solid rgba(255,255,255,0.06)',
+          }}
+        >
           {step === 0 && <StepBasics {...stepProps} />}
           {step === 1 && <StepBrand {...stepProps} />}
           {step === 2 && <StepServices {...stepProps} />}
           {step === 3 && <StepHours {...stepProps} />}
           {step === 4 && <StepPackages {...stepProps} />}
           {step === 5 && <StepPublish {...stepProps} onPublish={handlePublish} saving={saving} />}
+        </div>
 
-          {/* Nav buttons */}
-          <div className="flex gap-3 mt-8">
-            {step > 0 && (
-              <button
-                onClick={() => setStep((s) => s - 1)}
-                className="flex-1 rounded-xl py-3 text-sm font-medium transition-colors"
-                style={{
-                  background: tokens.surface2,
-                  color: tokens.text2,
-                  border: `1px solid ${tokens.border}`,
-                }}
-              >
-                Back
-              </button>
-            )}
-            {step < STEPS.length - 1 && (
-              <button
-                onClick={() => setStep((s) => s + 1)}
-                disabled={step === 0 && (!data.name || !data.category)}
-                className="flex-1 rounded-xl py-3 text-sm font-semibold transition-opacity disabled:opacity-40"
-                style={{ background: tokens.gold, color: '#000' }}
-              >
-                Continue
-              </button>
-            )}
-          </div>
+        {/* Nav buttons */}
+        <div className="flex gap-3 mt-6">
+          {step > 0 && (
+            <button
+              onClick={() => setStep((s) => s - 1)}
+              className="text-[14px] font-medium text-white/40 hover:text-white/60 transition-colors"
+            >
+              Back
+            </button>
+          )}
+          <div className="flex-1" />
+          {step < STEPS.length - 1 && (
+            <button
+              onClick={() => setStep((s) => s + 1)}
+              disabled={step === 0 && (!data.name || !data.category)}
+              className="w-full h-[52px] rounded-xl text-[14px] font-semibold transition-all disabled:opacity-40 btn-press"
+              style={{ background: '#D4AF37', color: '#000' }}
+            >
+              Continue
+            </button>
+          )}
         </div>
       </div>
     </div>
