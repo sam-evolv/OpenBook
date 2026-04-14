@@ -230,16 +230,15 @@ export default function WhatsAppSettingsPage() {
         </div>
       )}
 
-      {/* Sandbox note */}
+      {/* Meta Cloud API note */}
       <div
         className="rounded-2xl p-5"
         style={{ background: tokens.surface1, border: `1px solid ${tokens.border}` }}
       >
-        <p className="text-xs font-semibold text-white mb-1">Testing with Twilio Sandbox</p>
+        <p className="text-xs font-semibold text-white mb-1">Powered by Meta Cloud API</p>
         <p className="text-xs" style={{ color: tokens.text2 }}>
-          Before your number is approved by Meta, use the Twilio WhatsApp Sandbox.
-          Send <span className="font-mono" style={{ color: tokens.gold }}>join [sandbox-word]</span> to{' '}
-          <span className="font-mono" style={{ color: tokens.gold }}>+1 415 523 8886</span> to connect.
+          Your WhatsApp number is powered by Meta Cloud API directly — no third-party middleman.
+          Share this number with your customers and they can text to book 24/7.
         </p>
       </div>
     </div>

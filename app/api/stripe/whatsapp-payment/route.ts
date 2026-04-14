@@ -1,25 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { stripe } from '@/lib/stripe'
 import { confirmWhatsAppBooking } from '@/lib/whatsapp-payment'
-import twilio from 'twilio'
+import { sendWhatsAppMessage } from '@/lib/whatsapp-send'
 import { format, parseISO } from 'date-fns'
-
-const accountSid = process.env.TWILIO_ACCOUNT_SID!
-const authToken = process.env.TWILIO_AUTH_TOKEN!
-
-async function sendConfirmation(to: string, body: string): Promise<void> {
-  const client = twilio(accountSid, authToken)
-  const fromNumber = process.env.TWILIO_WHATSAPP_FROM ?? ''
-  try {
-    await client.messages.create({
-      from: fromNumber.startsWith('whatsapp:') ? fromNumber : `whatsapp:${fromNumber}`,
-      to: to.startsWith('whatsapp:') ? to : `whatsapp:${to}`,
-      body,
-    })
-  } catch (err) {
-    console.error('Twilio confirmation send error:', err)
-  }
-}
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const body = await req.text()
@@ -66,7 +49,10 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       `${displayDate} at ${displayTime}\n\n` +
       `Reply CANCEL if anything changes.`
 
-    await sendConfirmation(customerPhone, confirmationMsg)
+    const phoneNumberId = process.env.WHATSAPP_PHONE_NUMBER_ID ?? ''
+    if (phoneNumberId) {
+      await sendWhatsAppMessage({ phoneNumberId, to: customerPhone, message: confirmationMsg })
+    }
   }
 
   return NextResponse.json({ received: true })

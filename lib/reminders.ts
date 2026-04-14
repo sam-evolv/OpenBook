@@ -31,20 +31,6 @@ export async function sendReminder(target: ReminderTarget): Promise<void> {
     })
   }
 
-  // SMS via Twilio (lazy import to avoid build error if not configured)
-  if (customers.phone && process.env.TWILIO_ACCOUNT_SID) {
-    const twilio = (await import('twilio')).default
-    const client = twilio(
-      process.env.TWILIO_ACCOUNT_SID!,
-      process.env.TWILIO_AUTH_TOKEN!
-    )
-    await client.messages.create({
-      body: `${businesses.name}: ${services.name} reminder — ${dateStr} at ${timeStr}. Reply STOP to opt out.`,
-      from: process.env.TWILIO_PHONE_NUMBER!,
-      to: customers.phone,
-    })
-  }
-
   // Push notification (Expo) — fire and forget
   if (customers.expo_push_token) {
     void sendExpoPushNotification(customers.expo_push_token, subject, body)
