@@ -41,17 +41,20 @@ export async function generateMetadata({ params }: Props) {
 
     if (!business) return {}
 
-    const title       = `Book ${business.name}`
-    const description = business.description ?? `Book your appointment with ${business.name} in ${business.city ?? 'Ireland'}.`
+    const title       = `${business.name} | Book online | OpenBook`
+    const description = business.description ??
+      `Book ${business.name} online. ${business.category} in ${business.city ?? 'Ireland'}. Instant booking via OpenBook.`
 
     return {
       title,
       description,
+      keywords: [business.name, business.category, business.city, 'book online', 'OpenBook', 'Ireland'].filter(Boolean),
       openGraph: {
-        title,
-        description,
-        type:   'website',
-        images: business.hero_image_url
+        title:       `Book ${business.name} | OpenBook`,
+        description: business.description ?? description,
+        url:         `https://openbook.ie/${params.slug}`,
+        type:        'website',
+        images:      business.hero_image_url
           ? [{ url: business.hero_image_url, width: 1200, height: 630, alt: business.name }]
           : [],
       },
@@ -60,6 +63,9 @@ export async function generateMetadata({ params }: Props) {
         title,
         description,
         images:      business.hero_image_url ? [business.hero_image_url] : [],
+      },
+      alternates: {
+        canonical: `https://openbook.ie/${params.slug}`,
       },
     }
   } catch {
@@ -106,16 +112,71 @@ export default async function PublicBookingRoute({ params }: Props) {
       ? reviews.reduce((s, r) => s + (r.rating ?? 0), 0) / reviews.length
       : null
 
+  const schema = {
+    '@context': 'https://schema.org',
+    '@type': 'LocalBusiness',
+    name: business.name,
+    ...(business.description && { description: business.description }),
+    url: `https://openbook.ie/${business.slug}`,
+    ...(business.hero_image_url && { image: business.hero_image_url }),
+    ...(business.city && {
+      address: {
+        '@type': 'PostalAddress',
+        addressLocality: business.city,
+        addressCountry: 'IE',
+      },
+    }),
+    ...(services && services.length > 0 && {
+      hasOfferCatalog: {
+        '@type': 'OfferCatalog',
+        name: 'Services',
+        itemListElement: services.map((service) => ({
+          '@type': 'Offer',
+          itemOffered: {
+            '@type': 'Service',
+            name: service.name,
+            offers: {
+              '@type': 'Offer',
+              price: (service.price_cents / 100).toFixed(2),
+              priceCurrency: 'EUR',
+            },
+          },
+        })),
+      },
+    }),
+    potentialAction: {
+      '@type': 'ReserveAction',
+      target: {
+        '@type': 'EntryPoint',
+        urlTemplate: `https://openbook.ie/${business.slug}`,
+        actionPlatform: [
+          'http://schema.org/DesktopWebPlatform',
+          'http://schema.org/MobileWebPlatform',
+        ],
+      },
+      result: {
+        '@type': 'Reservation',
+        name: `Book at ${business.name}`,
+      },
+    },
+  }
+
   return (
-    <BusinessBookingPage
-      business={business}
-      services={services ?? []}
-      reviews={(reviews ?? []).map((r) => ({
-        ...r,
-        customers: { name: (r.customers as { name: string | null } | null)?.name ?? 'Anonymous' },
-      }))}
-      staff={staff ?? []}
-      avgRating={avgRating}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+      />
+      <BusinessBookingPage
+        business={business}
+        services={services ?? []}
+        reviews={(reviews ?? []).map((r) => ({
+          ...r,
+          customers: { name: (r.customers as { name: string | null } | null)?.name ?? 'Anonymous' },
+        }))}
+        staff={staff ?? []}
+        avgRating={avgRating}
+      />
+    </>
   )
 }
