@@ -136,9 +136,10 @@ function SlotPickerContent() {
                   paddingLeft:  14,
                   paddingRight: 14,
                   borderRadius: 20,
-                  background:   isActive ? '#D4AF37' : 'rgba(255,255,255,0.08)',
+                  background:   isActive ? (colourParam || '#D4AF37') : 'rgba(255,255,255,0.08)',
                   border:       isActive ? 'none' : '1px solid rgba(255,255,255,0.13)',
-                  color:        isActive ? '#1a1200' : 'rgba(255,255,255,0.65)',
+                  color:        isActive ? '#fff' : 'rgba(255,255,255,0.65)',
+                  boxShadow:    isActive ? '0 4px 12px rgba(212,175,55,0.4)' : 'none',
                   fontSize:     13,
                   fontWeight:   isActive ? 700 : 500,
                   whiteSpace:   'nowrap',
@@ -159,9 +160,9 @@ function SlotPickerContent() {
               <p
                 style={{
                   fontSize:      11,
-                  fontWeight:    700,
-                  color:         'rgba(255,255,255,0.40)',
-                  letterSpacing: '0.08em',
+                  fontWeight:    600,
+                  color:         '#D4AF37',
+                  letterSpacing: '0.1em',
                   textTransform: 'uppercase',
                   marginBottom:  10,
                 }}
@@ -177,9 +178,9 @@ function SlotPickerContent() {
               <p
                 style={{
                   fontSize:      11,
-                  fontWeight:    700,
-                  color:         'rgba(255,255,255,0.40)',
-                  letterSpacing: '0.08em',
+                  fontWeight:    600,
+                  color:         '#D4AF37',
+                  letterSpacing: '0.1em',
                   textTransform: 'uppercase',
                   marginBottom:  10,
                 }}
@@ -205,11 +206,11 @@ function SlotPickerContent() {
               className="active:scale-[0.97] transition-transform duration-150 w-full"
               style={{
                 height:         52,
-                borderRadius:   16,
-                background:     colourParam || '#D4AF37',
+                borderRadius:   14,
+                background:     '#D4AF37',
                 color:          '#000',
                 fontSize:       16,
-                fontWeight:     800,
+                fontWeight:     700,
                 border:         'none',
                 cursor:         'pointer',
                 display:        'flex',
