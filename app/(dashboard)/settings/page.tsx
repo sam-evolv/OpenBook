@@ -28,6 +28,7 @@ export default async function SettingsPage() {
           { href: '/settings/hours', label: 'Opening hours', desc: 'Set your weekly schedule' },
           { href: '/settings/payments', label: 'Payments', desc: 'Connect Stripe to accept cards' },
           { href: '/settings/notifications', label: 'Notifications', desc: 'Reminders & alerts' },
+          { href: '/settings/whatsapp', label: 'WhatsApp bot', desc: 'Enable AI booking via WhatsApp' },
         ].map((item) => (
           <Link
             key={item.href}

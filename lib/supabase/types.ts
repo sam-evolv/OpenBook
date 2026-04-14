@@ -183,6 +183,9 @@ export type Database = {
           stripe_account_id: string | null
           website: string | null
           whatsapp_number: string | null
+          whatsapp_enabled: boolean | null
+          whatsapp_phone_number: string | null
+          whatsapp_display_name: string | null
         }
         Insert: {
           address?: string | null
@@ -204,6 +207,9 @@ export type Database = {
           stripe_account_id?: string | null
           website?: string | null
           whatsapp_number?: string | null
+          whatsapp_enabled?: boolean | null
+          whatsapp_phone_number?: string | null
+          whatsapp_display_name?: string | null
         }
         Update: {
           address?: string | null
@@ -225,8 +231,93 @@ export type Database = {
           stripe_account_id?: string | null
           website?: string | null
           whatsapp_number?: string | null
+          whatsapp_enabled?: boolean | null
+          whatsapp_phone_number?: string | null
+          whatsapp_display_name?: string | null
         }
         Relationships: []
+      }
+      whatsapp_conversations: {
+        Row: {
+          id: string
+          created_at: string | null
+          updated_at: string | null
+          business_id: string
+          customer_phone: string
+          customer_name: string | null
+          state: string | null
+          context: Json | null
+          last_message_at: string | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string | null
+          updated_at?: string | null
+          business_id: string
+          customer_phone: string
+          customer_name?: string | null
+          state?: string | null
+          context?: Json | null
+          last_message_at?: string | null
+        }
+        Update: {
+          id?: string
+          created_at?: string | null
+          updated_at?: string | null
+          business_id?: string
+          customer_phone?: string
+          customer_name?: string | null
+          state?: string | null
+          context?: Json | null
+          last_message_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_conversations_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_messages: {
+        Row: {
+          id: string
+          created_at: string | null
+          conversation_id: string
+          direction: string
+          body: string
+          twilio_sid: string | null
+          status: string | null
+        }
+        Insert: {
+          id?: string
+          created_at?: string | null
+          conversation_id: string
+          direction: string
+          body: string
+          twilio_sid?: string | null
+          status?: string | null
+        }
+        Update: {
+          id?: string
+          created_at?: string | null
+          conversation_id?: string
+          direction?: string
+          body?: string
+          twilio_sid?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       customer_businesses: {
         Row: {

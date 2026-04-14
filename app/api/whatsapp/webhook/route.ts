@@ -1,148 +1,185 @@
 import { NextRequest, NextResponse } from 'next/server'
+import twilio from 'twilio'
 import { createServiceClient } from '@/lib/supabase/server'
-import { verifyWebhookSignature, parseIncomingMessage, sendWhatsAppMessage } from '@/lib/whatsapp'
-import { runBookingAssistant } from '@/lib/claude'
-import { getAvailability } from '@/lib/availability'
-import { addMinutes, parseISO } from 'date-fns'
-import type { ConversationState } from '@/lib/types'
+import { processWhatsAppMessage, createWhatsAppBooking } from '@/lib/whatsapp-brain'
+import { createWhatsAppPaymentLink } from '@/lib/whatsapp-payment'
+import { format, parseISO } from 'date-fns'
+import type { ConversationContext } from '@/lib/whatsapp-brain'
 
-/** GET — Meta webhook verification challenge */
-export async function GET(req: NextRequest) {
-  const { searchParams } = req.nextUrl
-  const mode = searchParams.get('hub.mode')
-  const token = searchParams.get('hub.verify_token')
-  const challenge = searchParams.get('hub.challenge')
+const accountSid = process.env.TWILIO_ACCOUNT_SID!
+const authToken = process.env.TWILIO_AUTH_TOKEN!
 
-  if (mode === 'subscribe' && token === process.env.META_WEBHOOK_VERIFY_TOKEN) {
-    return new NextResponse(challenge, { status: 200 })
+/** Send a WhatsApp message via Twilio REST API */
+async function sendTwilioMessage(to: string, from: string, body: string): Promise<string | null> {
+  const client = twilio(accountSid, authToken)
+  const toWa = to.startsWith('whatsapp:') ? to : `whatsapp:${to}`
+  const fromWa = from.startsWith('whatsapp:') ? from : `whatsapp:${from}`
+  try {
+    const msg = await client.messages.create({ from: fromWa, to: toWa, body })
+    return msg.sid
+  } catch (err) {
+    console.error('Twilio send error:', err)
+    return null
   }
-  return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 }
 
-/** POST — incoming WhatsApp messages */
-export async function POST(req: NextRequest) {
-  const rawBody = await req.text()
-  const signature = req.headers.get('x-hub-signature-256') ?? ''
+/** Empty TwiML response — we reply via REST API, not TwiML */
+function twimlOk(): NextResponse {
+  return new NextResponse('<?xml version="1.0" encoding="UTF-8"?><Response></Response>', {
+    headers: { 'Content-Type': 'text/xml' },
+  })
+}
 
-  const valid = await verifyWebhookSignature(rawBody, signature)
+export async function POST(req: NextRequest): Promise<NextResponse> {
+  // Parse form-urlencoded body that Twilio sends
+  const text = await req.text()
+  const params = Object.fromEntries(new URLSearchParams(text).entries())
+
+  // Verify Twilio signature
+  const signature = req.headers.get('x-twilio-signature') ?? ''
+  const url = req.url
+  const valid = twilio.validateRequest(authToken, signature, url, params)
   if (!valid) {
-    return NextResponse.json({ error: 'Invalid signature' }, { status: 401 })
+    console.error('Invalid Twilio signature')
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
   }
 
-  const payload = JSON.parse(rawBody) as Record<string, unknown>
-  const message = parseIncomingMessage(payload)
-  if (!message) return NextResponse.json({ ok: true })
+  const customerPhone = params['From'] ?? '' // e.g. "whatsapp:+353871234567"
+  const businessTwilioNumber = params['To'] ?? ''  // e.g. "whatsapp:+353761234567"
+  const messageBody = params['Body'] ?? ''
+  const twilioSid = params['MessageSid'] ?? ''
+
+  if (!customerPhone || !messageBody) return twimlOk()
+
+  // Normalise numbers — strip whatsapp: prefix for DB storage
+  const customerPhoneNorm = customerPhone.replace(/^whatsapp:/, '')
+  const businessNumberNorm = businessTwilioNumber.replace(/^whatsapp:/, '')
 
   const supabase = await createServiceClient()
 
-  // Find which business this WhatsApp number belongs to
+  // Find the business by their Twilio WhatsApp number
   const { data: business } = await supabase
     .from('businesses')
-    .select('id, name, category, description')
-    .eq('whatsapp_number', message.from)
+    .select('*')
+    .eq('whatsapp_phone_number', businessNumberNorm)
+    .eq('whatsapp_enabled', true)
     .maybeSingle()
 
-  if (!business) return NextResponse.json({ ok: true })
+  if (!business) return twimlOk()
 
-  // Load conversation state
-  const { data: session } = await supabase
-    .from('whatsapp_sessions')
-    .select('conversation_state')
-    .eq('whatsapp_number', message.from)
-    .eq('business_id', business.id)
-    .maybeSingle()
-
-  const state: ConversationState = (session?.conversation_state as unknown as ConversationState) ?? {
-    history: [],
-  }
-
-  // Get services
-  const { data: services } = await supabase
-    .from('services')
-    .select('id, name, duration_minutes, price_cents')
-    .eq('business_id', business.id)
-    .eq('is_active', true)
-
-  // Run Claude
-  const botResponse = await runBookingAssistant(
-    business,
-    services ?? [],
-    state,
-    message.text
-  )
-
-  // Execute action
-  if (botResponse.action === 'check_availability') {
-    const { date, service_name } = botResponse.params as { date: string; service_name: string }
-    const service = (services ?? []).find((s) =>
-      s.name.toLowerCase().includes((service_name ?? '').toLowerCase())
+  // Upsert conversation
+  const { data: conversation } = await supabase
+    .from('whatsapp_conversations')
+    .upsert(
+      {
+        business_id: business.id,
+        customer_phone: customerPhoneNorm,
+        last_message_at: new Date().toISOString(),
+      },
+      { onConflict: 'business_id,customer_phone', ignoreDuplicates: false }
     )
-    if (service && date) {
-      const availability = await getAvailability(business.id, service.id, date)
-      const available = availability.slots.filter((s) => s.available).map((s) => s.time)
-      const followUp = available.length
-        ? `Available slots on ${date}: ${available.slice(0, 6).join(', ')}`
-        : `No availability on ${date} — try another date?`
-      await sendWhatsAppMessage(message.from, `${botResponse.message}\n\n${followUp}`)
-    } else {
-      await sendWhatsAppMessage(message.from, botResponse.message)
-    }
-  } else if (botResponse.action === 'create_booking') {
-    const { service_id, date, time, customer_name } = botResponse.params as {
-      service_id: string
-      date: string
-      time: string
-      customer_name: string
-    }
-    const service = (services ?? []).find((s) => s.id === service_id)
-    if (service && date && time) {
-      const startsAt = `${date}T${time}:00`
-      const endsAt = addMinutes(parseISO(startsAt), service.duration_minutes).toISOString()
+    .select()
+    .single()
 
-      // Upsert customer by WhatsApp number
-      const { data: customer } = await supabase
-        .from('customers')
-        .upsert({ whatsapp_number: message.from, name: customer_name }, { onConflict: 'whatsapp_number' })
-        .select()
-        .single()
+  if (!conversation) return twimlOk()
 
-      if (customer) {
-        await supabase.from('bookings').insert({
-          business_id: business.id,
-          service_id,
-          customer_id: customer.id,
-          starts_at: startsAt,
-          ends_at: endsAt,
-          price_cents: service.price_cents,
-          source: 'whatsapp',
-          status: 'confirmed',
-        })
+  // Save inbound message
+  await supabase.from('whatsapp_messages').insert({
+    conversation_id: conversation.id,
+    direction: 'inbound',
+    body: messageBody,
+    twilio_sid: twilioSid,
+    status: 'received',
+  })
+
+  // Run AI brain
+  const { reply, newState, newContext, bookingDetails } = await processWhatsAppMessage({
+    business,
+    conversation,
+    message: messageBody,
+    customerPhone: customerPhoneNorm,
+  })
+
+  let finalReply = reply
+  let updatedContext: ConversationContext = newContext
+  let finalState = newState
+
+  // If brain returned a booking to create
+  if (bookingDetails) {
+    const { serviceId, date, time } = bookingDetails
+
+    const bookingId = await createWhatsAppBooking({
+      businessId: business.id,
+      serviceId,
+      customerPhone: customerPhoneNorm,
+      customerName: conversation.customer_name,
+      date,
+      time,
+    })
+
+    if (bookingId) {
+      updatedContext = { ...updatedContext, booking_id: bookingId }
+
+      // If business has Stripe, send payment link
+      if (business.stripe_account_id) {
+        try {
+          const { data: service } = await supabase
+            .from('services')
+            .select('name, price_cents')
+            .eq('id', serviceId)
+            .single()
+
+          if (service) {
+            const paymentUrl = await createWhatsAppPaymentLink({
+              bookingId,
+              businessId: business.id,
+              customerPhone: customerPhoneNorm,
+              serviceName: service.name,
+              priceEurCents: service.price_cents,
+              stripeAccountId: business.stripe_account_id,
+            })
+            updatedContext.payment_link = paymentUrl
+            finalState = 'awaiting_payment'
+            finalReply = `${finalReply}\n\nTo confirm your booking, tap the link to pay:\n\n${paymentUrl}\n\nLink expires in 30 minutes.`
+          }
+        } catch (err) {
+          console.error('Payment link error:', err)
+          // Fall through — confirm without payment
+          finalState = 'completed'
+        }
+      } else {
+        // No Stripe — confirm directly
+        finalState = 'completed'
+        const displayDate = (() => {
+          try { return format(parseISO(`${date}T${time}`), 'EEEE d MMMM') } catch { return date }
+        })()
+        finalReply = `Booking confirmed! See you ${displayDate} at ${time}. Reply CANCEL if anything changes.`
       }
     }
-    await sendWhatsAppMessage(message.from, botResponse.message)
-  } else {
-    await sendWhatsAppMessage(message.from, botResponse.message)
   }
 
   // Update conversation state
-  const updatedState: ConversationState = {
-    ...state,
-    history: [
-      ...state.history,
-      { role: 'user' as const, content: message.text },
-      { role: 'assistant' as const, content: botResponse.message },
-    ].slice(-20), // keep last 20 turns
-  }
-
-  await supabase.from('whatsapp_sessions').upsert(
-    {
-      whatsapp_number: message.from,
-      business_id: business.id,
-      conversation_state: updatedState as unknown as import('@/lib/supabase/types').Json,
+  await supabase
+    .from('whatsapp_conversations')
+    .update({
+      state: finalState,
+      context: updatedContext as unknown as import('@/lib/supabase/types').Json,
       last_message_at: new Date().toISOString(),
-    },
-    { onConflict: 'whatsapp_number,business_id' }
-  )
+      customer_name: conversation.customer_name ?? updatedContext.customer_name ?? null,
+    })
+    .eq('id', conversation.id)
 
-  return NextResponse.json({ ok: true })
+  // Send reply via Twilio
+  const outboundSid = await sendTwilioMessage(customerPhone, businessTwilioNumber, finalReply)
+
+  // Save outbound message
+  await supabase.from('whatsapp_messages').insert({
+    conversation_id: conversation.id,
+    direction: 'outbound',
+    body: finalReply,
+    twilio_sid: outboundSid ?? undefined,
+    status: 'sent',
+  })
+
+  return twimlOk()
 }
