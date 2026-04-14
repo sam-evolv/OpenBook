@@ -474,8 +474,8 @@ export default function BusinessPage() {
                 height: 44,
                 background: 'none',
                 border: 'none',
-                borderBottom: isActive ? `2px solid ${pc}` : '2px solid transparent',
-                color: isActive ? '#fff' : 'rgba(255,255,255,0.4)',
+                borderBottom: isActive ? '2px solid #D4AF37' : '2px solid transparent',
+                color: isActive ? '#fff' : 'rgba(255,255,255,0.45)',
                 fontSize: 13,
                 fontWeight: 600,
                 cursor: 'pointer',
@@ -555,6 +555,7 @@ export default function BusinessPage() {
                 <ServiceRow
                   key={service.name}
                   service={service}
+                  primaryColour={pc}
                   onClick={() => {
                     const qs = new URLSearchParams({
                       business: business.name,
@@ -1050,14 +1051,15 @@ export default function BusinessPage() {
             style={{
               width: '100%',
               height: 52,
-              borderRadius: 16,
-              background: pc,
+              borderRadius: 14,
+              background: '#D4AF37',
               color: '#000',
               fontSize: 16,
-              fontWeight: 800,
+              fontWeight: 700,
               border: 'none',
               cursor: 'pointer',
               letterSpacing: '-0.01em',
+              boxShadow: '0 4px 24px rgba(212,175,55,0.5)',
             }}
           >
             {business.ctaText}

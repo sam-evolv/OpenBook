@@ -5,19 +5,21 @@ import type { MockService } from '@/lib/mock-businesses'
 
 interface ServiceRowProps {
   service:  MockService
+  primaryColour?: string
   onClick:  () => void
 }
 
-export default function ServiceRow({ service, onClick }: ServiceRowProps) {
+export default function ServiceRow({ service, primaryColour, onClick }: ServiceRowProps) {
   return (
     <button
       onClick={onClick}
       className="text-left active:scale-[0.98] transition-transform duration-150 w-full"
       style={{
-        background:           'rgba(255,255,255,0.06)',
+        background:           'rgba(255,255,255,0.04)',
         backdropFilter:       'blur(14px)',
         WebkitBackdropFilter: 'blur(14px)',
         border:               '1px solid rgba(255,255,255,0.1)',
+        borderLeft:           primaryColour ? `3px solid ${primaryColour}` : '1px solid rgba(255,255,255,0.1)',
         borderRadius:         12,
         padding:              '13px 14px',
         display:              'flex',
