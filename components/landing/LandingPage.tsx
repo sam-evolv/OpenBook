@@ -102,27 +102,27 @@ export default function LandingPage() {
             <span style={{ fontSize: '12px',
               color: '#D4AF37', fontWeight: 600,
               letterSpacing: '0.08em' }}>
-              NOW LIVE · IRELAND
+              Now queryable on ChatGPT · Claude · Gemini
             </span>
           </div>
 
           {/* Headline */}
-          <h1 style={{ fontSize: 'clamp(40px, 6vw, 72px)',
-            fontWeight: 900, lineHeight: 1.05,
+          <h1 style={{ fontSize: 'clamp(36px, 5.5vw, 68px)',
+            fontWeight: 900, lineHeight: 1.08,
             letterSpacing: '-0.03em', marginBottom: '24px' }}>
-            Your booking page,<br/>
-            live in{' '}
-            <span style={{ color: '#D4AF37' }}>15 minutes.</span>
+            When someone asks AI to book<br/>
+            a service near them,<br/>
+            <span style={{ color: '#D4AF37' }}>will your business come up?</span>
           </h1>
 
           {/* Sub */}
           <p style={{ fontSize: '19px',
             color: 'rgba(255,255,255,0.55)',
-            lineHeight: 1.65, maxWidth: '540px',
+            lineHeight: 1.65, maxWidth: '580px',
             margin: '0 auto 40px' }}>
-            Give your business a beautiful booking page and
-            a home screen icon on every customer&apos;s phone.
-            No marketplace. Zero commission.
+            OpenBook puts your business on the AI platforms where your
+            customers are searching. ChatGPT. Claude. Gemini.
+            800 million users. One integration. Zero commission.
           </p>
 
           {/* CTAs */}
@@ -171,6 +171,79 @@ export default function LandingPage() {
             background: 'linear-gradient(to bottom, rgba(212,175,55,0.8), transparent)',
             animation: 'scrollLine 2s ease-in-out infinite'
           }}/>
+        </div>
+      </section>
+
+      {/* THE AI SHIFT */}
+      <section style={{ padding: '100px 40px', background: '#0d0d0d' }}>
+        <div style={{ maxWidth: '960px', margin: '0 auto' }}>
+          <p style={{ fontSize: '11px', color: '#D4AF37',
+            letterSpacing: '0.12em', fontWeight: 700,
+            marginBottom: '16px', textAlign: 'center' }}>THE AI SHIFT</p>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+            gap: '48px',
+          }}>
+            {/* Left column */}
+            <div>
+              <h2 style={{ fontSize: 'clamp(22px, 3vw, 30px)',
+                fontWeight: 900, letterSpacing: '-0.02em',
+                marginBottom: '20px', lineHeight: 1.2 }}>
+                Google is how people used to find you.
+              </h2>
+              <p style={{ fontSize: '17px',
+                color: 'rgba(255,255,255,0.55)',
+                lineHeight: 1.75, marginBottom: '16px' }}>
+                ChatGPT, Claude and Gemini are where they search now.
+                800 million people use ChatGPT every month. They&apos;re
+                asking it to recommend local services, book appointments,
+                and find the best option near them.
+              </p>
+              <p style={{ fontSize: '17px',
+                color: 'rgba(255,255,255,0.55)',
+                lineHeight: 1.75 }}>
+                If your business is not connected, you are invisible to them.
+              </p>
+            </div>
+            {/* Right column */}
+            <div style={{
+              background: 'rgba(212,175,55,0.05)',
+              border: '1px solid rgba(212,175,55,0.2)',
+              borderRadius: '20px',
+              padding: '36px',
+            }}>
+              <h2 style={{ fontSize: 'clamp(22px, 3vw, 30px)',
+                fontWeight: 900, letterSpacing: '-0.02em',
+                marginBottom: '20px', lineHeight: 1.2,
+                color: '#D4AF37' }}>
+                OpenBook connects you.
+              </h2>
+              <p style={{ fontSize: '17px',
+                color: 'rgba(255,255,255,0.55)',
+                lineHeight: 1.75, marginBottom: '16px' }}>
+                When someone asks an AI assistant to book a gym session,
+                a haircut, or a massage near them — OpenBook businesses
+                come up with live availability and instant booking.
+              </p>
+              <p style={{ fontSize: '17px',
+                color: 'rgba(255,255,255,0.55)',
+                lineHeight: 1.75, marginBottom: '32px' }}>
+                Your competitors who aren&apos;t on OpenBook won&apos;t
+                even appear.
+              </p>
+              <Link href="/onboarding" style={{
+                display: 'inline-block',
+                background: '#D4AF37', color: '#000',
+                padding: '13px 28px', borderRadius: '12px',
+                fontSize: '15px', fontWeight: 700,
+                textDecoration: 'none',
+                boxShadow: '0 4px 20px rgba(212,175,55,0.3)'
+              }}>
+                Get your business on AI →
+              </Link>
+            </div>
+          </div>
         </div>
       </section>
 
