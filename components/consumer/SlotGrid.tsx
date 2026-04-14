@@ -17,11 +17,11 @@ export default function SlotGrid({ slots, selected, onSelect }: SlotGridProps) {
             onClick={() => onSelect(slot)}
             className="py-2 rounded-xl text-center text-[12px] border transition-all duration-150 active:scale-95 focus-visible:outline-none"
             style={{
-              background: isActive ? '#D4AF37' : 'rgba(255,255,255,0.08)',
+              background: isActive ? 'rgba(212,175,55,0.2)' : 'rgba(255,255,255,0.08)',
               border:     isActive
                 ? '1px solid #D4AF37'
                 : '1px solid rgba(255,255,255,0.15)',
-              color:      isActive ? '#000' : 'rgba(255,255,255,0.8)',
+              color:      isActive ? '#fff' : 'rgba(255,255,255,0.8)',
               fontWeight: isActive ? 700 : 500,
             }}
           >
