@@ -4,17 +4,18 @@ import { colors, radius, transitions } from '../constants/theme';
 import TabBar from '../components/TabBar';
 
 const favourites = [
-  { emoji: '\u{1F487}', name: 'Luxe Hair', rating: '4.9' },
-  { emoji: '\u{1F485}', name: 'PolishPro', rating: '4.8' },
-  { emoji: '\u{1F4AA}', name: 'IronWorks', rating: '4.7' },
-  { emoji: '\u{1F9D6}', name: 'Zen Spa', rating: '4.9' },
-  { emoji: '\u{1F374}', name: 'Noire', rating: '4.8' },
+  { initials: 'EP', name: 'Elite Pampering', rating: '4.9', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
+  { initials: 'SW', name: 'StyleWorks', rating: '4.8', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
+  { initials: 'NS', name: 'NailStar', rating: '4.7', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
+  { initials: 'RB', name: 'Rose Beauty', rating: '4.9', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
+  { initials: 'TG', name: 'The Gym', rating: '4.8', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+  { initials: 'ZS', name: 'Zen Spa', rating: '4.9', gradient: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)' },
 ];
 
 const myPlaces = [
-  { emoji: '\u2615', name: 'Bean & Brew', category: 'Coffee', distance: '0.1 mi' },
-  { emoji: '\u{1F354}', name: 'Stack Burger', category: 'Food', distance: '0.3 mi' },
-  { emoji: '\u{1F3CB}\uFE0F', name: 'FitLife', category: 'Gym', distance: '0.5 mi' },
+  { initials: 'BB', name: 'Bean & Brew', category: 'Coffee', distance: '0.1 mi', gradient: 'linear-gradient(135deg, #fccb90 0%, #d57eeb 100%)' },
+  { initials: 'SB', name: 'Stack Burger', category: 'Food', distance: '0.3 mi', gradient: 'linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%)' },
+  { initials: 'FL', name: 'FitLife', category: 'Gym', distance: '0.5 mi', gradient: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)' },
 ];
 
 export default function HomeScreen() {
@@ -45,18 +46,27 @@ export default function HomeScreen() {
           <div>
             <div
               style={{
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: 2,
-                color: colors.goldPrimary,
-                textTransform: 'uppercase',
+                fontSize: 22,
+                fontWeight: 800,
                 marginBottom: 4,
+                letterSpacing: -0.3,
               }}
             >
-              OpenBook AI
+              <span style={{ color: colors.text }}>Open</span>
+              <span style={{ color: colors.text }}>Book </span>
+              <span
+                style={{
+                  background: colors.goldGradient,
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  backgroundClip: 'text',
+                }}
+              >
+                AI
+              </span>
             </div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: colors.text }}>
-              Good evening
+            <div style={{ fontSize: 15, color: colors.textSecondary }}>
+              Good evening, Sam
             </div>
           </div>
           <div
@@ -68,7 +78,7 @@ export default function HomeScreen() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 18,
+              fontSize: 17,
               fontWeight: 700,
               color: '#000',
             }}
@@ -87,14 +97,14 @@ export default function HomeScreen() {
         }}
       >
         {/* Favourites */}
-        <div style={{ padding: '12px 0' }}>
+        <div style={{ padding: '16px 0' }}>
           <div
             style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
               padding: '0 20px',
-              marginBottom: 12,
+              marginBottom: 14,
             }}
           >
             <span style={{ fontSize: 17, fontWeight: 700, color: colors.text }}>
@@ -123,7 +133,7 @@ export default function HomeScreen() {
                 whileTap={transitions.buttonTap}
                 style={{
                   flexShrink: 0,
-                  width: 80,
+                  width: 76,
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
@@ -135,17 +145,32 @@ export default function HomeScreen() {
                     width: 64,
                     height: 64,
                     borderRadius: radius.squircle,
-                    background: colors.surface2,
+                    background: fav.gradient,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 28,
-                    border: `1px solid ${colors.border}`,
+                    fontSize: 20,
+                    fontWeight: 800,
+                    color: '#fff',
+                    letterSpacing: -0.5,
+                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
                   }}
                 >
-                  {fav.emoji}
+                  {fav.initials}
                 </div>
-                <span style={{ fontSize: 12, fontWeight: 600, color: colors.text }}>
+                <span
+                  style={{
+                    fontSize: 11,
+                    fontWeight: 600,
+                    color: colors.text,
+                    textAlign: 'center',
+                    lineHeight: 1.2,
+                    maxWidth: 76,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}
+                >
                   {fav.name}
                 </span>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
@@ -158,13 +183,13 @@ export default function HomeScreen() {
         </div>
 
         {/* My Places */}
-        <div style={{ padding: '12px 20px' }}>
+        <div style={{ padding: '8px 20px' }}>
           <div
             style={{
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center',
-              marginBottom: 12,
+              marginBottom: 14,
             }}
           >
             <span style={{ fontSize: 17, fontWeight: 700, color: colors.text }}>
@@ -198,14 +223,19 @@ export default function HomeScreen() {
                     width: 48,
                     height: 48,
                     borderRadius: 14,
-                    background: colors.surface4,
+                    background: place.gradient,
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    fontSize: 24,
+                    fontSize: 16,
+                    fontWeight: 800,
+                    color: '#fff',
+                    letterSpacing: -0.5,
+                    flexShrink: 0,
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
                   }}
                 >
-                  {place.emoji}
+                  {place.initials}
                 </div>
                 <div style={{ flex: 1 }}>
                   <div style={{ fontSize: 15, fontWeight: 600, color: colors.text }}>
