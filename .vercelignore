@@ -1,0 +1,12 @@
+app/(dashboard)
+app/(auth)
+app/(consumer)
+app/(consumer-app)
+app/api
+app/onboarding
+app/[slug]
+components/dashboard
+components/consumer
+components/app
+components/onboarding
+components/public
