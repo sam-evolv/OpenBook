@@ -1,9 +1,43 @@
+import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { colors, radius, transitions } from '../constants/theme';
 import { suggestionPills } from '../constants/chatScripts';
 import TabBar from '../components/TabBar';
-import { useState } from 'react';
+
+function PillIcon({ type }: { type: string }) {
+  const c = colors.textSecondary;
+  switch (type) {
+    case 'nail':
+      return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <circle cx="6" cy="6" r="3" stroke={c} strokeWidth="1.5" />
+          <circle cx="6" cy="18" r="3" stroke={c} strokeWidth="1.5" />
+          <path d="M20 4L8.12 15.88M14.47 14.48L20 20M8.12 8.12L12 12" stroke={c} strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      );
+    case 'gym':
+      return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M6 12h12M4 10v4M20 10v4M2 11v2M22 11v2" stroke={c} strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      );
+    case 'date':
+      return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2l2.4 7.4H22l-6.2 4.5 2.4 7.4L12 17l-6.2 4.3 2.4-7.4L2 9.4h7.6L12 2z" stroke={c} strokeWidth="1.5" strokeLinejoin="round" />
+        </svg>
+      );
+    case 'flash':
+      return (
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+          <path d="M13 2L4.5 13.5H11L10 22L20.5 10H14L13 2Z" stroke={c} strokeWidth="1.5" strokeLinejoin="round" />
+        </svg>
+      );
+    default:
+      return null;
+  }
+}
 
 export default function AssistantScreen() {
   const navigate = useNavigate();
@@ -37,7 +71,7 @@ export default function AssistantScreen() {
       <div
         className="safe-top"
         style={{
-          padding: '16px 20px 8px',
+          padding: '16px 24px 8px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
@@ -47,7 +81,7 @@ export default function AssistantScreen() {
           style={{
             fontSize: 13,
             fontWeight: 800,
-            letterSpacing: 4,
+            letterSpacing: '0.2em',
             color: colors.goldPrimary,
             textTransform: 'uppercase',
           }}
@@ -56,7 +90,7 @@ export default function AssistantScreen() {
         </div>
       </div>
 
-      {/* Main content area */}
+      {/* Main content */}
       <div
         style={{
           flex: 1,
@@ -68,7 +102,7 @@ export default function AssistantScreen() {
           paddingBottom: 100,
         }}
       >
-        {/* Concentric rings animation */}
+        {/* Concentric rings + logo */}
         <div
           style={{
             position: 'relative',
@@ -77,6 +111,19 @@ export default function AssistantScreen() {
             marginBottom: 32,
           }}
         >
+          {/* Glass circle behind everything */}
+          <div
+            style={{
+              position: 'absolute',
+              inset: -24,
+              borderRadius: '50%',
+              background: 'rgba(255,255,255,0.03)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255,255,255,0.08)',
+            }}
+          />
+
           {/* Outer rings */}
           {[0, 1, 2].map((i) => (
             <motion.div
@@ -101,7 +148,7 @@ export default function AssistantScreen() {
             />
           ))}
 
-          {/* Core logo */}
+          {/* Core */}
           <motion.div
             style={{
               width: '100%',
@@ -114,19 +161,25 @@ export default function AssistantScreen() {
             }}
             animate={{
               boxShadow: [
-                `0 0 40px rgba(212,175,55,0.1)`,
-                `0 0 60px rgba(212,175,55,0.2)`,
-                `0 0 40px rgba(212,175,55,0.1)`,
+                '0 0 40px rgba(212,175,55,0.1)',
+                '0 0 60px rgba(212,175,55,0.2)',
+                '0 0 40px rgba(212,175,55,0.1)',
               ],
             }}
             transition={{ duration: 3, repeat: Infinity }}
           >
             <motion.div
-              style={{ fontSize: 56 }}
-              animate={{ scale: [1, 1.05, 1] }}
+              animate={{ scale: [1, 1.06, 1] }}
               transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
             >
-              &#10024;
+              <svg width="52" height="52" viewBox="0 0 24 24" fill="none">
+                <path
+                  d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"
+                  fill={colors.goldPrimary}
+                  stroke={colors.goldPrimary}
+                  strokeWidth="0.5"
+                />
+              </svg>
             </motion.div>
           </motion.div>
         </div>
@@ -138,9 +191,10 @@ export default function AssistantScreen() {
           transition={{ delay: 0.2, ...transitions.spring }}
           style={{
             fontSize: 22,
-            fontWeight: 700,
+            fontWeight: 900,
             color: colors.text,
             textAlign: 'center',
+            letterSpacing: '-0.03em',
             marginBottom: 8,
           }}
         >
@@ -153,6 +207,8 @@ export default function AssistantScreen() {
           transition={{ delay: 0.3 }}
           style={{
             fontSize: 14,
+            fontWeight: 400,
+            lineHeight: 1.6,
             color: colors.textSecondary,
             textAlign: 'center',
             marginBottom: 28,
@@ -185,15 +241,21 @@ export default function AssistantScreen() {
                 alignItems: 'center',
                 gap: 8,
                 padding: '14px 16px',
-                background: colors.surface2,
+                background: 'rgba(255,255,255,0.04)',
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
                 borderRadius: radius.pill,
-                border: `1px solid ${colors.border}`,
-                fontSize: 14,
+                border: '0.5px solid rgba(255,255,255,0.1)',
+                boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
+                fontSize: 13,
                 fontWeight: 500,
+                lineHeight: 1.4,
                 color: colors.text,
+                cursor: 'pointer',
+                textAlign: 'left',
               }}
             >
-              <span style={{ fontSize: 18 }}>{pill.icon}</span>
+              <PillIcon type={pill.type} />
               {pill.label}
             </motion.button>
           ))}
@@ -204,10 +266,7 @@ export default function AssistantScreen() {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 0.8 }}
-          style={{
-            fontSize: 12,
-            color: colors.textTertiary,
-          }}
+          style={{ fontSize: 12, color: colors.textTertiary }}
         >
           Powered by OpenBook AI
         </motion.div>
@@ -233,10 +292,12 @@ export default function AssistantScreen() {
             display: 'flex',
             alignItems: 'center',
             gap: 10,
-            background: colors.surface2,
+            background: 'rgba(255,255,255,0.06)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
             borderRadius: 28,
             padding: '6px 6px 6px 16px',
-            border: `1px solid ${colors.border}`,
+            border: '0.5px solid rgba(255,255,255,0.1)',
           }}
         >
           <input
@@ -251,6 +312,7 @@ export default function AssistantScreen() {
               outline: 'none',
               color: colors.text,
               fontSize: 15,
+              fontWeight: 400,
             }}
           />
           <motion.button
@@ -265,6 +327,8 @@ export default function AssistantScreen() {
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
+              border: 'none',
+              cursor: 'pointer',
             }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">

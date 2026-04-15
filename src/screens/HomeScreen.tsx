@@ -5,18 +5,24 @@ import TabBar from '../components/TabBar';
 
 const favourites = [
   { initials: 'EP', name: 'Elite Pampering', gradient: 'linear-gradient(145deg, #d4a820, #8a6810)', badge: null },
-  { initials: 'SW', name: 'StyleWorks', gradient: 'linear-gradient(145deg, #8070d0, #5040a8)', badge: '2' },
-  { initials: 'NS', name: 'NailStar', gradient: 'linear-gradient(145deg, #d05070, #a02848)', badge: null },
-  { initials: 'RB', name: 'Rose Beauty', gradient: 'linear-gradient(145deg, #28b880, #107850)', badge: null },
+  { initials: 'SW', name: 'StyleWorks',      gradient: 'linear-gradient(145deg, #8070d0, #5040a8)', badge: '2' },
+  { initials: 'NS', name: 'NailStar',        gradient: 'linear-gradient(145deg, #d05070, #a02848)', badge: null },
+  { initials: 'RB', name: 'Rose Beauty',     gradient: 'linear-gradient(145deg, #28b880, #107850)', badge: null },
 ];
 
 const myPlaces = [
-  { initials: 'CP', name: 'CorePower', gradient: 'linear-gradient(145deg, #3880d8, #1858a8)', badge: null },
-  { initials: 'YF', name: 'YogaFlow', gradient: 'linear-gradient(145deg, #d08028, #a05808)', badge: null },
+  { initials: 'CP', name: 'CorePower',   gradient: 'linear-gradient(145deg, #3880d8, #1858a8)', badge: null },
+  { initials: 'YF', name: 'YogaFlow',    gradient: 'linear-gradient(145deg, #d08028, #a05808)', badge: null },
   { initials: 'IG', name: 'IronGrip Gym', gradient: 'linear-gradient(145deg, #585858, #303030)', badge: '1' },
 ];
 
-function IconTile({ initials, name, gradient, badge, delay }: {
+function IconTile({
+  initials,
+  name,
+  gradient,
+  badge,
+  delay,
+}: {
   initials: string;
   name: string;
   gradient: string;
@@ -50,11 +56,13 @@ function IconTile({ initials, name, gradient, badge, delay }: {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            fontSize: 19,
-            fontWeight: 800,
+            fontSize: 17,
+            fontWeight: 900,
             color: '#fff',
-            letterSpacing: -0.5,
-            boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
+            letterSpacing: '-0.02em',
+            boxShadow:
+              'inset 0 1px 0 rgba(255,255,255,0.2), 0 8px 24px rgba(0,0,0,0.4)',
+            border: '0.5px solid rgba(255,255,255,0.08)',
           }}
         >
           {initials}
@@ -132,23 +140,19 @@ export default function HomeScreen() {
       }}
     >
       {/* Header */}
-      <div
-        className="safe-top"
-        style={{ padding: '18px 20px 14px' }}
-      >
+      <div className="safe-top" style={{ padding: '18px 24px 14px' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <span
             style={{
               fontSize: 26,
-              fontWeight: 800,
+              fontWeight: 900,
               color: colors.text,
-              letterSpacing: -0.5,
+              letterSpacing: '-0.03em',
             }}
           >
             OpenBook
           </span>
 
-          {/* Search icon button */}
           <motion.button
             whileTap={transitions.buttonTap}
             style={{
@@ -173,24 +177,19 @@ export default function HomeScreen() {
       </div>
 
       {/* Scrollable content */}
-      <div
-        style={{
-          flex: 1,
-          overflowY: 'auto',
-          paddingBottom: 100,
-        }}
-      >
-        {/* FAVOURITES section */}
-        <div style={{ padding: '14px 0 6px' }}>
+      <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 100 }}>
+
+        {/* FAVOURITES */}
+        <div style={{ paddingTop: 14 }}>
           <span
             style={{
               display: 'block',
-              fontSize: 11,
-              fontWeight: 600,
-              color: colors.textSecondary,
-              letterSpacing: 1.2,
+              fontSize: 10,
+              fontWeight: 800,
+              color: 'rgba(255,255,255,0.35)',
+              letterSpacing: '0.12em',
               textTransform: 'uppercase',
-              padding: '0 20px',
+              padding: '0 24px',
               marginBottom: 14,
             }}
           >
@@ -202,8 +201,8 @@ export default function HomeScreen() {
               display: 'flex',
               gap: 10,
               overflowX: 'auto',
-              paddingLeft: 20,
-              paddingRight: 20,
+              paddingLeft: 24,
+              paddingRight: 24,
               scrollbarWidth: 'none',
             }}
           >
@@ -213,17 +212,17 @@ export default function HomeScreen() {
           </div>
         </div>
 
-        {/* MY PLACES section */}
-        <div style={{ padding: '18px 0 6px' }}>
+        {/* MY PLACES */}
+        <div style={{ paddingTop: 28 }}>
           <span
             style={{
               display: 'block',
-              fontSize: 11,
-              fontWeight: 600,
-              color: colors.textSecondary,
-              letterSpacing: 1.2,
+              fontSize: 10,
+              fontWeight: 800,
+              color: 'rgba(255,255,255,0.35)',
+              letterSpacing: '0.12em',
               textTransform: 'uppercase',
-              padding: '0 20px',
+              padding: '0 24px',
               marginBottom: 14,
             }}
           >
@@ -235,8 +234,8 @@ export default function HomeScreen() {
               display: 'flex',
               gap: 10,
               overflowX: 'auto',
-              paddingLeft: 20,
-              paddingRight: 20,
+              paddingLeft: 24,
+              paddingRight: 24,
               scrollbarWidth: 'none',
             }}
           >
@@ -247,7 +246,7 @@ export default function HomeScreen() {
         </div>
 
         {/* Add a place */}
-        <div style={{ padding: '18px 20px 0' }}>
+        <div style={{ padding: '28px 24px 0' }}>
           <motion.button
             whileTap={transitions.buttonTap}
             onClick={() => navigate('/assistant')}
@@ -265,7 +264,14 @@ export default function HomeScreen() {
             }}
           >
             <span style={{ fontSize: 18, color: colors.textSecondary, lineHeight: 1 }}>+</span>
-            <span style={{ fontSize: 14, fontWeight: 500, color: colors.textSecondary }}>
+            <span
+              style={{
+                fontSize: 14,
+                fontWeight: 500,
+                color: colors.textSecondary,
+                lineHeight: 1.6,
+              }}
+            >
               Add a place
             </span>
           </motion.button>

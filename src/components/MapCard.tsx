@@ -10,13 +10,14 @@ export default function MapCard({ data }: Props) {
   return (
     <div
       style={{
-        background: colors.surface2,
+        background: 'rgba(255,255,255,0.03)',
         borderRadius: radius.card,
         overflow: 'hidden',
-        border: `1px solid ${colors.border}`,
+        border: '0.5px solid rgba(255,255,255,0.08)',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
       }}
     >
-      {/* Map area with SVG grid */}
+      {/* Map area */}
       <div
         style={{
           position: 'relative',
@@ -55,7 +56,7 @@ export default function MapCard({ data }: Props) {
           ))}
         </svg>
 
-        {/* User dot (blue pulsing) */}
+        {/* User dot */}
         <motion.div
           style={{
             position: 'absolute',
@@ -91,7 +92,7 @@ export default function MapCard({ data }: Props) {
           />
         </motion.div>
 
-        {/* Pins */}
+        {/* SVG circle marker pins */}
         {data.pins.map((pin) => (
           <div
             key={pin.label}
@@ -116,11 +117,12 @@ export default function MapCard({ data }: Props) {
                 color: colors.goldPrimary,
                 marginBottom: 4,
                 whiteSpace: 'nowrap',
-                border: `1px solid ${colors.goldPrimary}33`,
+                border: `0.5px solid ${colors.goldPrimary}44`,
               }}
             >
               {pin.label}
             </div>
+            {/* SVG pin marker */}
             <svg width="18" height="24" viewBox="0 0 18 24" fill="none">
               <path
                 d="M9 0C4.02 0 0 4.02 0 9c0 6.75 9 15 9 15s9-8.25 9-15c0-4.98-4.02-9-9-9z"
@@ -139,7 +141,7 @@ export default function MapCard({ data }: Props) {
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          borderTop: `1px solid ${colors.border}`,
+          borderTop: '0.5px solid rgba(255,255,255,0.06)',
         }}
       >
         <span style={{ fontSize: 13, color: colors.textSecondary }}>

@@ -68,7 +68,6 @@ export default function ChatScreen() {
     [scrollToBottom]
   );
 
-  // Initialize script on mount
   useEffect(() => {
     const initialMsg: ChatMessage = {
       id: 'user-initial',
@@ -96,7 +95,6 @@ export default function ChatScreen() {
     (triggered: boolean) => {
       setShowVoice(false);
       if (triggered) {
-        // Start the nail script after voice
         const voiceUserMsg: ChatMessage = {
           id: 'voice-user',
           sender: 'user',
@@ -148,9 +146,10 @@ export default function ChatScreen() {
           display: 'flex',
           alignItems: 'center',
           gap: 12,
-          borderBottom: `1px solid ${colors.border}`,
-          background: `${colors.surface1}ee`,
-          backdropFilter: 'blur(20px)',
+          borderBottom: '0.5px solid rgba(255,255,255,0.08)',
+          background: 'rgba(10,10,10,0.85)',
+          backdropFilter: 'blur(40px) saturate(180%)',
+          WebkitBackdropFilter: 'blur(40px) saturate(180%)',
           zIndex: 10,
         }}
       >
@@ -165,6 +164,8 @@ export default function ChatScreen() {
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            border: 'none',
+            cursor: 'pointer',
           }}
         >
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -172,7 +173,7 @@ export default function ChatScreen() {
           </svg>
         </motion.button>
 
-        {/* Avatar */}
+        {/* AI Avatar — SVG star, no emoji */}
         <div style={{ position: 'relative' }}>
           <div
             style={{
@@ -183,12 +184,17 @@ export default function ChatScreen() {
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 18,
             }}
           >
-            &#10024;
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"
+                fill="#000"
+                stroke="#000"
+                strokeWidth="0.5"
+              />
+            </svg>
           </div>
-          {/* Online dot */}
           <div
             style={{
               position: 'absolute',
@@ -204,7 +210,14 @@ export default function ChatScreen() {
         </div>
 
         <div>
-          <div style={{ fontSize: 16, fontWeight: 700, color: colors.text }}>
+          <div
+            style={{
+              fontSize: 16,
+              fontWeight: 700,
+              color: colors.text,
+              letterSpacing: '-0.02em',
+            }}
+          >
             OpenBook AI
           </div>
           <div style={{ fontSize: 12, color: colors.green, fontWeight: 500 }}>
@@ -235,15 +248,11 @@ export default function ChatScreen() {
         ))}
 
         {isTyping && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <TypingIndicator />
           </motion.div>
         )}
 
-        {/* Bottom spacer */}
         <div style={{ height: 80 }} />
       </div>
 
@@ -252,9 +261,10 @@ export default function ChatScreen() {
         style={{
           padding: '8px 16px',
           paddingBottom: 'max(env(safe-area-inset-bottom, 8px), 8px)',
-          background: `${colors.surface1}ee`,
+          background: 'rgba(10,10,10,0.85)',
           backdropFilter: 'blur(20px)',
-          borderTop: `1px solid ${colors.border}`,
+          WebkitBackdropFilter: 'blur(20px)',
+          borderTop: '0.5px solid rgba(255,255,255,0.08)',
         }}
       >
         <div
@@ -262,9 +272,12 @@ export default function ChatScreen() {
             display: 'flex',
             alignItems: 'center',
             gap: 8,
-            background: colors.surface3,
+            background: 'rgba(255,255,255,0.06)',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)',
             borderRadius: 28,
             padding: '6px 6px 6px 16px',
+            border: '0.5px solid rgba(255,255,255,0.1)',
           }}
         >
           <input
@@ -279,9 +292,9 @@ export default function ChatScreen() {
               outline: 'none',
               color: colors.text,
               fontSize: 15,
+              fontWeight: 400,
             }}
           />
-          {/* Mic button */}
           <motion.button
             whileTap={transitions.buttonTap}
             onClick={() => setShowVoice(true)}
@@ -294,6 +307,8 @@ export default function ChatScreen() {
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
+              border: 'none',
+              cursor: 'pointer',
             }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -302,7 +317,6 @@ export default function ChatScreen() {
               <path d="M12 18v4" stroke="#000" strokeWidth="2.5" strokeLinecap="round" />
             </svg>
           </motion.button>
-          {/* Send button */}
           <motion.button
             whileTap={transitions.buttonTap}
             onClick={handleSend}
@@ -315,6 +329,8 @@ export default function ChatScreen() {
               alignItems: 'center',
               justifyContent: 'center',
               flexShrink: 0,
+              border: 'none',
+              cursor: 'pointer',
             }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
@@ -333,7 +349,6 @@ export default function ChatScreen() {
         </div>
       </div>
 
-      {/* Voice overlay */}
       <AnimatePresence>
         {showVoice && <VoiceOverlay onDismiss={handleVoiceDismiss} />}
       </AnimatePresence>

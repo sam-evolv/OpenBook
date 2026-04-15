@@ -12,7 +12,6 @@ export interface SlotOption {
 }
 
 export interface BusinessCardData {
-  emoji: string;
   name: string;
   rating: number;
   reviews: number;
@@ -68,7 +67,7 @@ export const chatScripts: Record<string, ChatScript> = {
         id: 'nail-1',
         sender: 'ai',
         type: 'text',
-        text: "I found a great spot near you! PolishPro Nails has availability today. They're rated 4.9 stars and just 0.3 miles away.",
+        text: "I found a great spot near you. PolishPro Nails has availability today. They're rated 4.9 stars and just 0.3 miles away.",
         delay: 900,
       },
       {
@@ -95,14 +94,14 @@ export const chatScripts: Record<string, ChatScript> = {
         id: 'nail-4',
         sender: 'user',
         type: 'text',
-        text: "2:00 PM works great!",
+        text: '2:00 PM works great!',
         delay: 500,
       },
       {
         id: 'nail-5',
         sender: 'ai',
         type: 'text',
-        text: "Perfect! I've reserved the 2:00 PM slot at PolishPro Nails for you. Gel manicure, 45 minutes, $38. Ready to confirm?",
+        text: "Perfect. I've reserved the 2:00 PM slot at PolishPro Nails for you. Gel manicure, 45 minutes, $38. Ready to confirm?",
         delay: 900,
       },
       {
@@ -122,7 +121,7 @@ export const chatScripts: Record<string, ChatScript> = {
         id: 'gym-1',
         sender: 'ai',
         type: 'text',
-        text: "I found 3 top-rated gyms near you! Let me show you where they are.",
+        text: 'I found 3 top-rated gyms near you. Let me show you where they are.',
         delay: 900,
       },
       {
@@ -152,14 +151,14 @@ export const chatScripts: Record<string, ChatScript> = {
         sender: 'ai',
         type: 'business-card',
         businessCard: {
-          emoji: '\u{1F4AA}',
           name: 'IronWorks Gym & Fitness',
           rating: 4.8,
           reviews: 342,
           distance: '0.2 mi',
           categories: ['Weights', 'Cardio', 'Classes', 'Sauna'],
           price: '$29/day pass',
-          description: 'Full-service gym with Olympic lifting platforms, group fitness classes, and luxury recovery suite.',
+          description:
+            'Full-service gym with Olympic lifting platforms, group fitness classes, and luxury recovery suite.',
         },
         delay: 900,
       },
@@ -188,13 +187,13 @@ export const chatScripts: Record<string, ChatScript> = {
   },
 
   date: {
-    initialUserMessage: "Plan a date night for tonight",
+    initialUserMessage: 'Plan a date night for tonight',
     messages: [
       {
         id: 'date-1',
         sender: 'ai',
         type: 'text',
-        text: "Love it! I'll put together the perfect evening for you. I found some amazing options nearby.",
+        text: "Love it. I'll put together the perfect evening for you. I found some amazing options nearby.",
         delay: 900,
       },
       {
@@ -209,8 +208,8 @@ export const chatScripts: Record<string, ChatScript> = {
         sender: 'ai',
         type: 'slots',
         slots: [
-          { label: '\u{1F374} Noire Bistro', id: 'rest-1' },
-          { label: '\u{1F363} Sakura Omakase', id: 'rest-2' },
+          { label: 'Noire Bistro', id: 'rest-1' },
+          { label: 'Sakura Omakase', id: 'rest-2' },
         ],
         delay: 900,
       },
@@ -225,7 +224,7 @@ export const chatScripts: Record<string, ChatScript> = {
         id: 'date-5',
         sender: 'ai',
         type: 'text',
-        text: "Great taste! Sakura Omakase has a table for two at 7:30 PM tonight. Chef's 8-course omakase, $89 per person. It's one of the top-rated spots in the city.",
+        text: "Great taste. Sakura Omakase has a table for two at 7:30 PM tonight. Chef's 8-course omakase, $89 per person. One of the top-rated spots in the city.",
         delay: 900,
       },
       {
@@ -233,14 +232,14 @@ export const chatScripts: Record<string, ChatScript> = {
         sender: 'ai',
         type: 'business-card',
         businessCard: {
-          emoji: '\u{1F363}',
           name: 'Sakura Omakase',
           rating: 4.9,
           reviews: 528,
           distance: '0.8 mi',
           categories: ['Japanese', 'Omakase', 'Sake Bar', 'Fine Dining'],
           price: '$89/person',
-          description: "Intimate 12-seat omakase counter with master chef Tanaka. Seasonal fish flown in daily from Tokyo's Tsukiji market.",
+          description:
+            "Intimate 12-seat omakase counter with master chef Tanaka. Seasonal fish flown in daily from Tokyo's Tsukiji market.",
         },
         delay: 900,
       },
@@ -261,7 +260,7 @@ export const chatScripts: Record<string, ChatScript> = {
         id: 'flash-1',
         sender: 'ai',
         type: 'text',
-        text: "Hot deal alert! Here's the best flash deal near you right now:",
+        text: "Hot deal alert. Here's the best flash deal near you right now:",
         delay: 900,
       },
       {
@@ -270,7 +269,8 @@ export const chatScripts: Record<string, ChatScript> = {
         type: 'flash-deal',
         flashDeal: {
           business: 'Glow Skin Studio',
-          description: 'Luxury HydraFacial + LED Light Therapy combo. 60 minutes of pure rejuvenation.',
+          description:
+            'Luxury HydraFacial + LED Light Therapy combo. 60 minutes of pure rejuvenation.',
           originalPrice: '$189',
           currentPrice: '$69',
           savings: '63% OFF',
@@ -295,7 +295,7 @@ export const chatScripts: Record<string, ChatScript> = {
         id: 'custom-1',
         sender: 'ai',
         type: 'text',
-        text: "I'd love to help! Let me look into that for you...",
+        text: "I'd love to help. Let me look into that for you...",
         delay: 900,
       },
       {
@@ -310,14 +310,14 @@ export const chatScripts: Record<string, ChatScript> = {
         sender: 'ai',
         type: 'business-card',
         businessCard: {
-          emoji: '\u2B50',
           name: 'Top Local Pick',
           rating: 4.7,
           reviews: 186,
           distance: '0.4 mi',
           categories: ['Popular', 'Highly Rated', 'Nearby'],
           price: 'From $25',
-          description: 'A highly rated local favorite with excellent service and great reviews from the community.',
+          description:
+            'A highly rated local favourite with excellent service and great reviews from the community.',
         },
         delay: 900,
       },
@@ -333,8 +333,8 @@ export const chatScripts: Record<string, ChatScript> = {
 };
 
 export const suggestionPills = [
-  { label: 'Nail appointment', icon: '\u{1F485}', type: 'nail' },
-  { label: 'Find a gym', icon: '\u{1F4AA}', type: 'gym' },
-  { label: 'Date night', icon: '\u{1F37D}\uFE0F', type: 'date' },
-  { label: 'Flash deals', icon: '\u26A1', type: 'flash' },
+  { label: 'Book a nail apt', type: 'nail' },
+  { label: 'Find a gym nearby', type: 'gym' },
+  { label: 'Plan a date night', type: 'date' },
+  { label: 'Flash deals near me', type: 'flash' },
 ] as const;

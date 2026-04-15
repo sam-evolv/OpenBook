@@ -29,12 +29,13 @@ export default function FlashDealCard({ data, onGrab }: Props) {
       style={{
         background: `linear-gradient(135deg, rgba(212,175,55,0.08) 0%, rgba(212,175,55,0.03) 100%)`,
         borderRadius: radius.card,
-        border: `1px solid ${colors.goldPrimary}33`,
+        border: `0.5px solid ${colors.goldPrimary}44`,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
         overflow: 'hidden',
       }}
     >
       <div style={{ padding: 16 }}>
-        {/* Flash deal badge */}
+        {/* Flash deal badge — SVG lightning, no emoji */}
         <div
           style={{
             display: 'inline-flex',
@@ -46,24 +47,62 @@ export default function FlashDealCard({ data, onGrab }: Props) {
             marginBottom: 12,
           }}
         >
-          <span style={{ fontSize: 13 }}>&#9889;</span>
-          <span style={{ fontSize: 12, fontWeight: 700, color: colors.goldPrimary, letterSpacing: 0.5 }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <path
+              d="M13 2L4.5 13.5H11L10 22L20.5 10H14L13 2Z"
+              fill={colors.goldPrimary}
+              stroke={colors.goldPrimary}
+              strokeWidth="0.5"
+              strokeLinejoin="round"
+            />
+          </svg>
+          <span
+            style={{
+              fontSize: 12,
+              fontWeight: 700,
+              color: colors.goldPrimary,
+              letterSpacing: '0.06em',
+            }}
+          >
             FLASH DEAL
           </span>
         </div>
 
         {/* Business name */}
-        <div style={{ fontSize: 18, fontWeight: 700, color: colors.text, marginBottom: 6 }}>
+        <div
+          style={{
+            fontSize: 18,
+            fontWeight: 900,
+            color: colors.text,
+            letterSpacing: '-0.03em',
+            marginBottom: 6,
+          }}
+        >
           {data.business}
         </div>
 
         {/* Description */}
-        <div style={{ fontSize: 13, color: colors.textSecondary, lineHeight: 1.5, marginBottom: 14 }}>
+        <div
+          style={{
+            fontSize: 13,
+            fontWeight: 400,
+            lineHeight: 1.6,
+            color: colors.textSecondary,
+            marginBottom: 14,
+          }}
+        >
           {data.description}
         </div>
 
         {/* Pricing row */}
-        <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 8 }}>
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'baseline',
+            gap: 12,
+            marginBottom: 8,
+          }}
+        >
           <span
             style={{
               fontSize: 14,
@@ -73,7 +112,7 @@ export default function FlashDealCard({ data, onGrab }: Props) {
           >
             {data.originalPrice}
           </span>
-          <span style={{ fontSize: 28, fontWeight: 800, color: colors.text }}>
+          <span style={{ fontSize: 28, fontWeight: 900, color: colors.text }}>
             {data.currentPrice}
           </span>
           <span
@@ -124,9 +163,11 @@ export default function FlashDealCard({ data, onGrab }: Props) {
             borderRadius: radius.pill,
             color: '#000',
             fontSize: 15,
-            fontWeight: 700,
+            fontWeight: 800,
+            letterSpacing: '-0.02em',
             border: 'none',
             cursor: 'pointer',
+            boxShadow: '0 4px 20px rgba(212,175,55,0.3)',
           }}
         >
           Grab This Deal

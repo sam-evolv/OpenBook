@@ -36,9 +36,10 @@ export default function MessageBubble({
         marginBottom: 8,
       }}
     >
-      {/* Avatar row for AI messages */}
+      {/* AI text bubble */}
       {!isUser && message.type === 'text' && (
         <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, maxWidth: '85%' }}>
+          {/* SVG star avatar — no emoji */}
           <div
             style={{
               width: 32,
@@ -48,20 +49,31 @@ export default function MessageBubble({
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 15,
               flexShrink: 0,
             }}
           >
-            &#10024;
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path
+                d="M12 2L14.5 9.5L22 12L14.5 14.5L12 22L9.5 14.5L2 12L9.5 9.5L12 2Z"
+                fill="#000"
+                stroke="#000"
+                strokeWidth="0.5"
+              />
+            </svg>
           </div>
+          {/* Glass bubble */}
           <div
             style={{
-              background: colors.surface3,
+              background: 'rgba(255,255,255,0.06)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
               borderRadius: radius.bubble,
               borderBottomLeftRadius: 6,
+              border: '0.5px solid rgba(255,255,255,0.1)',
               padding: '12px 16px',
               fontSize: 15,
-              lineHeight: 1.5,
+              fontWeight: 400,
+              lineHeight: 1.6,
               color: colors.text,
             }}
           >
@@ -79,10 +91,11 @@ export default function MessageBubble({
             borderBottomRightRadius: 6,
             padding: '12px 16px',
             fontSize: 15,
-            lineHeight: 1.5,
+            fontWeight: 400,
+            lineHeight: 1.6,
             color: '#000',
-            fontWeight: 500,
             maxWidth: '85%',
+            boxShadow: '0 4px 20px rgba(212,175,55,0.3)',
           }}
         >
           {message.text}
@@ -112,12 +125,15 @@ export default function MessageBubble({
                     flexShrink: 0,
                     padding: '10px 18px',
                     borderRadius: radius.pill,
-                    background: isSelected ? colors.goldGradient : colors.surface3,
+                    background: isSelected ? colors.goldGradient : 'rgba(255,255,255,0.06)',
+                    backdropFilter: isSelected ? undefined : 'blur(20px)',
+                    WebkitBackdropFilter: isSelected ? undefined : 'blur(20px)',
                     color: isSelected ? '#000' : colors.text,
                     fontSize: 14,
                     fontWeight: 600,
-                    border: isSelected ? 'none' : `1px solid ${colors.border}`,
+                    border: isSelected ? 'none' : '0.5px solid rgba(255,255,255,0.1)',
                     whiteSpace: 'nowrap',
+                    cursor: 'pointer',
                   }}
                 >
                   {slot.label}
@@ -151,7 +167,7 @@ export default function MessageBubble({
 
       {/* Confirm CTA */}
       {message.type === 'confirm-cta' && (
-        <div style={{ width: '100%', paddingLeft: 40, paddingRight: 0 }}>
+        <div style={{ width: '100%', paddingLeft: 40 }}>
           <motion.button
             whileTap={transitions.buttonTap}
             onClick={onConfirm}
@@ -162,7 +178,8 @@ export default function MessageBubble({
               borderRadius: radius.pill,
               color: '#000',
               fontSize: 16,
-              fontWeight: 700,
+              fontWeight: 800,
+              letterSpacing: '-0.02em',
               border: 'none',
               cursor: 'pointer',
               boxShadow: '0 4px 20px rgba(212,175,55,0.3)',

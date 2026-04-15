@@ -8,25 +8,22 @@ function ConfettiParticle({ delay, angle }: { delay: number; angle: number }) {
   const x = Math.cos(angle) * distance;
   const y = Math.sin(angle) * distance;
   const size = 6 + Math.random() * 6;
-  const particleColors = [colors.goldPrimary, colors.goldLight, '#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24'];
+  const particleColors = [
+    colors.goldPrimary,
+    colors.goldLight,
+    '#ff6b6b',
+    '#4ecdc4',
+    '#45b7d1',
+    '#f9ca24',
+  ];
   const color = particleColors[Math.floor(Math.random() * particleColors.length)];
   const rotation = Math.random() * 360;
 
   return (
     <motion.div
       initial={{ x: 0, y: 0, opacity: 1, scale: 1, rotate: 0 }}
-      animate={{
-        x,
-        y: y + 40,
-        opacity: [1, 1, 0],
-        scale: [1, 1.2, 0.5],
-        rotate: rotation,
-      }}
-      transition={{
-        duration: 1.2,
-        delay,
-        ease: 'easeOut',
-      }}
+      animate={{ x, y: y + 40, opacity: [1, 1, 0], scale: [1, 1.2, 0.5], rotate: rotation }}
+      transition={{ duration: 1.2, delay, ease: 'easeOut' }}
       style={{
         position: 'absolute',
         width: size,
@@ -70,19 +67,18 @@ export default function SuccessScreen() {
         overflow: 'hidden',
       }}
     >
-      {/* Checkmark ring with confetti */}
+      {/* Checkmark rings with confetti */}
       <div
         style={{
           position: 'relative',
-          width: 120,
-          height: 120,
+          width: 160,
+          height: 160,
           marginBottom: 32,
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
         }}
       >
-        {/* Confetti */}
         <AnimatePresence>
           {showConfetti &&
             confettiParticles.map((p) => (
@@ -90,19 +86,28 @@ export default function SuccessScreen() {
             ))}
         </AnimatePresence>
 
-        {/* Ring */}
+        {/* Outer ring 140px */}
         <motion.div
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          transition={{
-            type: 'spring',
-            stiffness: 200,
-            damping: 12,
-            delay: 0.1,
-          }}
+          transition={{ type: 'spring', stiffness: 180, damping: 14, delay: 0.05 }}
           style={{
-            width: 100,
-            height: 100,
+            position: 'absolute',
+            width: 140,
+            height: 140,
+            borderRadius: '50%',
+            border: `1px solid rgba(48,209,88,0.1)`,
+          }}
+        />
+
+        {/* Inner ring 110px */}
+        <motion.div
+          initial={{ scale: 0, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ type: 'spring', stiffness: 200, damping: 12, delay: 0.1 }}
+          style={{
+            width: 110,
+            height: 110,
             borderRadius: '50%',
             background: `${colors.green}15`,
             border: `3px solid ${colors.green}`,
@@ -112,7 +117,6 @@ export default function SuccessScreen() {
             boxShadow: `0 0 40px ${colors.green}33`,
           }}
         >
-          {/* Checkmark */}
           <motion.svg
             width="44"
             height="44"
@@ -120,12 +124,7 @@ export default function SuccessScreen() {
             fill="none"
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            transition={{
-              type: 'spring',
-              stiffness: 300,
-              damping: 15,
-              delay: 0.4,
-            }}
+            transition={{ type: 'spring', stiffness: 300, damping: 15, delay: 0.4 }}
           >
             <motion.path
               d="M5 13l4 4L19 7"
@@ -148,9 +147,10 @@ export default function SuccessScreen() {
         transition={{ delay: 0.6, ...transitions.spring }}
         style={{
           fontSize: 26,
-          fontWeight: 800,
+          fontWeight: 900,
           color: colors.text,
           textAlign: 'center',
+          letterSpacing: '-0.03em',
           marginBottom: 8,
         }}
       >
@@ -163,16 +163,17 @@ export default function SuccessScreen() {
         transition={{ delay: 0.7 }}
         style={{
           fontSize: 15,
+          fontWeight: 400,
+          lineHeight: 1.6,
           color: colors.textSecondary,
           textAlign: 'center',
           marginBottom: 32,
-          lineHeight: 1.5,
         }}
       >
         You're all set. We've sent the details to your phone.
       </motion.div>
 
-      {/* Summary card */}
+      {/* Summary card — liquid glass */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -180,35 +181,49 @@ export default function SuccessScreen() {
         style={{
           width: '100%',
           maxWidth: 340,
-          background: colors.surface2,
+          background: 'rgba(255,255,255,0.04)',
+          backdropFilter: 'blur(30px)',
+          WebkitBackdropFilter: 'blur(30px)',
           borderRadius: radius.card,
           padding: 20,
-          border: `1px solid ${colors.border}`,
+          border: '0.5px solid rgba(255,255,255,0.1)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.4), inset 0 1px 0 rgba(255,255,255,0.05)',
           marginBottom: 32,
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
+          {/* PP initials squircle — no emoji */}
           <div
             style={{
               width: 44,
               height: 44,
               borderRadius: 12,
-              background: colors.goldGradient,
+              background: 'linear-gradient(145deg, #d05070, #a02848)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 22,
+              fontSize: 14,
+              fontWeight: 900,
+              color: '#fff',
+              letterSpacing: '-0.02em',
+              flexShrink: 0,
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.2)',
             }}
           >
-            &#10024;
+            PP
           </div>
           <div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: colors.text }}>
+            <div
+              style={{
+                fontSize: 16,
+                fontWeight: 700,
+                color: colors.text,
+                letterSpacing: '-0.02em',
+              }}
+            >
               PolishPro Nails
             </div>
-            <div style={{ fontSize: 13, color: colors.textSecondary }}>
-              Gel Manicure
-            </div>
+            <div style={{ fontSize: 13, color: colors.textSecondary }}>Gel Manicure</div>
           </div>
         </div>
 
@@ -217,7 +232,7 @@ export default function SuccessScreen() {
             display: 'flex',
             justifyContent: 'space-between',
             padding: '12px 0',
-            borderTop: `1px solid ${colors.border}`,
+            borderTop: '0.5px solid rgba(255,255,255,0.06)',
           }}
         >
           <div>
@@ -236,11 +251,11 @@ export default function SuccessScreen() {
             justifyContent: 'space-between',
             alignItems: 'center',
             padding: '12px 0 0',
-            borderTop: `1px solid ${colors.border}`,
+            borderTop: '0.5px solid rgba(255,255,255,0.06)',
           }}
         >
           <span style={{ fontSize: 14, color: colors.textSecondary }}>Total paid</span>
-          <span style={{ fontSize: 18, fontWeight: 800, color: colors.goldPrimary }}>$38.00</span>
+          <span style={{ fontSize: 18, fontWeight: 900, color: colors.goldPrimary }}>€38.00</span>
         </div>
       </motion.div>
 
@@ -254,13 +269,16 @@ export default function SuccessScreen() {
         style={{
           width: '100%',
           maxWidth: 340,
-          padding: '18px',
+          height: 56,
           background: colors.goldGradient,
           borderRadius: radius.pill,
           color: '#000',
           fontSize: 17,
-          fontWeight: 700,
-          boxShadow: '0 4px 20px rgba(212,175,55,0.3)',
+          fontWeight: 800,
+          letterSpacing: '-0.02em',
+          border: 'none',
+          cursor: 'pointer',
+          boxShadow: '0 8px 32px rgba(212,175,55,0.4)',
         }}
       >
         Back to Home
