@@ -14,6 +14,7 @@ const CONSUMER_PUBLIC = [
   '/business',
   '/welcome',
   '/auth/callback',
+  '/app',
 ]
 
 // ── Consumer protected routes ──────────────────────────────────────────────
