@@ -1,16 +1,17 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { colors, radius, transitions } from '../constants/theme';
+import { useAuth } from '../lib/AuthContext';
 import TabBar from '../components/TabBar';
 
 const favourites = [
-  { initials: 'EP', name: 'Elite Pampering', rating: '4.9', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-  { initials: 'SW', name: 'StyleWorks', rating: '4.8', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
-  { initials: 'NS', name: 'NailStar', rating: '4.7', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
-  { initials: 'RB', name: 'Rose Beauty', rating: '4.9', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
-  { initials: 'CP', name: 'CorePower', rating: '4.8', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
-  { initials: 'YF', name: 'YogaFlow', rating: '4.9', gradient: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)' },
-  { initials: 'IG', name: 'IronGrip Gym', rating: '4.7', gradient: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)' },
+  { initials: 'EP', name: 'Evolv Performance', rating: '4.9', gradient: 'linear-gradient(135deg, #D4AF37 0%, #b88a18 100%)', slug: 'evolv-performance' },
+  { initials: 'SW', name: 'Saltwater Sauna', rating: '4.8', gradient: 'linear-gradient(135deg, #a78bfa 0%, #8b5cf6 100%)', slug: 'saltwater-sauna' },
+  { initials: 'NS', name: 'The Nail Studio', rating: '4.7', gradient: 'linear-gradient(135deg, #f472b6 0%, #ec4899 100%)', slug: 'the-nail-studio' },
+  { initials: 'RB', name: 'Refresh Barber', rating: '4.9', gradient: 'linear-gradient(135deg, #34d399 0%, #10b981 100%)', slug: 'refresh-barber' },
+  { initials: 'CP', name: 'Cork Physio', rating: '4.8', gradient: 'linear-gradient(135deg, #60a5fa 0%, #3b82f6 100%)', slug: 'cork-physio' },
+  { initials: 'YF', name: 'Yoga Flow Cork', rating: '4.9', gradient: 'linear-gradient(135deg, #fb923c 0%, #f97316 100%)', slug: 'yoga-flow-cork' },
+  { initials: 'IG', name: 'Iron Gym Cork', rating: '4.7', gradient: 'linear-gradient(135deg, rgba(255,255,255,0.7) 0%, rgba(255,255,255,0.4) 100%)', slug: 'iron-gym-cork' },
 ];
 
 const myPlaces = [
@@ -21,6 +22,10 @@ const myPlaces = [
 
 export default function HomeScreen() {
   const navigate = useNavigate();
+  const { customer, user } = useAuth();
+  const firstName = customer?.name?.split(' ')[0] ?? user?.email?.split('@')[0] ?? 'there';
+  const greeting = new Date().getHours() < 12 ? 'Good morning' : new Date().getHours() < 18 ? 'Good afternoon' : 'Good evening';
+  const userInitial = (customer?.name?.[0] ?? user?.email?.[0] ?? 'S').toUpperCase();
 
   return (
     <motion.div
@@ -67,10 +72,11 @@ export default function HomeScreen() {
               </span>
             </div>
             <div style={{ fontSize: 15, color: colors.textSecondary }}>
-              Good evening, Sam
+              {greeting}, {firstName}
             </div>
           </div>
           <div
+            onClick={() => navigate('/me')}
             style={{
               width: 40,
               height: 40,
@@ -82,9 +88,10 @@ export default function HomeScreen() {
               fontSize: 17,
               fontWeight: 700,
               color: '#000',
+              cursor: 'pointer',
             }}
           >
-            S
+            {userInitial}
           </div>
         </div>
       </div>
@@ -111,7 +118,7 @@ export default function HomeScreen() {
             <span style={{ fontSize: 17, fontWeight: 700, color: colors.text }}>
               Favourites
             </span>
-            <span style={{ fontSize: 13, color: colors.goldPrimary, fontWeight: 600 }}>
+            <span onClick={() => navigate('/explore')} style={{ fontSize: 13, color: colors.goldPrimary, fontWeight: 600, cursor: 'pointer' }}>
               See all
             </span>
           </div>
@@ -132,6 +139,7 @@ export default function HomeScreen() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: i * 0.08, ...transitions.spring }}
                 whileTap={transitions.buttonTap}
+                onClick={() => navigate(`/business/${fav.slug}`)}
                 style={{
                   flexShrink: 0,
                   width: 76,
@@ -139,6 +147,7 @@ export default function HomeScreen() {
                   flexDirection: 'column',
                   alignItems: 'center',
                   gap: 6,
+                  cursor: 'pointer',
                 }}
               >
                 <div

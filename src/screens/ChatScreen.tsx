@@ -2,27 +2,40 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { colors, radius, transitions } from '../constants/theme';
-import { chatScripts, type ChatMessage } from '../constants/chatScripts';
-import MessageBubble from '../components/MessageBubble';
 import TypingIndicator from '../components/TypingIndicator';
 import VoiceOverlay from '../components/VoiceOverlay';
+import { processUserMessage, type AiChatMessage } from '../lib/ai-assistant';
+import type { Business, Service, TimeSlot } from '../lib/types';
+
+interface AiContext {
+  businesses: Business[]
+  selectedBusiness: Business | null
+  selectedService: Service | null
+  services: Service[]
+  slots: TimeSlot[]
+  selectedDate: string
+}
 
 export default function ChatScreen() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const scriptType = searchParams.get('type') || 'nail';
+  const scriptType = searchParams.get('type') || '';
   const customQuery = searchParams.get('q') || '';
 
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<AiChatMessage[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [showVoice, setShowVoice] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [inputValue, setInputValue] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
-  const scriptIndexRef = useRef(0);
-  const isRunningRef = useRef(false);
-
-  const script = chatScripts[scriptType] || chatScripts.nail;
+  const contextRef = useRef<AiContext>({
+    businesses: [],
+    selectedBusiness: null,
+    selectedService: null,
+    services: [],
+    slots: [],
+    selectedDate: new Date().toISOString().split('T')[0],
+  });
+  const initializedRef = useRef(false);
 
   const scrollToBottom = useCallback(() => {
     setTimeout(() => {
@@ -32,98 +45,85 @@ export default function ChatScreen() {
     }, 50);
   }, []);
 
-  const runScript = useCallback(
-    (startIndex: number, scriptMessages: ChatMessage[]) => {
-      if (isRunningRef.current) return;
-      isRunningRef.current = true;
+  // Map script type to initial user message
+  function getInitialMessage(): string {
+    if (customQuery) return customQuery;
+    switch (scriptType) {
+      case 'nail': return 'Find me a nail appointment nearby';
+      case 'gym': return 'Find me a gym nearby';
+      case 'date': return 'Find me a nice restaurant for tonight';
+      case 'flash': return 'Show me the best deals nearby';
+      default: return customQuery || 'Hi! What can you help me with?';
+    }
+  }
 
-      const addNextMessage = (idx: number) => {
-        if (idx >= scriptMessages.length) {
-          isRunningRef.current = false;
-          return;
-        }
-
-        const msg = scriptMessages[idx];
-
-        if (msg.sender === 'ai') {
-          setIsTyping(true);
-          scrollToBottom();
-          setTimeout(() => {
-            setIsTyping(false);
-            setMessages((prev) => [...prev, msg]);
-            scrollToBottom();
-            scriptIndexRef.current = idx + 1;
-            setTimeout(() => addNextMessage(idx + 1), 300);
-          }, msg.delay || 900);
-        } else {
-          setMessages((prev) => [...prev, msg]);
-          scrollToBottom();
-          scriptIndexRef.current = idx + 1;
-          setTimeout(() => addNextMessage(idx + 1), msg.delay || 500);
-        }
-      };
-
-      addNextMessage(startIndex);
-    },
-    [scrollToBottom]
-  );
-
-  // Initialize script on mount
-  useEffect(() => {
-    const initialMsg: ChatMessage = {
-      id: 'user-initial',
-      sender: 'user',
-      type: 'text',
-      text: customQuery || script.initialUserMessage,
+  async function sendMessage(text: string) {
+    const userMsg: AiChatMessage = {
+      id: `user-${Date.now()}`,
+      role: 'user',
+      content: text,
     };
-
-    setMessages([initialMsg]);
+    setMessages((prev) => [...prev, userMsg]);
     scrollToBottom();
+    setIsTyping(true);
 
-    const timer = setTimeout(() => {
-      runScript(0, script.messages);
-    }, 600);
+    try {
+      const { reply, updatedContext, action } = await processUserMessage(text, contextRef.current);
 
-    return () => clearTimeout(timer);
+      // Update context
+      contextRef.current = { ...contextRef.current, ...updatedContext };
+
+      const aiMsg: AiChatMessage = {
+        id: `ai-${Date.now()}`,
+        role: 'assistant',
+        content: reply,
+      };
+      setIsTyping(false);
+      setMessages((prev) => [...prev, aiMsg]);
+      scrollToBottom();
+
+      // Handle navigation action
+      if (action?.startsWith('navigate:')) {
+        const path = action.replace('navigate:', '');
+        setTimeout(() => navigate(path), 1500);
+      }
+    } catch {
+      setIsTyping(false);
+      const errorMsg: AiChatMessage = {
+        id: `ai-error-${Date.now()}`,
+        role: 'assistant',
+        content: "Sorry, I had trouble processing that. Please try again!",
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+      scrollToBottom();
+    }
+  }
+
+  // Initialize with first message
+  useEffect(() => {
+    if (initializedRef.current) return;
+    initializedRef.current = true;
+    const initial = getInitialMessage();
+    sendMessage(initial);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [scriptType]);
-
-  const handleConfirm = () => {
-    navigate('/confirm');
-  };
+  }, []);
 
   const handleVoiceDismiss = useCallback(
     (triggered: boolean) => {
       setShowVoice(false);
       if (triggered) {
-        // Start the nail script after voice
-        const voiceUserMsg: ChatMessage = {
-          id: 'voice-user',
-          sender: 'user',
-          type: 'text',
-          text: 'Find me a nail appointment nearby',
-        };
-        setMessages((prev) => [...prev, voiceUserMsg]);
-        scrollToBottom();
-        setTimeout(() => {
-          runScript(0, chatScripts.nail.messages);
-        }, 600);
+        sendMessage('Find me a nail appointment nearby');
       }
     },
-    [runScript, scrollToBottom]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    []
   );
 
   const handleSend = () => {
     if (!inputValue.trim()) return;
-    const userMsg: ChatMessage = {
-      id: `user-${Date.now()}`,
-      sender: 'user',
-      type: 'text',
-      text: inputValue.trim(),
-    };
-    setMessages((prev) => [...prev, userMsg]);
+    const text = inputValue.trim();
     setInputValue('');
-    scrollToBottom();
+    sendMessage(text);
   };
 
   return (
@@ -172,7 +172,6 @@ export default function ChatScreen() {
           </svg>
         </motion.button>
 
-        {/* Avatar */}
         <div style={{ position: 'relative' }}>
           <div
             style={{
@@ -188,7 +187,6 @@ export default function ChatScreen() {
           >
             &#10024;
           </div>
-          {/* Online dot */}
           <div
             style={{
               position: 'absolute',
@@ -222,28 +220,77 @@ export default function ChatScreen() {
           padding: '16px 16px 8px',
         }}
       >
-        {messages.map((msg, i) => (
-          <MessageBubble
+        {messages.map((msg) => (
+          <div
             key={msg.id}
-            message={msg}
-            index={i}
-            onSlotSelect={(slot) => setSelectedSlot(slot.id)}
-            selectedSlot={selectedSlot}
-            onConfirm={handleConfirm}
-            onBook={handleConfirm}
-          />
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: msg.role === 'user' ? 'flex-end' : 'flex-start',
+              marginBottom: 8,
+            }}
+          >
+            {msg.role === 'assistant' ? (
+              <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, maxWidth: '85%' }}>
+                <div
+                  style={{
+                    width: 32,
+                    height: 32,
+                    borderRadius: '50%',
+                    background: colors.goldGradient,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: 15,
+                    flexShrink: 0,
+                  }}
+                >
+                  &#10024;
+                </div>
+                <div
+                  style={{
+                    background: colors.surface3,
+                    borderRadius: radius.bubble,
+                    borderBottomLeftRadius: 6,
+                    padding: '12px 16px',
+                    fontSize: 15,
+                    lineHeight: 1.6,
+                    color: colors.text,
+                    whiteSpace: 'pre-wrap',
+                  }}
+                  dangerouslySetInnerHTML={{
+                    __html: msg.content
+                      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                      .replace(/\n/g, '<br/>')
+                  }}
+                />
+              </div>
+            ) : (
+              <div
+                style={{
+                  background: colors.goldGradient,
+                  borderRadius: radius.bubble,
+                  borderBottomRightRadius: 6,
+                  padding: '12px 16px',
+                  fontSize: 15,
+                  lineHeight: 1.5,
+                  color: '#000',
+                  fontWeight: 500,
+                  maxWidth: '85%',
+                }}
+              >
+                {msg.content}
+              </div>
+            )}
+          </div>
         ))}
 
         {isTyping && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-          >
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
             <TypingIndicator />
           </motion.div>
         )}
 
-        {/* Bottom spacer */}
         <div style={{ height: 80 }} />
       </div>
 
@@ -281,7 +328,6 @@ export default function ChatScreen() {
               fontSize: 15,
             }}
           />
-          {/* Mic button */}
           <motion.button
             whileTap={transitions.buttonTap}
             onClick={() => setShowVoice(true)}
@@ -302,7 +348,6 @@ export default function ChatScreen() {
               <path d="M12 18v4" stroke="#000" strokeWidth="2.5" strokeLinecap="round" />
             </svg>
           </motion.button>
-          {/* Send button */}
           <motion.button
             whileTap={transitions.buttonTap}
             onClick={handleSend}
@@ -318,16 +363,8 @@ export default function ChatScreen() {
             }}
           >
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
-              <path
-                d="M22 2L11 13"
-                stroke={inputValue.trim() ? '#000' : colors.textTertiary}
-                strokeWidth="2.5"
-                strokeLinecap="round"
-              />
-              <path
-                d="M22 2L15 22L11 13L2 9L22 2Z"
-                fill={inputValue.trim() ? '#000' : colors.textTertiary}
-              />
+              <path d="M22 2L11 13" stroke={inputValue.trim() ? '#000' : colors.textTertiary} strokeWidth="2.5" strokeLinecap="round" />
+              <path d="M22 2L15 22L11 13L2 9L22 2Z" fill={inputValue.trim() ? '#000' : colors.textTertiary} />
             </svg>
           </motion.button>
         </div>

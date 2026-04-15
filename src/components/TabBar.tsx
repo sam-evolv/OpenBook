@@ -4,10 +4,10 @@ import { colors, transitions } from '../constants/theme';
 
 const tabs = [
   { id: 'home', label: 'Home', path: '/', icon: 'home' },
-  { id: 'explore', label: 'Explore', path: '/', icon: 'explore' },
+  { id: 'explore', label: 'Explore', path: '/explore', icon: 'explore' },
   { id: 'ai', label: 'Ask AI', path: '/assistant', icon: 'ai' },
-  { id: 'bookings', label: 'Bookings', path: '/', icon: 'bookings' },
-  { id: 'me', label: 'Me', path: '/', icon: 'me' },
+  { id: 'bookings', label: 'Bookings', path: '/bookings', icon: 'bookings' },
+  { id: 'me', label: 'Me', path: '/me', icon: 'me' },
 ];
 
 function TabIcon({ icon, active }: { icon: string; active: boolean }) {
@@ -62,8 +62,16 @@ export default function TabBar() {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const isHome = location.pathname === '/';
-  const isAssistant = location.pathname === '/assistant';
+  const pathname = location.pathname;
+
+  function isActive(tabId: string): boolean {
+    if (tabId === 'home') return pathname === '/';
+    if (tabId === 'explore') return pathname === '/explore';
+    if (tabId === 'ai') return pathname === '/assistant' || pathname.startsWith('/chat');
+    if (tabId === 'bookings') return pathname === '/bookings';
+    if (tabId === 'me') return pathname === '/me';
+    return false;
+  }
 
   return (
     <div
@@ -92,8 +100,7 @@ export default function TabBar() {
         }}
       >
         {tabs.map((tab) => {
-          const active =
-            (tab.id === 'home' && isHome) || (tab.id === 'ai' && isAssistant);
+          const active = isActive(tab.id);
 
           if (tab.id === 'ai') {
             return (
