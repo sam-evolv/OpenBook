@@ -4,20 +4,115 @@ import { colors, radius, transitions } from '../constants/theme';
 import TabBar from '../components/TabBar';
 
 const favourites = [
-  { initials: 'EP', name: 'Elite Pampering', rating: '4.9', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-  { initials: 'SW', name: 'StyleWorks', rating: '4.8', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
-  { initials: 'NS', name: 'NailStar', rating: '4.7', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
-  { initials: 'RB', name: 'Rose Beauty', rating: '4.9', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
-  { initials: 'CP', name: 'CorePower', rating: '4.8', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
-  { initials: 'YF', name: 'YogaFlow', rating: '4.9', gradient: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)' },
-  { initials: 'IG', name: 'IronGrip Gym', rating: '4.7', gradient: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)' },
+  { initials: 'EP', name: 'Elite Pampering', gradient: 'linear-gradient(145deg, #d4a820, #8a6810)', badge: null },
+  { initials: 'SW', name: 'StyleWorks', gradient: 'linear-gradient(145deg, #8070d0, #5040a8)', badge: '2' },
+  { initials: 'NS', name: 'NailStar', gradient: 'linear-gradient(145deg, #d05070, #a02848)', badge: null },
+  { initials: 'RB', name: 'Rose Beauty', gradient: 'linear-gradient(145deg, #28b880, #107850)', badge: null },
 ];
 
 const myPlaces = [
-  { initials: 'BB', name: 'Bean & Brew', category: 'Coffee', distance: '0.1 mi', gradient: 'linear-gradient(135deg, #fccb90 0%, #d57eeb 100%)' },
-  { initials: 'SB', name: 'Stack Burger', category: 'Food', distance: '0.3 mi', gradient: 'linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%)' },
-  { initials: 'FL', name: 'FitLife', category: 'Gym', distance: '0.5 mi', gradient: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)' },
+  { initials: 'CP', name: 'CorePower', gradient: 'linear-gradient(145deg, #3880d8, #1858a8)', badge: null },
+  { initials: 'YF', name: 'YogaFlow', gradient: 'linear-gradient(145deg, #d08028, #a05808)', badge: null },
+  { initials: 'IG', name: 'IronGrip Gym', gradient: 'linear-gradient(145deg, #585858, #303030)', badge: '1' },
 ];
+
+function IconTile({ initials, name, gradient, badge, delay }: {
+  initials: string;
+  name: string;
+  gradient: string;
+  badge: string | null;
+  delay: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay, ...transitions.spring }}
+      whileTap={transitions.buttonTap}
+      style={{
+        flexShrink: 0,
+        width: 72,
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: 5,
+        cursor: 'pointer',
+      }}
+    >
+      {/* Squircle icon */}
+      <div style={{ position: 'relative' }}>
+        <div
+          style={{
+            width: 62,
+            height: 62,
+            borderRadius: 20,
+            background: gradient,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontSize: 19,
+            fontWeight: 800,
+            color: '#fff',
+            letterSpacing: -0.5,
+            boxShadow: '0 4px 14px rgba(0,0,0,0.35)',
+          }}
+        >
+          {initials}
+        </div>
+        {badge && (
+          <div
+            style={{
+              position: 'absolute',
+              top: -5,
+              right: -5,
+              width: 18,
+              height: 18,
+              borderRadius: '50%',
+              background: colors.red,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              fontSize: 11,
+              fontWeight: 700,
+              color: '#fff',
+              border: '2px solid #080808',
+            }}
+          >
+            {badge}
+          </div>
+        )}
+      </div>
+
+      {/* Name */}
+      <span
+        style={{
+          fontSize: 11,
+          fontWeight: 500,
+          color: colors.textSecondary,
+          textAlign: 'center',
+          lineHeight: 1.2,
+          maxWidth: 72,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+        }}
+      >
+        {name}
+      </span>
+
+      {/* Dot indicator */}
+      <div
+        style={{
+          width: 5,
+          height: 5,
+          borderRadius: '50%',
+          background: colors.goldPrimary,
+          opacity: 0.7,
+        }}
+      />
+    </motion.div>
+  );
+}
 
 export default function HomeScreen() {
   const navigate = useNavigate();
@@ -39,53 +134,41 @@ export default function HomeScreen() {
       {/* Header */}
       <div
         className="safe-top"
-        style={{
-          padding: '16px 20px 12px',
-        }}
+        style={{ padding: '18px 20px 14px' }}
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <div
-              style={{
-                fontSize: 22,
-                fontWeight: 800,
-                marginBottom: 4,
-                letterSpacing: -0.3,
-              }}
-            >
-              <span style={{ color: colors.text }}>Open</span>
-              <span style={{ color: colors.text }}>Book </span>
-              <span
-                style={{
-                  background: colors.goldGradient,
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}
-              >
-                AI
-              </span>
-            </div>
-            <div style={{ fontSize: 15, color: colors.textSecondary }}>
-              Good evening, Sam
-            </div>
-          </div>
-          <div
+          <span
             style={{
-              width: 40,
-              height: 40,
+              fontSize: 26,
+              fontWeight: 800,
+              color: colors.text,
+              letterSpacing: -0.5,
+            }}
+          >
+            OpenBook
+          </span>
+
+          {/* Search icon button */}
+          <motion.button
+            whileTap={transitions.buttonTap}
+            style={{
+              width: 36,
+              height: 36,
               borderRadius: '50%',
-              background: colors.goldGradient,
+              background: 'transparent',
+              border: 'none',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              fontSize: 17,
-              fontWeight: 700,
-              color: '#000',
+              cursor: 'pointer',
+              padding: 0,
             }}
           >
-            S
-          </div>
+            <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+              <circle cx="9.5" cy="9.5" r="6.5" stroke="#D4AF37" strokeWidth="2" />
+              <line x1="14.5" y1="14.5" x2="20" y2="20" stroke="#D4AF37" strokeWidth="2" strokeLinecap="round" />
+            </svg>
+          </motion.button>
         </div>
       </div>
 
@@ -97,165 +180,74 @@ export default function HomeScreen() {
           paddingBottom: 100,
         }}
       >
-        {/* Favourites */}
-        <div style={{ padding: '16px 0' }}>
-          <div
+        {/* FAVOURITES section */}
+        <div style={{ padding: '14px 0 6px' }}>
+          <span
             style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
+              display: 'block',
+              fontSize: 11,
+              fontWeight: 600,
+              color: colors.textSecondary,
+              letterSpacing: 1.2,
+              textTransform: 'uppercase',
               padding: '0 20px',
               marginBottom: 14,
             }}
           >
-            <span style={{ fontSize: 17, fontWeight: 700, color: colors.text }}>
-              Favourites
-            </span>
-            <span style={{ fontSize: 13, color: colors.goldPrimary, fontWeight: 600 }}>
-              See all
-            </span>
-          </div>
+            Favourites
+          </span>
 
           <div
             style={{
               display: 'flex',
-              gap: 12,
+              gap: 10,
               overflowX: 'auto',
               paddingLeft: 20,
               paddingRight: 20,
+              scrollbarWidth: 'none',
             }}
           >
             {favourites.map((fav, i) => (
-              <motion.div
-                key={fav.name}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.08, ...transitions.spring }}
-                whileTap={transitions.buttonTap}
-                style={{
-                  flexShrink: 0,
-                  width: 76,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 6,
-                }}
-              >
-                <div
-                  style={{
-                    width: 64,
-                    height: 64,
-                    borderRadius: radius.squircle,
-                    background: fav.gradient,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 20,
-                    fontWeight: 800,
-                    color: '#fff',
-                    letterSpacing: -0.5,
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
-                  }}
-                >
-                  {fav.initials}
-                </div>
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: colors.text,
-                    textAlign: 'center',
-                    lineHeight: 1.2,
-                    maxWidth: 76,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {fav.name}
-                </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                  <span style={{ color: '#FFD700', fontSize: 10 }}>&#9733;</span>
-                  <span style={{ fontSize: 10, color: colors.textSecondary }}>{fav.rating}</span>
-                </div>
-              </motion.div>
+              <IconTile key={fav.initials} {...fav} delay={i * 0.07} />
             ))}
           </div>
         </div>
 
-        {/* My Places */}
-        <div style={{ padding: '8px 20px' }}>
-          <div
+        {/* MY PLACES section */}
+        <div style={{ padding: '18px 0 6px' }}>
+          <span
             style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
+              display: 'block',
+              fontSize: 11,
+              fontWeight: 600,
+              color: colors.textSecondary,
+              letterSpacing: 1.2,
+              textTransform: 'uppercase',
+              padding: '0 20px',
               marginBottom: 14,
             }}
           >
-            <span style={{ fontSize: 17, fontWeight: 700, color: colors.text }}>
-              My Places
-            </span>
-            <span style={{ fontSize: 13, color: colors.goldPrimary, fontWeight: 600 }}>
-              See all
-            </span>
-          </div>
+            My Places
+          </span>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div
+            style={{
+              display: 'flex',
+              gap: 10,
+              overflowX: 'auto',
+              paddingLeft: 20,
+              paddingRight: 20,
+              scrollbarWidth: 'none',
+            }}
+          >
             {myPlaces.map((place, i) => (
-              <motion.div
-                key={place.name}
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 + i * 0.08, ...transitions.spring }}
-                whileTap={transitions.buttonTap}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 14,
-                  background: colors.surface2,
-                  borderRadius: radius.squircle,
-                  padding: '14px 16px',
-                  border: `1px solid ${colors.border}`,
-                }}
-              >
-                <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 14,
-                    background: place.gradient,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 16,
-                    fontWeight: 800,
-                    color: '#fff',
-                    letterSpacing: -0.5,
-                    flexShrink: 0,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                  }}
-                >
-                  {place.initials}
-                </div>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: colors.text }}>
-                    {place.name}
-                  </div>
-                  <div style={{ fontSize: 13, color: colors.textSecondary }}>
-                    {place.category}
-                  </div>
-                </div>
-                <span style={{ fontSize: 12, color: colors.textTertiary }}>
-                  {place.distance}
-                </span>
-              </motion.div>
+              <IconTile key={place.initials} {...place} delay={0.28 + i * 0.07} />
             ))}
           </div>
         </div>
 
-        {/* Add a place button */}
-        <div style={{ padding: '12px 20px' }}>
+        {/* Add a place */}
+        <div style={{ padding: '18px 20px 0' }}>
           <motion.button
             whileTap={transitions.buttonTap}
             onClick={() => navigate('/assistant')}
@@ -269,10 +261,11 @@ export default function HomeScreen() {
               alignItems: 'center',
               justifyContent: 'center',
               gap: 8,
+              cursor: 'pointer',
             }}
           >
-            <span style={{ fontSize: 20, color: colors.textTertiary }}>+</span>
-            <span style={{ fontSize: 15, fontWeight: 600, color: colors.textSecondary }}>
+            <span style={{ fontSize: 18, color: colors.textSecondary, lineHeight: 1 }}>+</span>
+            <span style={{ fontSize: 14, fontWeight: 500, color: colors.textSecondary }}>
               Add a place
             </span>
           </motion.button>
