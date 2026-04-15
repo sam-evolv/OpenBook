@@ -8,8 +8,9 @@ const favourites = [
   { initials: 'SW', name: 'StyleWorks', rating: '4.8', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
   { initials: 'NS', name: 'NailStar', rating: '4.7', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
   { initials: 'RB', name: 'Rose Beauty', rating: '4.9', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
-  { initials: 'TG', name: 'The Gym', rating: '4.8', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
-  { initials: 'ZS', name: 'Zen Spa', rating: '4.9', gradient: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)' },
+  { initials: 'CP', name: 'CorePower', rating: '4.8', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
+  { initials: 'YF', name: 'YogaFlow', rating: '4.9', gradient: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)' },
+  { initials: 'IG', name: 'IronGrip Gym', rating: '4.7', gradient: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)' },
 ];
 
 const myPlaces = [
