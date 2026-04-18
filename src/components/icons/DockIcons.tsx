@@ -1,56 +1,112 @@
-import type { SVGProps } from 'react';
+'use client';
 
-const baseProps = {
-  fill: 'none',
-  stroke: 'currentColor',
-  strokeWidth: 1.8,
-  strokeLinecap: 'round' as const,
-  strokeLinejoin: 'round' as const,
-  viewBox: '0 0 24 24',
-};
+import type { FC } from 'react';
 
-export function HomeIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg {...baseProps} {...props}>
-      <path d="M4 11 L12 4 L20 11 V20 H4 Z" />
-      <path d="M9 20 V14 H15 V20" />
-    </svg>
-  );
-}
+export const HomeSymbol: FC = () => (
+  <path
+    d="M12 30 L31 14 L50 30 L50 48 L38 48 L38 36 L24 36 L24 48 L12 48 Z"
+    fill="#FFFFFF"
+    fillOpacity="0.85"
+  />
+);
 
-export function ExploreIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg {...baseProps} {...props}>
-      <circle cx="12" cy="12" r="8" />
-      <path d="M15 9 L13 13 L9 15 L11 11 Z" />
-    </svg>
-  );
-}
+export const CompassSymbol: FC = () => (
+  <g>
+    <circle
+      cx="31"
+      cy="31"
+      r="16"
+      fill="none"
+      stroke="#FFFFFF"
+      strokeOpacity="0.35"
+      strokeWidth="1.2"
+    />
+    <path d="M37 23 L33 33 L23 37 L27 27 Z" fill="#D4AF37" />
+    <path d="M37 23 L33 33 L29 32 Z" fill="#FFFFFF" fillOpacity="0.5" />
+  </g>
+);
 
-export function AssistantIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg {...baseProps} {...props}>
-      <path d="M12 3 L13.8 9.2 L20 11 L13.8 12.8 L12 19 L10.2 12.8 L4 11 L10.2 9.2 Z" />
-    </svg>
-  );
-}
+export const SparkleSymbol: FC = () => (
+  <g>
+    <path
+      d="M31 14 L34 26 L46 30 L34 34 L31 46 L28 34 L16 30 L28 26 Z"
+      fill="#FFFFFF"
+      fillOpacity="0.55"
+    />
+    <path
+      d="M31 14 L34 26 L46 30 L35 31 L31 24 Z"
+      fill="#FFFFFF"
+      fillOpacity="0.35"
+    />
+    <circle cx="46" cy="15" r="1.5" fill="#FFFFFF" fillOpacity="0.9" />
+    <circle cx="16" cy="46" r="1" fill="#FFFFFF" fillOpacity="0.75" />
+  </g>
+);
 
-export function BookingsIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg {...baseProps} {...props}>
-      <rect x="4" y="5" width="16" height="16" rx="2" />
-      <path d="M4 9 H20" />
-      <path d="M9 3 V7" />
-      <path d="M15 3 V7" />
-    </svg>
-  );
-}
+export const CalendarSymbol: FC = () => (
+  <g>
+    <rect
+      x="13"
+      y="17"
+      width="36"
+      height="32"
+      rx="4"
+      fill="#FFFFFF"
+      fillOpacity="0.28"
+    />
+    <rect
+      x="13"
+      y="17"
+      width="36"
+      height="10"
+      rx="4"
+      fill="#000000"
+      fillOpacity="0.22"
+    />
+    <line
+      x1="21"
+      y1="13"
+      x2="21"
+      y2="20"
+      stroke="#FFFFFF"
+      strokeOpacity="0.7"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <line
+      x1="41"
+      y1="13"
+      x2="41"
+      y2="20"
+      stroke="#FFFFFF"
+      strokeOpacity="0.7"
+      strokeWidth="2"
+      strokeLinecap="round"
+    />
+    <circle cx="21" cy="34" r="2" fill="#FFFFFF" fillOpacity="0.85" />
+    <circle cx="31" cy="34" r="2" fill="#FFFFFF" fillOpacity="0.85" />
+    <circle cx="41" cy="34" r="2" fill="#FFFFFF" fillOpacity="0.45" />
+    <circle cx="21" cy="42" r="2" fill="#FFFFFF" fillOpacity="0.45" />
+  </g>
+);
 
-export function MeIcon(props: SVGProps<SVGSVGElement>) {
-  return (
-    <svg {...baseProps} {...props}>
-      <circle cx="12" cy="9" r="3.5" />
-      <path d="M5 20 Q5 14 12 14 Q19 14 19 20" />
-    </svg>
-  );
-}
+export const ProfileSymbol: FC = () => (
+  <g>
+    <circle cx="31" cy="24" r="7" fill="#FFFFFF" fillOpacity="0.55" />
+    <path
+      d="M16 50 Q16 38 31 38 Q46 38 46 50 Z"
+      fill="#FFFFFF"
+      fillOpacity="0.55"
+    />
+  </g>
+);
+
+export const dockIcons = {
+  home: HomeSymbol,
+  explore: CompassSymbol,
+  askAi: SparkleSymbol,
+  bookings: CalendarSymbol,
+  me: ProfileSymbol,
+} as const;
+
+export type DockIconKey = keyof typeof dockIcons;

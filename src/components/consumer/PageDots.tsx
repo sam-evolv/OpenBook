@@ -1,30 +1,35 @@
 type Props = {
-  count: number;
   active: number;
+  total: number;
 };
 
-export default function PageDots({ count, active }: Props) {
+export default function PageDots({ active, total }: Props) {
   return (
     <div
       style={{
+        position: 'absolute',
+        left: 0,
+        right: 0,
+        bottom: 108,
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
         gap: 6,
-        padding: '8px 0',
+        pointerEvents: 'none',
       }}
     >
-      {Array.from({ length: count }, (_, i) => {
+      {Array.from({ length: total }, (_, i) => {
         const isActive = i === active;
         return (
           <span
             key={i}
             style={{
-              width: isActive ? 18 : 6,
+              width: 6,
               height: 6,
               borderRadius: 3,
-              background: isActive ? '#D4AF37' : 'rgba(255,255,255,0.18)',
-              transition: 'all 200ms ease',
+              background: isActive
+                ? 'rgba(255,255,255,0.95)'
+                : 'rgba(255,255,255,0.3)',
             }}
           />
         );
