@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { supabaseAdmin, type Business, type Service } from '@/lib/supabase';
+import { heroForBusiness } from '@/lib/categories';
 import { BusinessAppShell } from './BusinessAppShell';
 
 export const dynamic = 'force-dynamic';
@@ -11,11 +12,7 @@ export type BusinessExtended = Business & {
   gallery_urls: string[] | null;
   team: Array<{ name: string; role: string; photo_url?: string }> | null;
   testimonials: Array<{ quote: string; author: string; rating?: number }> | null;
-  offers: Array<{
-    title: string;
-    description: string;
-    badge?: string;
-  }> | null;
+  offers: Array<{ title: string; description: string; badge?: string }> | null;
 };
 
 async function getBusiness(slug: string): Promise<{
@@ -39,8 +36,16 @@ async function getBusiness(slug: string): Promise<{
     .eq('is_active', true)
     .order('price_cents', { ascending: true });
 
+  // If no cover image set, pick a curated one for the category
+  const enhanced = {
+    ...business,
+    cover_image_url:
+      business.cover_image_url ??
+      heroForBusiness(business.slug, business.category),
+  };
+
   return {
-    business: business as BusinessExtended,
+    business: enhanced as BusinessExtended,
     services: (services ?? []) as Service[],
   };
 }
@@ -52,6 +57,5 @@ export default async function BusinessPage({
 }) {
   const { business, services } = await getBusiness(params.slug);
   if (!business) notFound();
-
   return <BusinessAppShell business={business} services={services} />;
 }

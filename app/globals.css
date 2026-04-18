@@ -2,35 +2,170 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ------------------------------------------------------------
+   TYPOGRAPHY: SF Pro Display + SF Pro Text via local + Inter fallback
+   Apple ships these with iOS. Web fallback matches closely.
+   ------------------------------------------------------------ */
+
 :root {
-  --brand-gold: #D4AF37;
-  --brand-black: #080808;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display',
+    'Inter', system-ui, sans-serif;
+  --font-text: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter',
+    system-ui, sans-serif;
+
+  /* Brand */
+  --brand-gold: #d4af37;
+  --brand-gold-warm: #e8c76b;
+  --brand-gold-deep: #8b6428;
+  --brand-black: #000000;
+
+  /* Material surfaces — layered depth like iOS */
+  --mat-floor: #000000;        /* background base */
+  --mat-surface-1: #0e0e10;    /* lifted 1px */
+  --mat-surface-2: #16161a;    /* lifted card */
+  --mat-surface-3: #1f1f24;    /* lifted modal */
+  --mat-glass-thin: rgba(30, 30, 34, 0.55);
+  --mat-glass-thick: rgba(22, 22, 26, 0.82);
+
+  /* Content opacity ramp (Apple's secondary/tertiary labels) */
+  --label-1: rgba(255, 255, 255, 0.95);
+  --label-2: rgba(255, 255, 255, 0.62);
+  --label-3: rgba(255, 255, 255, 0.38);
+  --label-4: rgba(255, 255, 255, 0.22);
+
+  /* Separator — hairline (0.5px on retina) */
+  --sep: rgba(255, 255, 255, 0.065);
+  --sep-strong: rgba(255, 255, 255, 0.11);
+
+  /* Motion curves — Apple's standard is a custom spring */
+  --ease-apple: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-apple-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 html,
 body {
-  background: #020202;
-  color: #fff;
+  background: var(--mat-floor);
+  color: var(--label-1);
+  font-family: var(--font-text);
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'ss01', 'ss02';
+  font-synthesis: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'SF Pro Display',
-    system-ui, sans-serif;
-  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  text-rendering: optimizeLegibility;
+  letter-spacing: -0.011em;
 }
 
-@layer utilities {
-  .pt-safe {
-    padding-top: env(safe-area-inset-top, 0px);
-  }
-  .pb-safe {
-    padding-bottom: env(safe-area-inset-bottom, 0px);
-  }
+/* Real display typography — tight tracking at size, looser at body */
+.text-display {
+  font-family: var(--font-display);
+  letter-spacing: -0.03em;
+  font-weight: 700;
+}
+.text-display-sm {
+  font-family: var(--font-display);
+  letter-spacing: -0.022em;
+  font-weight: 600;
+}
+.text-title {
+  font-family: var(--font-display);
+  letter-spacing: -0.015em;
+  font-weight: 600;
+}
+.text-caption {
+  font-family: var(--font-text);
+  letter-spacing: 0;
+  font-weight: 500;
+}
+.text-caption-eyebrow {
+  font-family: var(--font-text);
+  letter-spacing: 0.12em;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 11px;
+}
 
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+/* ------------------------------------------------------------
+   MATERIAL SURFACES — one place for every card style
+   Avoids the "every card is white/[0.03]" flatness.
+   ------------------------------------------------------------ */
+
+.mat-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.02) 0%, transparent 100%),
+    var(--mat-surface-1);
+  border: 0.5px solid var(--sep);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+    0 8px 24px rgba(0, 0, 0, 0.35);
+}
+.mat-card-elevated {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.03) 0%, transparent 100%),
+    var(--mat-surface-2);
+  border: 0.5px solid var(--sep-strong);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.06) inset,
+    0 12px 36px rgba(0, 0, 0, 0.5);
+}
+.mat-glass-thin {
+  background: var(--mat-glass-thin);
+  backdrop-filter: blur(24px) saturate(180%);
+  -webkit-backdrop-filter: blur(24px) saturate(180%);
+  border: 0.5px solid var(--sep-strong);
+}
+.mat-glass-thick {
+  background: var(--mat-glass-thick);
+  backdrop-filter: blur(40px) saturate(180%);
+  -webkit-backdrop-filter: blur(40px) saturate(180%);
+  border: 0.5px solid var(--sep-strong);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.08) inset,
+    0 20px 50px rgba(0, 0, 0, 0.6);
+}
+
+/* ------------------------------------------------------------
+   UTILITIES
+   ------------------------------------------------------------ */
+@layer utilities {
+  .pt-safe { padding-top: env(safe-area-inset-top, 0px); }
+  .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Hairline border — real 0.5px on retina displays */
+  .hairline { border-width: 0.5px; }
+}
+
+/* ------------------------------------------------------------
+   MOTION — subtle life across the app
+   ------------------------------------------------------------ */
+
+@keyframes subtle-float {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-4px) scale(1.01); }
+}
+
+@keyframes gentle-pulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 0.8; transform: scale(1.05); }
+}
+
+@keyframes reveal-up {
+  0% { opacity: 0; transform: translateY(12px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-float { animation: subtle-float 5s var(--ease-apple) infinite; }
+.animate-gentle-pulse { animation: gentle-pulse 4s var(--ease-apple) infinite; }
+.animate-reveal-up { animation: reveal-up 500ms var(--ease-apple) both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-float,
+  .animate-gentle-pulse,
+  .animate-reveal-up {
+    animation: none;
   }
 }

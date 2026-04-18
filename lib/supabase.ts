@@ -20,6 +20,7 @@ export type Business = {
   primary_colour: string;
   cover_image_url: string | null;
   logo_url: string | null;
+  processed_icon_url: string | null;
   description: string | null;
   price_tier: number | null;
   rating: number | null;
@@ -27,6 +28,8 @@ export type Business = {
   address_line?: string | null;
   phone?: string | null;
   website?: string | null;
+
+  // Rich content (from v3 migration)
   tagline?: string | null;
   about_long?: string | null;
   gallery_urls?: string[] | null;
@@ -50,7 +53,7 @@ export type Booking = {
   business_id: string;
   service_id: string;
   customer_id: string | null;
-  starts_at: string; // ISO
+  starts_at: string;
   ends_at: string;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   price_cents: number;
@@ -60,7 +63,7 @@ export type Booking = {
 export type BookingWithDetails = Booking & {
   businesses: Pick<
     Business,
-    'slug' | 'name' | 'primary_colour' | 'cover_image_url' | 'city'
+    'slug' | 'name' | 'primary_colour' | 'cover_image_url' | 'city' | 'processed_icon_url'
   >;
   services: Pick<Service, 'name' | 'duration_minutes' | 'price_cents'>;
 };

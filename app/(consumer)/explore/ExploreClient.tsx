@@ -68,7 +68,7 @@ export function ExploreClient({ businesses }: { businesses: Business[] }) {
           Explore <span className="text-[#D4AF37]">Ireland</span>
         </h1>
         <p className="mt-1.5 text-[14px] text-white/55">
-          Discover local businesses you'll love.
+          Everything nearby, one tap to book.
         </p>
       </div>
 

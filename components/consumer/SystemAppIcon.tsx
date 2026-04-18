@@ -1,83 +1,146 @@
 'use client';
 
 import Link from 'next/link';
-import { Compass, Wallet, UserCircle, type LucideIcon } from 'lucide-react';
+import { Compass, Wallet, UserRound } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
-type SystemApp = {
-  href: string;
-  label: string;
-  icon: LucideIcon;
-  gradient: string;
-};
+type SystemKind = 'discover' | 'wallet' | 'me';
 
-const APPS: Record<'discover' | 'wallet' | 'me', SystemApp> = {
+const SYSTEM_APPS: Record<
+  SystemKind,
+  {
+    href: string;
+    label: string;
+    Icon: LucideIcon;
+    gradient: { highlight: string; base: string; shadow: string };
+    glyphColour: string;
+  }
+> = {
   discover: {
     href: '/explore',
     label: 'Discover',
-    icon: Compass,
-    gradient:
-      'linear-gradient(145deg, #F4D57A 0%, #D4AF37 50%, #8B6428 100%)',
+    Icon: Compass,
+    gradient: { highlight: '#F6D77C', base: '#D4AF37', shadow: '#7A5418' },
+    glyphColour: 'rgba(0,0,0,0.78)',
   },
   wallet: {
     href: '/wallet',
     label: 'Wallet',
-    icon: Wallet,
-    gradient:
-      'linear-gradient(145deg, #3D3D42 0%, #1C1C1E 55%, #000000 100%)',
+    Icon: Wallet,
+    gradient: { highlight: '#2C2C30', base: '#141418', shadow: '#050507' },
+    glyphColour: 'rgba(255,255,255,0.95)',
   },
   me: {
     href: '/me',
     label: 'Me',
-    icon: UserCircle,
-    gradient:
-      'linear-gradient(145deg, #6B6B70 0%, #3A3A3F 55%, #1C1C20 100%)',
+    Icon: UserRound,
+    gradient: { highlight: '#4A4A50', base: '#2A2A30', shadow: '#131317' },
+    glyphColour: 'rgba(255,255,255,0.95)',
   },
 };
 
-export function SystemAppIcon({ kind }: { kind: 'discover' | 'wallet' | 'me' }) {
-  const { href, label, icon: Icon, gradient } = APPS[kind];
-  const isGold = kind === 'discover';
+export function SystemAppIcon({
+  kind,
+  size = 72,
+}: {
+  kind: SystemKind;
+  size?: number;
+}) {
+  const cfg = SYSTEM_APPS[kind];
+  const { Icon } = cfg;
+  const radius = Math.round(size * 0.235);
 
   return (
     <Link
-      href={href}
-      className="group flex flex-col items-center active:scale-90 transition-transform duration-150"
-      aria-label={label}
+      href={cfg.href}
+      className="group flex flex-col items-center transition-transform duration-300 active:scale-[0.88] hover:scale-[1.02]"
+      style={{ transitionTimingFunction: 'cubic-bezier(0.32, 0.72, 0, 1)' }}
+      aria-label={cfg.label}
     >
       <div
-        className="
-          relative w-[72px] h-[72px] rounded-[18px]
-          flex items-center justify-center
-          shadow-[0_10px_28px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.22)]
-        "
-        style={{ background: gradient }}
+        className="relative overflow-hidden"
+        style={{
+          width: size,
+          height: size,
+          borderRadius: radius,
+          boxShadow: `
+            0 1px 2px rgba(0, 0, 0, 0.25),
+            0 8px 20px rgba(0, 0, 0, 0.45),
+            0 16px 40px rgba(0, 0, 0, 0.3)
+          `,
+        }}
       >
-        <Icon
-          className={`w-9 h-9 ${isGold ? 'text-black/75' : 'text-white/95'}`}
-          strokeWidth={2}
-        />
+        {/* Radial base */}
         <div
-          aria-hidden
-          className="absolute inset-0 rounded-[18px] pointer-events-none"
+          className="absolute inset-0"
           style={{
-            background:
-              'linear-gradient(180deg, rgba(255,255,255,0.28) 0%, rgba(255,255,255,0.06) 42%, transparent 58%)',
+            background: `radial-gradient(ellipse at 30% 20%, ${cfg.gradient.highlight} 0%, ${cfg.gradient.base} 45%, ${cfg.gradient.shadow} 100%)`,
           }}
         />
+
+        {/* Glyph */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <Icon
+            style={{
+              width: size * 0.46,
+              height: size * 0.46,
+              color: cfg.glyphColour,
+              filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))',
+            }}
+            strokeWidth={1.8}
+          />
+        </div>
+
+        {/* Specular highlight */}
         <div
           aria-hidden
-          className="absolute inset-0 rounded-[18px] pointer-events-none"
+          className="absolute inset-0 pointer-events-none"
           style={{
-            boxShadow:
-              'inset 0 0 0 1px rgba(255,255,255,0.16), inset 0 -1px 0 rgba(0,0,0,0.3)',
+            background: `
+              linear-gradient(
+                180deg,
+                rgba(255,255,255,0.32) 0%,
+                rgba(255,255,255,0.08) 22%,
+                transparent 50%,
+                transparent 100%
+              )
+            `,
+          }}
+        />
+
+        {/* Bottom shadow */}
+        <div
+          aria-hidden
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: `linear-gradient(180deg, transparent 60%, rgba(0,0,0,0.22) 100%)`,
+          }}
+        />
+
+        {/* Hairline */}
+        <div
+          aria-hidden
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            borderRadius: radius,
+            boxShadow: `
+              inset 0 0 0 0.5px rgba(255, 255, 255, 0.2),
+              inset 0 1px 0 rgba(255, 255, 255, 0.12),
+              inset 0 -0.5px 0 rgba(0, 0, 0, 0.4)
+            `,
           }}
         />
       </div>
+
       <span
-        className="mt-2 text-[12px] font-medium text-white/90 text-center leading-tight"
-        style={{ textShadow: '0 1px 2px rgba(0,0,0,0.5)' }}
+        className="mt-2 text-[12px] font-medium leading-tight text-center"
+        style={{
+          color: 'var(--label-1)',
+          letterSpacing: '-0.01em',
+          textShadow: '0 1px 2px rgba(0,0,0,0.6)',
+        }}
       >
-        {label}
+        {cfg.label}
       </span>
     </Link>
   );
