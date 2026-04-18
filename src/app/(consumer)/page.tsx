@@ -22,6 +22,31 @@ const slugToSymbol: Record<string, BusinessSymbolId> = {
   'iron-gym-cork': 'iron-gym',
 };
 
+const displayNames: Record<string, string> = {
+  'evolv-performance': 'Evolv',
+  'refresh-barber': 'Refresh',
+  'saltwater-sauna': 'Saltwater',
+  'the-nail-studio': 'Nail Studio',
+  'cork-physio': 'Cork Physio',
+  'yoga-flow-cork': 'Yoga',
+  'iron-gym-cork': 'Iron Gym',
+};
+
+const displayOrder = [
+  'evolv-performance',
+  'saltwater-sauna',
+  'the-nail-studio',
+  'refresh-barber',
+  'cork-physio',
+  'yoga-flow-cork',
+  'iron-gym-cork',
+];
+
+function orderIndex(slug: string): number {
+  const idx = displayOrder.indexOf(slug);
+  return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+}
+
 const wallpaperCss = `
   radial-gradient(85% 50% at 50% 12%, rgba(212,175,55,0.3) 0%, rgba(148,100,20,0.1) 25%, transparent 55%),
   radial-gradient(70% 50% at 88% 78%, rgba(120,70,200,0.18) 0%, transparent 55%),
@@ -45,13 +70,14 @@ async function fetchBusinesses(): Promise<Business[]> {
     const { data, error } = await supabase
       .from('businesses')
       .select('id, name, slug, category, primary_colour')
-      .eq('is_live', true)
-      .order('name');
+      .eq('is_live', true);
     if (error) {
       console.error('[home] failed to load businesses', error.message);
       return [];
     }
-    return data ?? [];
+    return (data ?? []).slice().sort(
+      (a, b) => orderIndex(a.slug) - orderIndex(b.slug),
+    );
   } catch (err) {
     console.error('[home] supabase fetch threw', err);
     return [];
@@ -109,20 +135,21 @@ export default async function HomePage() {
         </h1>
       </header>
 
-      <section style={{ padding: '28px 22px 0' }}>
+      <section style={{ padding: '28px 24px 0' }}>
         <div
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(4, 1fr)',
             rowGap: 22,
-            columnGap: 16,
+            columnGap: 14,
             justifyItems: 'center',
           }}
         >
           {businesses.map((b) => {
             const symbolId = slugToSymbol[b.slug];
             const initials = initialsOf(b.name);
-            const firstWord = b.name.split(/\s+/)[0] ?? b.name;
+            const label =
+              displayNames[b.slug] ?? b.name.split(/\s+/)[0] ?? b.name;
             return (
               <Link
                 key={b.id}
@@ -154,7 +181,7 @@ export default async function HomePage() {
                     textShadow: '0 1px 3px rgba(0,0,0,0.75)',
                   }}
                 >
-                  {firstWord}
+                  {label}
                 </span>
               </Link>
             );
