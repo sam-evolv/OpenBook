@@ -27,6 +27,12 @@ export type Business = {
   address_line?: string | null;
   phone?: string | null;
   website?: string | null;
+  tagline?: string | null;
+  about_long?: string | null;
+  gallery_urls?: string[] | null;
+  team?: Array<{ name: string; role: string; photo_url?: string }> | null;
+  testimonials?: Array<{ quote: string; author: string; rating?: number }> | null;
+  offers?: Array<{ title: string; description: string; badge?: string }> | null;
 };
 
 export type Service = {

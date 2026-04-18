@@ -16,27 +16,16 @@ async function getBusinesses(): Promise<Business[]> {
     )
     .eq('is_live', true)
     .order('name', { ascending: true });
-
-  if (error) {
-    console.error('[explore] fetch error', error);
-    return [];
-  }
+  if (error) return [];
   return (data ?? []) as Business[];
 }
 
 export default async function ExplorePage() {
   const businesses = await getBusinesses();
-
   return (
     <main className="min-h-[100dvh] bg-[#050505] text-white antialiased">
       <ConsumerHeader />
-      <Suspense
-        fallback={
-          <div className="px-5 pt-6">
-            <div className="h-9 w-56 bg-white/[0.04] rounded-lg animate-pulse" />
-          </div>
-        }
-      >
+      <Suspense fallback={null}>
         <ExploreClient businesses={businesses} />
       </Suspense>
       <BottomTabBar />
