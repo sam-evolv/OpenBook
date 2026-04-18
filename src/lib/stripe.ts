@@ -8,6 +8,6 @@ export function getStripe(): Stripe {
   if (!key) {
     throw new Error('STRIPE_SECRET_KEY is not set');
   }
-  cached = new Stripe(key, { apiVersion: '2024-06-20' as Stripe.LatestApiVersion });
+  cached = new Stripe(key);
   return cached;
 }
