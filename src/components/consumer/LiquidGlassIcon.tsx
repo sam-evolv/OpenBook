@@ -1,10 +1,16 @@
 'use client';
 
-import { useId, type ReactNode } from 'react';
+import { useId } from 'react';
+import {
+  businessSymbols,
+  type BusinessSymbolId,
+} from '@/components/icons/BusinessSymbols';
+import { dockIcons, type DockIconId } from '@/components/icons/DockIcons';
 
 export interface LiquidGlassIconProps {
   primaryColour: string;
-  symbol?: ReactNode;
+  businessSymbolId?: BusinessSymbolId;
+  dockSymbolId?: DockIconId;
   fallbackInitials?: string;
   size?: number;
   variant?: 'diagonal' | 'radial-gold';
@@ -92,7 +98,8 @@ function deriveStops(hex: string): [string, string, string, string] {
 
 export function LiquidGlassIcon({
   primaryColour,
-  symbol,
+  businessSymbolId,
+  dockSymbolId,
   fallbackInitials,
   size = 62,
   variant = 'diagonal',
@@ -107,6 +114,12 @@ export function LiquidGlassIcon({
   const specId = `lg-spec-${uid}`;
 
   const [s0, s1, s2, s3] = deriveStops(primaryColour);
+
+  const Symbol = businessSymbolId
+    ? businessSymbols[businessSymbolId]
+    : dockSymbolId
+      ? dockIcons[dockSymbolId]
+      : null;
 
   return (
     <div
@@ -147,13 +160,7 @@ export function LiquidGlassIcon({
               <stop offset="100%" stopColor="#5E4A0E" />
             </radialGradient>
           ) : (
-            <linearGradient
-              id={fillId}
-              x1="0.15"
-              y1="0"
-              x2="0.85"
-              y2="1"
-            >
+            <linearGradient id={fillId} x1="0.15" y1="0" x2="0.85" y2="1">
               <stop offset="0%" stopColor={s0} />
               <stop offset="33%" stopColor={s1} />
               <stop offset="70%" stopColor={s2} />
@@ -185,8 +192,8 @@ export function LiquidGlassIcon({
           <rect x="0" y="0" width="62" height="62" fill={`url(#${fillId})`} />
 
           {/* Layer 2: symbol or initials */}
-          {symbol ? (
-            <g>{symbol}</g>
+          {Symbol ? (
+            <Symbol />
           ) : fallbackInitials ? (
             <text
               x="31"

@@ -1,6 +1,4 @@
-'use client';
-
-import { useId, type FC } from 'react';
+import type { FC } from 'react';
 
 export type BusinessSymbolId =
   | 'evolv'
@@ -10,6 +8,12 @@ export type BusinessSymbolId =
   | 'cork-physio'
   | 'yoga-flow'
   | 'iron-gym';
+
+let symbolCounter = 0;
+function nextSymbolId(prefix: string): string {
+  symbolCounter += 1;
+  return `${prefix}-${symbolCounter}`;
+}
 
 export const EvolvSymbol: FC = () => (
   <g>
@@ -59,8 +63,7 @@ export const RefreshSymbol: FC = () => (
 );
 
 export const SaltwaterSymbol: FC = () => {
-  const uid = useId().replace(/:/g, '');
-  const sunId = `sw-sun-${uid}`;
+  const sunId = nextSymbolId('sw-sun');
   return (
     <g>
       <defs>

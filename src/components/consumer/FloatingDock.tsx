@@ -3,13 +3,13 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { LiquidGlassIcon } from './LiquidGlassIcon';
-import { dockIcons } from '@/components/icons/DockIcons';
+import type { DockIconId } from '@/components/icons/DockIcons';
 
 type Variant = 'diagonal' | 'radial-gold';
 
 type Tab = {
   href: string;
-  key: keyof typeof dockIcons;
+  key: DockIconId;
   label: string;
   colour: string;
   variant: Variant;
@@ -88,7 +88,6 @@ export default function FloatingDock() {
         }}
       >
         {tabs.map((tab) => {
-          const Symbol = dockIcons[tab.key];
           const isActive =
             tab.href === '/'
               ? pathname === '/'
@@ -107,7 +106,7 @@ export default function FloatingDock() {
                 size={50}
                 primaryColour={tab.colour}
                 variant={tab.variant}
-                symbol={<Symbol />}
+                dockSymbolId={tab.key}
                 active={isActive}
               />
             </Link>

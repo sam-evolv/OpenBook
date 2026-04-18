@@ -1,6 +1,6 @@
-'use client';
-
 import type { FC } from 'react';
+
+export type DockIconId = 'home' | 'explore' | 'askAi' | 'bookings' | 'me';
 
 export const HomeSymbol: FC = () => (
   <path
@@ -101,12 +101,10 @@ export const ProfileSymbol: FC = () => (
   </g>
 );
 
-export const dockIcons = {
+export const dockIcons: Record<DockIconId, FC> = {
   home: HomeSymbol,
   explore: CompassSymbol,
   askAi: SparkleSymbol,
   bookings: CalendarSymbol,
   me: ProfileSymbol,
-} as const;
-
-export type DockIconKey = keyof typeof dockIcons;
+};

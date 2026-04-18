@@ -1,10 +1,7 @@
 import Link from 'next/link';
 import { createClient, hasSupabaseEnv } from '@/lib/supabase/server';
 import { LiquidGlassIcon } from '@/components/consumer/LiquidGlassIcon';
-import {
-  businessSymbols,
-  type BusinessSymbolId,
-} from '@/components/icons/BusinessSymbols';
+import type { BusinessSymbolId } from '@/components/icons/BusinessSymbols';
 import PageDots from '@/components/consumer/PageDots';
 
 type Business = {
@@ -124,7 +121,6 @@ export default async function HomePage() {
         >
           {businesses.map((b) => {
             const symbolId = slugToSymbol[b.slug];
-            const Symbol = symbolId ? businessSymbols[symbolId] : null;
             const initials = initialsOf(b.name);
             const firstWord = b.name.split(/\s+/)[0] ?? b.name;
             return (
@@ -140,9 +136,9 @@ export default async function HomePage() {
                 }}
               >
                 <LiquidGlassIcon
-                  primaryColour={b.primary_colour ?? '#D4AF37'}
-                  symbol={Symbol ? <Symbol /> : undefined}
-                  fallbackInitials={Symbol ? undefined : initials}
+                  primaryColour={b.primary_colour || '#D4AF37'}
+                  businessSymbolId={symbolId}
+                  fallbackInitials={symbolId ? undefined : initials}
                 />
                 <span
                   style={{
