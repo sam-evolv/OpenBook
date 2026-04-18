@@ -19,17 +19,17 @@ export function BookingsList({
     const up: BookingWithDetails[] = [];
     const pa: BookingWithDetails[] = [];
     for (const b of bookings) {
-      if (new Date(b.end_at).getTime() >= now && b.status !== 'cancelled') {
+      if (new Date(b.ends_at).getTime() >= now && b.status !== 'cancelled') {
         up.push(b);
       } else {
         pa.push(b);
       }
     }
     up.sort(
-      (a, b) => new Date(a.start_at).getTime() - new Date(b.start_at).getTime()
+      (a, b) => new Date(a.starts_at).getTime() - new Date(b.starts_at).getTime()
     );
     pa.sort(
-      (a, b) => new Date(b.start_at).getTime() - new Date(a.start_at).getTime()
+      (a, b) => new Date(b.starts_at).getTime() - new Date(a.starts_at).getTime()
     );
     return { upcoming: up, past: pa };
   }, [bookings, now]);
@@ -75,8 +75,8 @@ export function BookingsList({
 
 function BookingCard({ booking }: { booking: BookingWithDetails }) {
   const colour = booking.businesses.primary_colour || '#D4AF37';
-  const start = new Date(booking.start_at);
-  const isPast = Date.now() > new Date(booking.end_at).getTime();
+  const start = new Date(booking.starts_at);
+  const isPast = Date.now() > new Date(booking.ends_at).getTime();
 
   return (
     <Link
@@ -129,7 +129,7 @@ function BookingCard({ booking }: { booking: BookingWithDetails }) {
           className="text-[13px] font-semibold"
           style={{ color: colour }}
         >
-          {formatPrice(booking.total_cents)}
+          {formatPrice(booking.price_cents)}
         </span>
         <ArrowRight className="w-4 h-4 text-white/30" strokeWidth={2} />
       </div>

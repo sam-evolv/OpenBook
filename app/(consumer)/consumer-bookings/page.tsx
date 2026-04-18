@@ -24,7 +24,7 @@ async function getMyBookings(): Promise<BookingWithDetails[]> {
     )
     .eq('customer_id', customerId)
     .in('status', ['confirmed', 'pending', 'completed'])
-    .order('start_at', { ascending: false });
+    .order('starts_at', { ascending: false });
 
   return (data ?? []) as BookingWithDetails[];
 }

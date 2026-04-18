@@ -48,8 +48,8 @@ export async function POST(req: NextRequest) {
       .select('id')
       .eq('business_id', businessId)
       .in('status', ['pending', 'confirmed'])
-      .lt('start_at', end.toISOString())
-      .gt('end_at', start.toISOString())
+      .lt('starts_at', end.toISOString())
+      .gt('ends_at', start.toISOString())
       .limit(1);
 
     if (overlaps && overlaps.length > 0) {
@@ -95,10 +95,10 @@ export async function POST(req: NextRequest) {
         business_id: businessId,
         service_id: serviceId,
         customer_id: customerId,
-        start_at: start.toISOString(),
-        end_at: end.toISOString(),
+        starts_at: start.toISOString(),
+        ends_at: end.toISOString(),
         status: 'confirmed',
-        total_cents: service.price_cents,
+        price_cents: service.price_cents,
       })
       .select('id')
       .single();

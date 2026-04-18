@@ -39,7 +39,7 @@ export default async function ConfirmPage({
   if (!booking) notFound();
 
   const colour = booking.businesses.primary_colour || '#D4AF37';
-  const startAt = new Date(booking.start_at);
+  const startAt = new Date(booking.starts_at);
   const dateStr = startAt.toLocaleDateString('en-IE', {
     weekday: 'long',
     day: 'numeric',
@@ -122,7 +122,7 @@ export default async function ConfirmPage({
             />
             <DetailRow
               label="Total"
-              value={formatPrice(booking.total_cents)}
+              value={formatPrice(booking.price_cents)}
               valueColour={colour}
               last
             />

@@ -96,15 +96,15 @@ export async function GET(req: NextRequest) {
 
   const { data: bookings } = await sb
     .from('bookings')
-    .select('start_at, end_at, status')
+    .select('starts_at, ends_at, status')
     .eq('business_id', service.business_id)
     .in('status', ['pending', 'confirmed'])
-    .gte('start_at', dayStartISO.toISOString())
-    .lte('start_at', dayEndISO.toISOString());
+    .gte('starts_at', dayStartISO.toISOString())
+    .lte('starts_at', dayEndISO.toISOString());
 
   const busy = (bookings ?? []).map((b: any) => ({
-    start: new Date(b.start_at).getTime(),
-    end: new Date(b.end_at).getTime(),
+    start: new Date(b.starts_at).getTime(),
+    end: new Date(b.ends_at).getTime(),
   }));
 
   const slots = candidates

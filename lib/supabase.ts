@@ -50,10 +50,10 @@ export type Booking = {
   business_id: string;
   service_id: string;
   customer_id: string | null;
-  start_at: string; // ISO
-  end_at: string;
+  starts_at: string; // ISO
+  ends_at: string;
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
-  total_cents: number;
+  price_cents: number;
   created_at: string;
 };
 
