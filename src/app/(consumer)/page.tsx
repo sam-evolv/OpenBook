@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { createClient, hasSupabaseEnv } from '@/lib/supabase/server';
-import LiquidGlassIcon from '@/components/consumer/LiquidGlassIcon';
+import { LiquidGlassIcon } from '@/components/consumer/LiquidGlassIcon';
 import type { BusinessSymbolId } from '@/components/icons/BusinessSymbols';
-import { colors } from '@/lib/constants';
+import PageDots from '@/components/consumer/PageDots';
 
 type Business = {
   id: string;
@@ -10,18 +10,49 @@ type Business = {
   slug: string;
   category: string | null;
   primary_colour: string | null;
-  logo_url: string | null;
 };
 
-const NAME_TO_SYMBOL: Record<string, BusinessSymbolId> = {
-  'Evolv Performance': 'evolv',
-  'Refresh Barber': 'refresh',
-  'Saltwater Sauna Cork': 'saltwater',
-  'The Nail Studio': 'nail-studio',
-  'Cork Physio & Sports': 'cork-physio',
-  'Yoga Flow Cork': 'yoga-flow',
-  'Iron Gym Cork': 'iron-gym',
+const slugToSymbol: Record<string, BusinessSymbolId> = {
+  'evolv-performance': 'evolv',
+  'refresh-barber': 'refresh',
+  'saltwater-sauna': 'saltwater',
+  'the-nail-studio': 'nail-studio',
+  'cork-physio': 'cork-physio',
+  'yoga-flow-cork': 'yoga-flow',
+  'iron-gym-cork': 'iron-gym',
 };
+
+const displayNames: Record<string, string> = {
+  'evolv-performance': 'Evolv',
+  'refresh-barber': 'Refresh',
+  'saltwater-sauna': 'Saltwater',
+  'the-nail-studio': 'Nail Studio',
+  'cork-physio': 'Cork Physio',
+  'yoga-flow-cork': 'Yoga',
+  'iron-gym-cork': 'Iron Gym',
+};
+
+const displayOrder = [
+  'evolv-performance',
+  'saltwater-sauna',
+  'the-nail-studio',
+  'refresh-barber',
+  'cork-physio',
+  'yoga-flow-cork',
+  'iron-gym-cork',
+];
+
+function orderIndex(slug: string): number {
+  const idx = displayOrder.indexOf(slug);
+  return idx === -1 ? Number.MAX_SAFE_INTEGER : idx;
+}
+
+const wallpaperCss = `
+  radial-gradient(85% 50% at 50% 12%, rgba(212,175,55,0.3) 0%, rgba(148,100,20,0.1) 25%, transparent 55%),
+  radial-gradient(70% 50% at 88% 78%, rgba(120,70,200,0.18) 0%, transparent 55%),
+  radial-gradient(60% 45% at 12% 88%, rgba(70,180,160,0.14) 0%, transparent 55%),
+  #050504
+`;
 
 function initialsOf(name: string): string {
   return name
@@ -32,137 +63,162 @@ function initialsOf(name: string): string {
     .join('');
 }
 
-function inferSymbolId(name: string): BusinessSymbolId | undefined {
-  return NAME_TO_SYMBOL[name];
-}
-
 async function fetchBusinesses(): Promise<Business[]> {
   if (!hasSupabaseEnv()) return [];
   try {
     const supabase = createClient();
     const { data, error } = await supabase
       .from('businesses')
-      .select('id, name, slug, category, primary_colour, logo_url')
-      .eq('is_live', true)
-      .order('created_at', { ascending: true })
-      .limit(8);
+      .select('id, name, slug, category, primary_colour')
+      .eq('is_live', true);
     if (error) {
       console.error('[home] failed to load businesses', error.message);
       return [];
     }
-    return data ?? [];
+    return (data ?? []).slice().sort(
+      (a, b) => orderIndex(a.slug) - orderIndex(b.slug),
+    );
   } catch (err) {
     console.error('[home] supabase fetch threw', err);
     return [];
   }
 }
 
+function AddPlaceTile() {
+  return (
+    <div
+      style={{
+        width: 62,
+        height: 62,
+        borderRadius: 16,
+        border: '1.5px dashed rgba(255,255,255,0.2)',
+        background: 'rgba(255,255,255,0.02)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'rgba(255,255,255,0.55)',
+        fontSize: 26,
+        fontWeight: 300,
+        lineHeight: 1,
+      }}
+    >
+      +
+    </div>
+  );
+}
+
 export default async function HomePage() {
   const businesses = await fetchBusinesses();
 
   return (
-    <div
+    <main
       style={{
+        minHeight: '100dvh',
+        background: wallpaperCss,
         position: 'relative',
-        flex: 1,
-        background: `
-          radial-gradient(60% 40% at 20% 12%, rgba(212,175,55,0.18) 0%, rgba(8,8,8,0) 60%),
-          radial-gradient(50% 35% at 80% 8%, rgba(10,132,255,0.14) 0%, rgba(8,8,8,0) 60%),
-          radial-gradient(70% 50% at 50% 100%, rgba(48,209,88,0.10) 0%, rgba(8,8,8,0) 60%),
-          ${colors.bg}
-        `,
       }}
     >
-      <header className="safe-top" style={{ padding: '20px 22px 8px' }}>
-        <div
+      <header
+        style={{ textAlign: 'center', paddingTop: 56, paddingBottom: 8 }}
+      >
+        <h1
           style={{
-            fontSize: 24,
-            fontWeight: 800,
-            letterSpacing: -0.3,
-            color: colors.text,
+            fontSize: 13,
+            fontWeight: 500,
+            letterSpacing: '3.5px',
+            color: 'rgba(255,255,255,0.55)',
+            textTransform: 'uppercase',
+            margin: 0,
           }}
         >
-          Open<span style={{ color: colors.text }}>Book</span>{' '}
-          <span
-            style={{
-              background: colors.goldGradient,
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-              backgroundClip: 'text',
-            }}
-          >
-            AI
-          </span>
-        </div>
-        <div style={{ fontSize: 14, color: colors.textSecondary, marginTop: 4 }}>
-          {businesses.length > 0
-            ? 'Tap a place to start a booking.'
-            : 'No businesses yet. Add one to get started.'}
-        </div>
+          OpenBook
+        </h1>
       </header>
 
-      <section style={{ padding: '20px 18px 28px' }}>
+      <section style={{ padding: '28px 24px 0' }}>
         <div
           style={{
             display: 'grid',
             gridTemplateColumns: 'repeat(4, 1fr)',
             rowGap: 22,
-            columnGap: 8,
+            columnGap: 14,
             justifyItems: 'center',
           }}
         >
-          {businesses.map((b) => (
-            <Link key={b.id} href={`/business/${b.slug}`} style={{ display: 'flex' }}>
-              <LiquidGlassIcon
-                primaryColour={b.primary_colour}
-                fallbackInitials={initialsOf(b.name)}
-                symbolId={inferSymbolId(b.name)}
-                label={b.name}
-              />
-            </Link>
-          ))}
+          {businesses.map((b) => {
+            const symbolId = slugToSymbol[b.slug];
+            const initials = initialsOf(b.name);
+            const label =
+              displayNames[b.slug] ?? b.name.split(/\s+/)[0] ?? b.name;
+            return (
+              <Link
+                key={b.id}
+                href={`/business/${b.slug}`}
+                style={{
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  gap: 8,
+                  textDecoration: 'none',
+                }}
+              >
+                <LiquidGlassIcon
+                  primaryColour={b.primary_colour || '#D4AF37'}
+                  businessSymbolId={symbolId}
+                  fallbackInitials={symbolId ? undefined : initials}
+                />
+                <span
+                  style={{
+                    fontSize: 11.5,
+                    fontWeight: 500,
+                    color: 'rgba(255,255,255,0.98)',
+                    letterSpacing: '-0.1px',
+                    maxWidth: 72,
+                    textAlign: 'center',
+                    whiteSpace: 'nowrap',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    textShadow: '0 1px 3px rgba(0,0,0,0.75)',
+                  }}
+                >
+                  {label}
+                </span>
+              </Link>
+            );
+          })}
 
-          <Link href="/explore" style={{ display: 'flex' }}>
-            <div
+          <Link
+            href="/explore"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: 8,
+              textDecoration: 'none',
+            }}
+          >
+            <AddPlaceTile />
+            <span
               style={{
-                width: 72,
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: 6,
+                fontSize: 11.5,
+                fontWeight: 500,
+                color: 'rgba(255,255,255,0.98)',
+                letterSpacing: '-0.1px',
+                maxWidth: 72,
+                textAlign: 'center',
+                whiteSpace: 'nowrap',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                textShadow: '0 1px 3px rgba(0,0,0,0.75)',
               }}
             >
-              <div
-                style={{
-                  width: 72,
-                  height: 72,
-                  borderRadius: 20,
-                  border: `1.5px dashed ${colors.textTertiary}`,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: colors.textSecondary,
-                  fontSize: 26,
-                  fontWeight: 300,
-                }}
-              >
-                +
-              </div>
-              <span
-                style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  color: colors.textSecondary,
-                  textAlign: 'center',
-                  lineHeight: 1.2,
-                }}
-              >
-                Add a place
-              </span>
-            </div>
+              Add
+            </span>
           </Link>
         </div>
       </section>
-    </div>
+
+      <PageDots active={0} total={3} />
+    </main>
   );
 }
