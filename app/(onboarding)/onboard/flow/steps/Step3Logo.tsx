@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Upload, CheckCircle2, Loader2, ImageIcon } from 'lucide-react';
+import { Upload, CheckCircle2, Loader2 } from 'lucide-react';
 import { StepHeader, NextButton, SkipLink } from './shared';
 import type { OnboardingState } from '../OnboardingFlow';
 
@@ -16,22 +16,53 @@ export function Step3Logo({ state, update, next }: StepProps) {
   const [error, setError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  async function ensureBusinessId(): Promise<string | null> {
+    if (state.businessId) return state.businessId;
+
+    /* If we don't have a businessId yet, force a save now.
+     * This makes logo upload work even if the user came back to step 3
+     * or their state got dropped. */
+    try {
+      const res = await fetch('/api/onboarding/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state, step: 2 }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data?.businessId) {
+        update({ businessId: data.businessId, slug: data.slug ?? state.slug });
+        return data.businessId;
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  }
+
   async function handleFile(file: File) {
     if (!file) return;
     if (!file.type.startsWith('image/')) {
       setError('Please upload an image file.');
       return;
     }
-    if (!state.businessId) {
-      setError('Finish step 1 first.');
+    if (file.size > 5 * 1024 * 1024) {
+      setError('File too large. Max 5MB.');
       return;
     }
 
     setUploading(true);
     setError(null);
 
+    const businessId = await ensureBusinessId();
+    if (!businessId) {
+      setError('We need your business name first — tap Back and complete Step 1.');
+      setUploading(false);
+      return;
+    }
+
     const formData = new FormData();
-    formData.append('businessId', state.businessId);
+    formData.append('businessId', businessId);
     formData.append('file', file);
 
     try {
@@ -45,7 +76,7 @@ export function Step3Logo({ state, update, next }: StepProps) {
         primary_colour: data.detectedColour ?? state.primary_colour,
       });
     } catch (err: any) {
-      setError(err?.message ?? 'Upload failed');
+      setError(err?.message ?? 'Upload failed. Try a different file.');
     } finally {
       setUploading(false);
     }
@@ -118,7 +149,6 @@ export function Step3Logo({ state, update, next }: StepProps) {
       ) : (
         <div className="flex flex-col items-center gap-6">
           <div className="flex items-center gap-5">
-            {/* Before */}
             {state.logo_url && (
               <div className="flex flex-col items-center gap-2">
                 <div className="h-[96px] w-[96px] rounded-2xl bg-white/5 p-3 hairline flex items-center justify-center">
@@ -133,7 +163,6 @@ export function Step3Logo({ state, update, next }: StepProps) {
 
             <div className="text-white/30 text-[24px]">→</div>
 
-            {/* After */}
             <div className="flex flex-col items-center gap-2">
               <div
                 className="relative h-[96px] w-[96px] overflow-hidden"

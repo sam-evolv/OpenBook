@@ -87,7 +87,6 @@ interface Props {
 }
 
 export function OnboardingFlow({ owner, initialBusiness, startAt = 0 }: Props) {
-  const router = useRouter();
   const [step, setStep] = useState(startAt);
   const [state, setState] = useState<OnboardingState>(() => {
     if (!initialBusiness) return { ...emptyState, founder_name: owner.full_name ?? '' };
@@ -127,11 +126,31 @@ export function OnboardingFlow({ owner, initialBusiness, startAt = 0 }: Props) {
   const back = () => setStep(Math.max(0, step - 1));
 
   async function saveProgress(newStep: number) {
-    await fetch('/api/onboarding/save', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ state, step: newStep }),
-    });
+    try {
+      const res = await fetch('/api/onboarding/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state, step: newStep }),
+      });
+      if (!res.ok) {
+        console.error('[saveProgress] failed', await res.text());
+        return;
+      }
+      const data = await res.json();
+
+      /* THIS IS THE FIX: persist the businessId + canonical slug returned
+       * from the server so every downstream step (logo upload, Stripe,
+       * publish) can reference it. */
+      if (data?.businessId) {
+        setState((prev) => ({
+          ...prev,
+          businessId: data.businessId,
+          slug: data.slug ?? prev.slug,
+        }));
+      }
+    } catch (err) {
+      console.error('[saveProgress] network error', err);
+    }
   }
 
   const StepComponent = [
@@ -149,7 +168,6 @@ export function OnboardingFlow({ owner, initialBusiness, startAt = 0 }: Props) {
 
   return (
     <main className="relative min-h-[100dvh] text-white overflow-hidden">
-      {/* Background */}
       <div
         aria-hidden
         className="fixed inset-0 -z-10"
@@ -166,7 +184,6 @@ export function OnboardingFlow({ owner, initialBusiness, startAt = 0 }: Props) {
         }}
       />
 
-      {/* Progress bar */}
       <div className="pt-safe">
         <div className="px-6 pt-4 pb-3 flex items-center gap-4">
           <button
@@ -196,7 +213,6 @@ export function OnboardingFlow({ owner, initialBusiness, startAt = 0 }: Props) {
         </div>
       </div>
 
-      {/* Content — two-column on desktop, stacked on mobile */}
       <div className="mx-auto max-w-6xl px-5 pb-12">
         <div className={`grid gap-8 ${showPreview ? 'lg:grid-cols-[1fr_380px]' : 'lg:grid-cols-1 lg:max-w-xl lg:mx-auto'}`}>
           <div className="min-h-[60vh]">

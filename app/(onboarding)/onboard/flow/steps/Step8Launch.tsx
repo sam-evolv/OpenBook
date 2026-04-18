@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Copy, Share2, Smartphone, Loader2, PartyPopper } from 'lucide-react';
 import type { OnboardingState } from '../OnboardingFlow';
@@ -11,40 +11,74 @@ interface StepProps {
   next: () => void;
 }
 
-export function Step8Launch({ state }: StepProps) {
+export function Step8Launch({ state, update }: StepProps) {
   const router = useRouter();
   const [publishing, setPublishing] = useState(false);
   const [published, setPublished] = useState(false);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const publishOnce = useRef(false);
 
   const appHost = typeof window !== 'undefined'
     ? window.location.host.replace('dash.', 'app.').replace(/^localhost.*$/, 'app.openbook.ie')
     : 'app.openbook.ie';
   const publicUrl = `https://${appHost}/business/${state.slug}`;
 
+  async function ensureBusinessId(currentState: OnboardingState): Promise<string | null> {
+    if (currentState.businessId) return currentState.businessId;
+    try {
+      const res = await fetch('/api/onboarding/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ state: currentState, step: 7 }),
+      });
+      if (!res.ok) return null;
+      const data = await res.json();
+      if (data?.businessId) {
+        update({ businessId: data.businessId, slug: data.slug ?? currentState.slug });
+        return data.businessId;
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  }
+
   async function publish() {
+    if (publishOnce.current) return;
+    publishOnce.current = true;
+
     setPublishing(true);
     setError(null);
+
+    const businessId = await ensureBusinessId(state);
+    if (!businessId) {
+      setError('We couldn\'t find your business. Please go back to Step 1 and try again.');
+      setPublishing(false);
+      publishOnce.current = false;
+      return;
+    }
+
     try {
       const res = await fetch('/api/onboarding/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state }),
+        body: JSON.stringify({ state: { ...state, businessId } }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? 'Could not publish');
       setPublished(true);
     } catch (err: any) {
       setError(err?.message ?? 'Something went wrong');
+      publishOnce.current = false;
     } finally {
       setPublishing(false);
     }
   }
 
   useEffect(() => {
-    // Auto-publish the moment they hit step 8
-    if (!published && !publishing) publish();
+    if (!published && !publishing && !publishOnce.current) publish();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function copyUrl() {
@@ -105,7 +139,6 @@ export function Step8Launch({ state }: StepProps) {
 
   return (
     <div className="flex flex-col gap-8 max-w-[520px] animate-reveal-up">
-      {/* Hero */}
       <div className="text-center">
         <div
           className="mx-auto flex h-[96px] w-[96px] items-center justify-center rounded-full mb-5"
@@ -130,7 +163,6 @@ export function Step8Launch({ state }: StepProps) {
         </p>
       </div>
 
-      {/* Public URL card */}
       <div
         className="rounded-[22px] p-5 mat-card-elevated"
         style={{
@@ -175,7 +207,6 @@ export function Step8Launch({ state }: StepProps) {
         </div>
       </div>
 
-      {/* QR code */}
       <div className="rounded-[22px] p-5 mat-card">
         <p className="text-[11px] font-semibold tracking-[0.14em] uppercase mb-3" style={{ color: 'var(--label-3)' }}>
           Put it on your shopfront
@@ -192,9 +223,7 @@ export function Step8Launch({ state }: StepProps) {
             />
           </div>
           <div>
-            <p className="text-[14px] font-semibold mb-1">
-              Scan to book
-            </p>
+            <p className="text-[14px] font-semibold mb-1">Scan to book</p>
             <p className="text-[12px] leading-relaxed" style={{ color: 'var(--label-2)' }}>
               Print this, put it on your counter, window, or business cards. Every scan becomes a booking.
             </p>
@@ -202,7 +231,6 @@ export function Step8Launch({ state }: StepProps) {
         </div>
       </div>
 
-      {/* Install instructions */}
       <div className="rounded-[22px] p-5 mat-card">
         <div className="flex items-center gap-2 mb-3">
           <Smartphone className="h-4 w-4" style={{ color: 'var(--brand-gold)' }} strokeWidth={2} />
@@ -220,7 +248,6 @@ export function Step8Launch({ state }: StepProps) {
         </div>
       </div>
 
-      {/* Primary CTA */}
       <div className="mt-2">
         <button
           onClick={goToDashboard}
