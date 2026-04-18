@@ -205,7 +205,7 @@ export default function ChatScreen() {
 
         <div>
           <div style={{ fontSize: 16, fontWeight: 700, color: colors.text }}>
-            OpenBook AI
+            OpenBook
           </div>
           <div style={{ fontSize: 12, color: colors.green, fontWeight: 500 }}>
             Online

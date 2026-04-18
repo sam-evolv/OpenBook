@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { colors, radius, transitions } from '../constants/theme';
 import { suggestionPills } from '../constants/chatScripts';
-import TabBar from '../components/TabBar';
+import FloatingDock from '../components/FloatingDock';
 import { useState } from 'react';
 
 export default function AssistantScreen() {
@@ -209,7 +209,7 @@ export default function AssistantScreen() {
             color: colors.textTertiary,
           }}
         >
-          Powered by OpenBook AI
+          Powered by OpenBook
         </motion.div>
       </div>
 
@@ -217,7 +217,7 @@ export default function AssistantScreen() {
       <div
         style={{
           position: 'fixed',
-          bottom: 68,
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 118px)',
           left: '50%',
           transform: 'translateX(-50%)',
           width: '100%',
@@ -275,7 +275,7 @@ export default function AssistantScreen() {
         </div>
       </div>
 
-      <TabBar />
+      <FloatingDock />
     </motion.div>
   );
 }

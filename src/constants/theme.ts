@@ -17,6 +17,16 @@ export const colors = {
   white: '#ffffff',
   border: 'rgba(255,255,255,0.06)',
   borderLight: 'rgba(255,255,255,0.1)',
+  hairline: 'rgba(255,255,255,0.14)',
+  hairlineSoft: 'rgba(255,255,255,0.24)',
+  bgDeep: '#050504',
+  dockGlass: 'rgba(30, 25, 18, 0.55)',
+  mutedGlass: 'rgba(255,255,255,0.08)',
+  wallpaper:
+    'radial-gradient(85% 50% at 50% 12%, rgba(212,175,55,0.30) 0%, rgba(148,100,20,0.10) 25%, transparent 55%),' +
+    'radial-gradient(70% 50% at 88% 78%, rgba(120,70,200,0.18) 0%, transparent 55%),' +
+    'radial-gradient(60% 45% at 12% 88%, rgba(70,180,160,0.14) 0%, transparent 55%),' +
+    '#050504',
 } as const;
 
 export const radius = {

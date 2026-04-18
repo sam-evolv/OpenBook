@@ -17,7 +17,7 @@ export default function App() {
         height: '100dvh',
         position: 'relative',
         overflow: 'hidden',
-        background: '#080808',
+        background: '#050504',
       }}
     >
       <AnimatePresence mode="wait">

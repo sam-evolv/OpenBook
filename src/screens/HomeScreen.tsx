@@ -1,22 +1,44 @@
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { colors, radius, transitions } from '../constants/theme';
-import TabBar from '../components/TabBar';
+import FloatingDock from '../components/FloatingDock';
+import PageDots from '../components/PageDots';
+import LiquidGlassIcon from '../components/LiquidGlassIcon';
+import {
+  businessSymbols,
+  type BusinessSymbolId,
+} from '../components/icons/BusinessSymbols';
 
-const favourites = [
-  { initials: 'EP', name: 'Elite Pampering', rating: '4.9', gradient: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' },
-  { initials: 'SW', name: 'StyleWorks', rating: '4.8', gradient: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' },
-  { initials: 'NS', name: 'NailStar', rating: '4.7', gradient: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' },
-  { initials: 'RB', name: 'Rose Beauty', rating: '4.9', gradient: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' },
-  { initials: 'CP', name: 'CorePower', rating: '4.8', gradient: 'linear-gradient(135deg, #fa709a 0%, #fee140 100%)' },
-  { initials: 'YF', name: 'YogaFlow', rating: '4.9', gradient: 'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)' },
-  { initials: 'IG', name: 'IronGrip Gym', rating: '4.7', gradient: 'linear-gradient(135deg, #f6d365 0%, #fda085 100%)' },
+type Favourite = {
+  initials: string;
+  name: string;
+  rating: string;
+  primaryColour: string;
+  symbolId?: BusinessSymbolId;
+};
+
+type MyPlace = {
+  initials: string;
+  name: string;
+  category: string;
+  distance: string;
+  primaryColour: string;
+};
+
+const favourites: Favourite[] = [
+  { initials: 'EP', name: 'Evolv Performance', rating: '4.9', primaryColour: '#6E4AB7', symbolId: 'evolv' },
+  { initials: 'SS', name: 'Saltwater Sauna', rating: '4.8', primaryColour: '#1E6F86', symbolId: 'saltwater' },
+  { initials: 'NS', name: 'The Nail Studio', rating: '4.7', primaryColour: '#B45A82', symbolId: 'nail-studio' },
+  { initials: 'RB', name: 'Refresh Barber', rating: '4.9', primaryColour: '#2D6A4F', symbolId: 'refresh' },
+  { initials: 'CP', name: 'Cork Physio & Sports', rating: '4.8', primaryColour: '#B24A3A', symbolId: 'cork-physio' },
+  { initials: 'YF', name: 'Yoga Flow', rating: '4.9', primaryColour: '#3E7CB1', symbolId: 'yoga-flow' },
+  { initials: 'IG', name: 'Iron Gym', rating: '4.7', primaryColour: '#2A2A2A', symbolId: 'iron-gym' },
 ];
 
-const myPlaces = [
-  { initials: 'BB', name: 'Bean & Brew', category: 'Coffee', distance: '0.1 mi', gradient: 'linear-gradient(135deg, #fccb90 0%, #d57eeb 100%)' },
-  { initials: 'SB', name: 'Stack Burger', category: 'Food', distance: '0.3 mi', gradient: 'linear-gradient(135deg, #ff9a9e 0%, #fad0c4 100%)' },
-  { initials: 'FL', name: 'FitLife', category: 'Gym', distance: '0.5 mi', gradient: 'linear-gradient(135deg, #a1c4fd 0%, #c2e9fb 100%)' },
+const myPlaces: MyPlace[] = [
+  { initials: 'BB', name: 'Bean & Brew', category: 'Coffee', distance: '0.1 mi', primaryColour: '#8B5A3C' },
+  { initials: 'SB', name: 'Stack Burger', category: 'Food', distance: '0.3 mi', primaryColour: '#B2453C' },
+  { initials: 'FL', name: 'FitLife', category: 'Gym', distance: '0.5 mi', primaryColour: '#3A6E9C' },
 ];
 
 export default function HomeScreen() {
@@ -32,7 +54,7 @@ export default function HomeScreen() {
         height: '100%',
         display: 'flex',
         flexDirection: 'column',
-        background: colors.bg,
+        background: colors.wallpaper,
         overflow: 'hidden',
       }}
     >
@@ -48,23 +70,12 @@ export default function HomeScreen() {
             <div
               style={{
                 fontSize: 22,
-                fontWeight: 800,
+                fontWeight: 500,
                 marginBottom: 4,
                 letterSpacing: -0.3,
               }}
             >
-              <span style={{ color: colors.text }}>Open</span>
-              <span style={{ color: colors.text }}>Book </span>
-              <span
-                style={{
-                  background: colors.goldGradient,
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}
-              >
-                AI
-              </span>
+              <span style={{ color: colors.text }}>OpenBook</span>
             </div>
             <div style={{ fontSize: 15, color: colors.textSecondary }}>
               Good evening, Sam
@@ -80,7 +91,7 @@ export default function HomeScreen() {
               alignItems: 'center',
               justifyContent: 'center',
               fontSize: 17,
-              fontWeight: 700,
+              fontWeight: 500,
               color: '#000',
             }}
           >
@@ -94,7 +105,7 @@ export default function HomeScreen() {
         style={{
           flex: 1,
           overflowY: 'auto',
-          paddingBottom: 100,
+          paddingBottom: 160,
         }}
       >
         {/* Favourites */}
@@ -108,10 +119,10 @@ export default function HomeScreen() {
               marginBottom: 14,
             }}
           >
-            <span style={{ fontSize: 17, fontWeight: 700, color: colors.text }}>
+            <span style={{ fontSize: 17, fontWeight: 500, color: colors.text }}>
               Favourites
             </span>
-            <span style={{ fontSize: 13, color: colors.goldPrimary, fontWeight: 600 }}>
+            <span style={{ fontSize: 13, color: colors.goldPrimary, fontWeight: 500 }}>
               See all
             </span>
           </div>
@@ -119,67 +130,58 @@ export default function HomeScreen() {
           <div
             style={{
               display: 'flex',
-              gap: 12,
+              gap: 14,
               overflowX: 'auto',
               paddingLeft: 20,
               paddingRight: 20,
             }}
           >
-            {favourites.map((fav, i) => (
-              <motion.div
-                key={fav.name}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.08, ...transitions.spring }}
-                whileTap={transitions.buttonTap}
-                style={{
-                  flexShrink: 0,
-                  width: 76,
-                  display: 'flex',
-                  flexDirection: 'column',
-                  alignItems: 'center',
-                  gap: 6,
-                }}
-              >
-                <div
+            {favourites.map((fav, i) => {
+              const Symbol = fav.symbolId ? businessSymbols[fav.symbolId] : null;
+              return (
+                <motion.div
+                  key={fav.name}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.08, ...transitions.spring }}
+                  whileTap={transitions.buttonTap}
                   style={{
-                    width: 64,
-                    height: 64,
-                    borderRadius: radius.squircle,
-                    background: fav.gradient,
+                    flexShrink: 0,
+                    width: 72,
                     display: 'flex',
+                    flexDirection: 'column',
                     alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 20,
-                    fontWeight: 800,
-                    color: '#fff',
-                    letterSpacing: -0.5,
-                    boxShadow: '0 4px 12px rgba(0,0,0,0.3)',
+                    gap: 8,
                   }}
                 >
-                  {fav.initials}
-                </div>
-                <span
-                  style={{
-                    fontSize: 11,
-                    fontWeight: 600,
-                    color: colors.text,
-                    textAlign: 'center',
-                    lineHeight: 1.2,
-                    maxWidth: 76,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                >
-                  {fav.name}
-                </span>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-                  <span style={{ color: '#FFD700', fontSize: 10 }}>&#9733;</span>
-                  <span style={{ fontSize: 10, color: colors.textSecondary }}>{fav.rating}</span>
-                </div>
-              </motion.div>
-            ))}
+                  <LiquidGlassIcon
+                    primaryColour={fav.primaryColour}
+                    symbol={Symbol ? <Symbol /> : undefined}
+                    fallbackInitials={fav.initials}
+                    size={62}
+                  />
+                  <span
+                    style={{
+                      fontSize: 11,
+                      fontWeight: 500,
+                      color: colors.text,
+                      textAlign: 'center',
+                      lineHeight: 1.2,
+                      maxWidth: 72,
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                    }}
+                  >
+                    {fav.name}
+                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <span style={{ color: '#FFD700', fontSize: 10 }}>&#9733;</span>
+                    <span style={{ fontSize: 10, color: colors.textSecondary }}>{fav.rating}</span>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
 
@@ -193,10 +195,10 @@ export default function HomeScreen() {
               marginBottom: 14,
             }}
           >
-            <span style={{ fontSize: 17, fontWeight: 700, color: colors.text }}>
+            <span style={{ fontSize: 17, fontWeight: 500, color: colors.text }}>
               My Places
             </span>
-            <span style={{ fontSize: 13, color: colors.goldPrimary, fontWeight: 600 }}>
+            <span style={{ fontSize: 13, color: colors.goldPrimary, fontWeight: 500 }}>
               See all
             </span>
           </div>
@@ -215,31 +217,17 @@ export default function HomeScreen() {
                   gap: 14,
                   background: colors.surface2,
                   borderRadius: radius.squircle,
-                  padding: '14px 16px',
+                  padding: '12px 14px',
                   border: `1px solid ${colors.border}`,
                 }}
               >
-                <div
-                  style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 14,
-                    background: place.gradient,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 16,
-                    fontWeight: 800,
-                    color: '#fff',
-                    letterSpacing: -0.5,
-                    flexShrink: 0,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                  }}
-                >
-                  {place.initials}
-                </div>
+                <LiquidGlassIcon
+                  primaryColour={place.primaryColour}
+                  fallbackInitials={place.initials}
+                  size={44}
+                />
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: 15, fontWeight: 600, color: colors.text }}>
+                  <div style={{ fontSize: 15, fontWeight: 500, color: colors.text }}>
                     {place.name}
                   </div>
                   <div style={{ fontSize: 13, color: colors.textSecondary }}>
@@ -252,34 +240,62 @@ export default function HomeScreen() {
               </motion.div>
             ))}
           </div>
-        </div>
 
-        {/* Add a place button */}
-        <div style={{ padding: '12px 20px' }}>
+          {/* Add a place */}
           <motion.button
             whileTap={transitions.buttonTap}
             onClick={() => navigate('/assistant')}
             style={{
+              marginTop: 10,
               width: '100%',
-              padding: '16px',
+              padding: '12px 14px',
               borderRadius: radius.squircle,
-              border: `1.5px dashed ${colors.textTertiary}`,
+              border: `1.5px dashed ${colors.hairline}`,
               background: 'transparent',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'center',
-              gap: 8,
+              gap: 14,
             }}
           >
-            <span style={{ fontSize: 20, color: colors.textTertiary }}>+</span>
-            <span style={{ fontSize: 15, fontWeight: 600, color: colors.textSecondary }}>
+            <div
+              style={{
+                width: 44,
+                height: 44,
+                borderRadius: 12,
+                background: colors.mutedGlass,
+                border: `0.5px solid ${colors.hairline}`,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0,
+                backdropFilter: 'blur(20px)',
+                WebkitBackdropFilter: 'blur(20px)',
+              }}
+            >
+              <span style={{ fontSize: 22, fontWeight: 400, color: 'rgba(255,255,255,0.7)', lineHeight: 1 }}>
+                +
+              </span>
+            </div>
+            <span style={{ fontSize: 15, fontWeight: 500, color: colors.textSecondary }}>
               Add a place
             </span>
           </motion.button>
         </div>
       </div>
 
-      <TabBar />
+      <div
+        style={{
+          position: 'fixed',
+          bottom: 'calc(env(safe-area-inset-bottom, 0px) + 108px)',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          zIndex: 40,
+        }}
+      >
+        <PageDots count={3} active={0} />
+      </div>
+
+      <FloatingDock />
     </motion.div>
   );
 }
