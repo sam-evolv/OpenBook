@@ -250,7 +250,7 @@ export function AIDistribution() {
                   </div>
                   <div className="flex-1">
                     <div className="text-[14px] text-paper/85 leading-[1.55]">
-                      <StreamedText text={demo.preamble} play={phase !== 'type'} reduce={!!reduce} />
+                      <StreamedText text={demo.preamble} play reduce={!!reduce} />
                     </div>
 
                     {(phase === 'cards' || phase === 'rest') && (
