@@ -38,18 +38,23 @@ function inferSymbolId(name: string): BusinessSymbolId | undefined {
 
 async function fetchBusinesses(): Promise<Business[]> {
   if (!hasSupabaseEnv()) return [];
-  const supabase = createClient();
-  const { data, error } = await supabase
-    .from('businesses')
-    .select('id, name, slug, category, primary_colour, logo_url')
-    .eq('is_live', true)
-    .order('created_at', { ascending: true })
-    .limit(8);
-  if (error) {
-    console.error('[home] failed to load businesses', error.message);
+  try {
+    const supabase = createClient();
+    const { data, error } = await supabase
+      .from('businesses')
+      .select('id, name, slug, category, primary_colour, logo_url')
+      .eq('is_live', true)
+      .order('created_at', { ascending: true })
+      .limit(8);
+    if (error) {
+      console.error('[home] failed to load businesses', error.message);
+      return [];
+    }
+    return data ?? [];
+  } catch (err) {
+    console.error('[home] supabase fetch threw', err);
     return [];
   }
-  return data ?? [];
 }
 
 export default async function HomePage() {
@@ -92,7 +97,7 @@ export default async function HomePage() {
         <div style={{ fontSize: 14, color: colors.textSecondary, marginTop: 4 }}>
           {businesses.length > 0
             ? 'Tap a place to start a booking.'
-            : 'Connect Supabase to load live businesses.'}
+            : 'No businesses yet. Add one to get started.'}
         </div>
       </header>
 
