@@ -51,3 +51,5 @@ export const transitions = {
   springSmooth: { type: 'spring' as const, stiffness: 200, damping: 20 },
   buttonTap: { scale: 0.93 },
 } as const;
+
+export const FRAME_MAX_WIDTH = 430;
