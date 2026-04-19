@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef } from 'react';
 import { Upload, CheckCircle2, Loader2, Check } from 'lucide-react';
 import { StepHeader, NextButton, SkipLink } from './shared';
 import type { OnboardingState } from '../OnboardingFlow';
@@ -11,15 +11,32 @@ interface StepProps {
   next: () => void;
 }
 
-type BackgroundChoice = 'auto' | 'black' | 'white' | 'primary' | `#${string}`;
+/** What the user has selected. Either a named preset, or a specific hex. */
+type BgSelection =
+  | { kind: 'auto' }
+  | { kind: 'black' }
+  | { kind: 'white' }
+  | { kind: 'primary' }
+  | { kind: 'custom'; hex: string };
+
+/** Convert a selection into the string the server expects. */
+function selectionToServerValue(sel: BgSelection): string {
+  switch (sel.kind) {
+    case 'auto':    return 'auto';
+    case 'black':   return 'black';
+    case 'white':   return 'white';
+    case 'primary': return 'primary';
+    case 'custom':  return sel.hex;
+  }
+}
 
 export function Step3Logo({ state, update, next }: StepProps) {
   const [uploading, setUploading] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [bgChoice, setBgChoice] = useState<BackgroundChoice>('auto');
-  const [customHex, setCustomHex] = useState('#080808');
-  const [showCustom, setShowCustom] = useState(false);
+  const [selection, setSelection] = useState<BgSelection>({ kind: 'auto' });
+  const [customHex, setCustomHex] = useState('#6366F1'); // A nice indigo default so it's clearly "custom"
+  const [customPickerOpen, setCustomPickerOpen] = useState(false);
   const [logoPath, setLogoPath] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -67,7 +84,7 @@ export function Step3Logo({ state, update, next }: StepProps) {
     const formData = new FormData();
     formData.append('businessId', businessId);
     formData.append('file', file);
-    formData.append('background', bgChoice);
+    formData.append('background', selectionToServerValue(selection));
 
     try {
       const res = await fetch('/api/upload-logo', { method: 'POST', body: formData });
@@ -86,14 +103,14 @@ export function Step3Logo({ state, update, next }: StepProps) {
     }
   }
 
-  async function regenerate(newBg: BackgroundChoice) {
+  async function regenerate(newSelection: BgSelection) {
     if (!state.businessId || !logoPath) return;
     setRegenerating(true);
     setError(null);
 
     const formData = new FormData();
     formData.append('businessId', state.businessId);
-    formData.append('background', newBg);
+    formData.append('background', selectionToServerValue(newSelection));
     formData.append('cachedLogoPath', logoPath);
 
     try {
@@ -108,17 +125,27 @@ export function Step3Logo({ state, update, next }: StepProps) {
     }
   }
 
-  function pickBg(choice: BackgroundChoice) {
-    setBgChoice(choice);
-    setShowCustom(choice.startsWith('#') && choice !== '#080808' && choice !== '#FFFFFF');
-    if (state.processed_icon_url) regenerate(choice);
+  function pickPreset(kind: Exclude<BgSelection['kind'], 'custom'>) {
+    const newSel: BgSelection = { kind };
+    setSelection(newSel);
+    setCustomPickerOpen(false);
+    if (state.processed_icon_url) regenerate(newSel);
   }
 
-  function commitCustom() {
-    const hex = customHex.trim();
-    if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
-      pickBg(hex as BackgroundChoice);
-    }
+  function openCustomPicker() {
+    setCustomPickerOpen(true);
+    const newSel: BgSelection = { kind: 'custom', hex: customHex };
+    setSelection(newSel);
+    if (state.processed_icon_url) regenerate(newSel);
+  }
+
+  function applyCustomHex(nextHex: string) {
+    const hex = nextHex.trim();
+    if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return;
+    setCustomHex(hex);
+    const newSel: BgSelection = { kind: 'custom', hex };
+    setSelection(newSel);
+    if (state.processed_icon_url) regenerate(newSel);
   }
 
   return (
@@ -241,66 +268,58 @@ export function Step3Logo({ state, update, next }: StepProps) {
             <div className="grid grid-cols-5 gap-2">
               <BgSwatch
                 label="Auto"
-                active={bgChoice === 'auto'}
-                onClick={() => pickBg('auto')}
+                active={selection.kind === 'auto'}
+                onClick={() => pickPreset('auto')}
                 preview="gradient"
               />
               <BgSwatch
                 label="Black"
-                active={bgChoice === 'black'}
-                onClick={() => pickBg('black')}
+                active={selection.kind === 'black'}
+                onClick={() => pickPreset('black')}
                 preview="#080808"
               />
               <BgSwatch
                 label="White"
-                active={bgChoice === 'white'}
-                onClick={() => pickBg('white')}
+                active={selection.kind === 'white'}
+                onClick={() => pickPreset('white')}
                 preview="#FFFFFF"
               />
               <BgSwatch
                 label="Brand"
-                active={bgChoice === 'primary'}
-                onClick={() => pickBg('primary')}
+                active={selection.kind === 'primary'}
+                onClick={() => pickPreset('primary')}
                 preview={state.primary_colour}
               />
               <BgSwatch
                 label="Custom"
-                active={bgChoice.startsWith('#') && bgChoice !== '#080808' && bgChoice !== '#FFFFFF'}
-                onClick={() => {
-                  setShowCustom(true);
-                  pickBg(customHex as BackgroundChoice);
-                }}
+                active={selection.kind === 'custom'}
+                onClick={openCustomPicker}
                 preview={customHex}
                 hashIndicator
               />
             </div>
 
-            {showCustom && (
+            {customPickerOpen && (
               <div className="flex items-center gap-2 mt-2 animate-reveal-up">
                 <input
                   type="color"
                   value={customHex}
-                  onChange={(e) => setCustomHex(e.target.value)}
-                  onBlur={commitCustom}
+                  onChange={(e) => applyCustomHex(e.target.value)}
                   className="h-10 w-14 rounded-lg border-0 bg-transparent cursor-pointer"
+                  aria-label="Pick a custom colour"
                 />
                 <input
                   type="text"
                   value={customHex}
                   onChange={(e) => setCustomHex(e.target.value)}
-                  onBlur={commitCustom}
-                  onKeyDown={(e) => e.key === 'Enter' && commitCustom()}
+                  onBlur={(e) => applyCustomHex(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') applyCustomHex((e.target as HTMLInputElement).value);
+                  }}
                   placeholder="#080808"
                   className="flex-1 h-10 px-3 rounded-lg mat-card text-[13px] font-mono focus:outline-none"
                   style={{ color: 'var(--label-1)' }}
                 />
-                <button
-                  onClick={commitCustom}
-                  className="h-10 px-3 rounded-lg mat-card-elevated text-[12px] font-semibold"
-                  style={{ color: 'var(--brand-gold)' }}
-                >
-                  Apply
-                </button>
               </div>
             )}
           </div>
@@ -323,8 +342,8 @@ export function Step3Logo({ state, update, next }: StepProps) {
               onClick={() => {
                 update({ logo_url: null, processed_icon_url: null });
                 setLogoPath(null);
-                setBgChoice('auto');
-                setShowCustom(false);
+                setSelection({ kind: 'auto' });
+                setCustomPickerOpen(false);
               }}
               className="text-[13px] font-medium"
               style={{ color: 'var(--label-3)' }}
@@ -347,7 +366,7 @@ export function Step3Logo({ state, update, next }: StepProps) {
   );
 }
 
-/* A little swatch button for the background picker */
+/* One swatch button for the background picker */
 function BgSwatch({
   label,
   active,
@@ -368,10 +387,13 @@ function BgSwatch({
       }
     : { backgroundColor: preview };
 
-  // If preview is white, give a hairline border so it's visible against dark UI
-  if (preview === '#FFFFFF') {
+  if (preview === '#FFFFFF' || (typeof preview === 'string' && preview.toLowerCase() === '#ffffff')) {
     swatchStyle.border = '0.5px solid rgba(255,255,255,0.2)';
   }
+
+  const checkColour = (preview === '#FFFFFF' || (typeof preview === 'string' && preview.toLowerCase() === '#ffffff'))
+    ? '#000'
+    : '#fff';
 
   return (
     <button
@@ -387,13 +409,13 @@ function BgSwatch({
         className="h-7 w-7 rounded-full flex items-center justify-center"
         style={swatchStyle}
       >
-        {hashIndicator && (
+        {hashIndicator && !active && (
           <span className="text-[10px] font-bold" style={{ color: 'rgba(255,255,255,0.7)' }}>
             #
           </span>
         )}
-        {active && !hashIndicator && (
-          <Check className="h-3.5 w-3.5" strokeWidth={3} style={{ color: preview === '#FFFFFF' ? '#000' : '#fff' }} />
+        {active && (
+          <Check className="h-3.5 w-3.5" strokeWidth={3} style={{ color: checkColour }} />
         )}
       </div>
       <span
