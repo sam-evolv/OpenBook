@@ -1,7 +1,10 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
 import { getCurrentOwner, createSupabaseServerClient } from '@/lib/supabase-server';
+import { GeistSans } from 'geist/font/sans';
+import { GeistMono } from 'geist/font/mono';
+import { DashboardThemeProvider } from '@/components/dashboard/ThemeProvider';
 import { DashboardNav } from '@/components/dashboard/DashboardNav';
+import './dashboard.css';
 
 export const dynamic = 'force-dynamic';
 
@@ -21,13 +24,17 @@ export default async function DashboardLayout({ children }: { children: React.Re
   if (!business) redirect('/onboard/flow');
 
   return (
-    <div className="min-h-[100dvh] bg-[#050505] text-white flex">
-      <DashboardNav business={business} />
-      <div className="flex-1 flex flex-col min-w-0">
-        <div className="flex-1 overflow-y-auto">
-          <div className="mx-auto max-w-6xl px-6 py-8">{children}</div>
-        </div>
-      </div>
+    <div
+      className={`dashboard-root min-h-[100dvh] flex ${GeistSans.variable} ${GeistMono.variable}`}
+      data-theme="dark"
+      style={{ background: 'var(--bg-0)', color: 'var(--fg-0)' }}
+    >
+      <DashboardThemeProvider>
+        <DashboardNav business={business} ownerName={owner.full_name ?? undefined} />
+        <main className="flex-1 min-w-0 overflow-y-auto">
+          <div className="mx-auto max-w-6xl px-8 py-8">{children}</div>
+        </main>
+      </DashboardThemeProvider>
     </div>
   );
 }

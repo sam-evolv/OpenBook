@@ -1,6 +1,6 @@
 import { createSupabaseServerClient, getCurrentOwner } from '@/lib/supabase-server';
 import { redirect } from 'next/navigation';
-import { BookingsList } from '@/components/dashboard/BookingsList';
+import { BookingsClient } from '@/components/dashboard/BookingsClient';
 
 export const dynamic = 'force-dynamic';
 
@@ -44,16 +44,5 @@ export default async function BookingsPage({
 
   const { data: bookings } = await query.limit(100);
 
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-[24px] font-bold tracking-[-0.02em]">Bookings</h1>
-        <p className="mt-1 text-[13px]" style={{ color: 'rgba(255,255,255,0.5)' }}>
-          All the bookings you've received.
-        </p>
-      </div>
-
-      <BookingsList bookings={bookings ?? []} activeFilter={filter} />
-    </div>
-  );
+  return <BookingsClient bookings={bookings ?? []} activeFilter={filter} />;
 }

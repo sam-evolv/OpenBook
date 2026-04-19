@@ -1,6 +1,6 @@
 import { createSupabaseServerClient, getCurrentOwner } from '@/lib/supabase-server';
 import { redirect } from 'next/navigation';
-import { SettingsEditor } from '@/components/dashboard/SettingsEditor';
+import { SettingsClient } from '@/components/dashboard/SettingsClient';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,16 +18,5 @@ export default async function SettingsPage() {
 
   if (!business) redirect('/onboard/flow');
 
-  return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-[24px] font-bold tracking-[-0.02em]">Settings</h1>
-        <p className="mt-1 text-[13px]" style={{ color: 'rgba(255,255,255,0.5)' }}>
-          Update your business info, branding, and photos.
-        </p>
-      </div>
-
-      <SettingsEditor initialBusiness={business} />
-    </div>
-  );
+  return <SettingsClient initialBusiness={business} />;
 }

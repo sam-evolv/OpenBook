@@ -6,83 +6,99 @@ export const dynamic = 'force-dynamic';
 
 /**
  * POST /api/onboarding/save
+ * Body: { state, step }
  *
- * Idempotent save. Rules:
- * 1. Refuse to save without a non-empty name OR existing businessId.
- *    Prevents empty ghost rows from being created.
- * 2. Reuse the owner's existing draft business (their most recent row) if
- *    no businessId is passed. Prevents per-keystroke row creation.
- * 3. Only generate a slug suffix if someone ELSE owns the slug — never
- *    when the current user already owns it themselves.
+ * Persists business + services + hours on every save so resuming onboarding
+ * (or refreshing the page) doesn't lose progress. Uses upsert patterns for
+ * safety against duplicates.
  */
 export async function POST(req: NextRequest) {
   const sb = createSupabaseServerClient();
   const {
     data: { user },
   } = await sb.auth.getUser();
+  if (!user) return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
 
-  if (!user) {
-    return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
+  const { state, step } = await req.json();
+  if (!state) return NextResponse.json({ error: 'Missing state' }, { status: 400 });
+
+  /* --- 1. Upsert the business row --- */
+  const hasAnyContent =
+    state.name?.trim() ||
+    state.slug?.trim() ||
+    state.tagline?.trim() ||
+    state.about_long?.trim() ||
+    state.logo_url ||
+    state.hero_image_url ||
+    (state.services?.length ?? 0) > 0;
+
+  if (!hasAnyContent) {
+    return NextResponse.json({ ok: true, skipped: 'empty-state' });
   }
 
-  const { state, step } = (await req.json()) as { state: any; step: number };
+  let businessId: string | null = state.businessId ?? null;
 
-  // Guard against saving empty state. This is the bug that was creating
-  // blank is_live=true rows when Step 8 mounted with no state.
-  const hasName = typeof state?.name === 'string' && state.name.trim().length > 0;
-  const hasBusinessId = typeof state?.businessId === 'string' && state.businessId.length > 0;
-
-  if (!hasName && !hasBusinessId) {
-    return NextResponse.json(
-      { error: 'Name required to save progress' },
-      { status: 400 }
-    );
-  }
-
-  // Build the payload (only include fields the client actually set)
   const businessPayload: any = {
     owner_id: user.id,
-    primary_colour: state.primary_colour ?? '#D4AF37',
-    is_live: false, // stays hidden until /complete
+    name: state.name?.trim() || null,
+    category: state.category || null,
+    city: state.city || null,
+    address_line: state.address_line || null,
+    primary_colour: state.primary_colour || '#D4AF37',
+    secondary_colour: state.secondary_colour || null,
+    logo_url: state.logo_url ?? null,
+    processed_icon_url: state.processed_icon_url ?? null,
+    hero_image_url: state.hero_image_url ?? null,
+    gallery_urls: state.gallery_urls ?? [],
+    tagline: state.tagline?.trim() || null,
+    about_long: state.about_long?.trim() || null,
+    founder_name: state.founder_name?.trim() || null,
+    phone: state.phone?.trim() || null,
+    website: state.website?.trim() || null,
     socials: state.socials ?? {},
+    is_live: false, // Never flip to true here; publish flow handles that
   };
 
-  // Only set fields we actually have values for — never clobber with undefined/empty
-  if (state.name?.trim()) businessPayload.name = state.name.trim();
-  if (state.category) businessPayload.category = state.category;
-  if (state.city) businessPayload.city = state.city;
-  if (state.address_line) businessPayload.address_line = state.address_line;
-  if (state.secondary_colour) businessPayload.secondary_colour = state.secondary_colour;
-  if (state.tagline) businessPayload.tagline = state.tagline;
-  if (state.about_long) businessPayload.about_long = state.about_long;
-  if (state.founder_name) businessPayload.founder_name = state.founder_name;
-  if (state.phone) businessPayload.phone = state.phone;
-  if (state.website) businessPayload.website = state.website;
-  if (state.logo_url) businessPayload.logo_url = state.logo_url;
-  if (state.processed_icon_url) businessPayload.processed_icon_url = state.processed_icon_url;
-
-  // Resolve which row to update:
-  // 1. If client sent a businessId, use that (subject to ownership check).
-  // 2. Else find the owner's most recent draft (is_live = false) row.
-  // 3. Else create a new row.
-  let businessId: string | undefined = state.businessId;
-
-  if (businessId) {
-    const { data: existing } = await sb
-      .from('businesses')
-      .select('id, owner_id')
-      .eq('id', businessId)
-      .maybeSingle();
-
-    if (!existing || existing.owner_id !== user.id) {
-      businessId = undefined; // treat as missing, fall through
+  /* Slug handling: if user provided one, check for collisions */
+  let finalSlug: string | null = null;
+  if (state.slug?.trim()) {
+    finalSlug = state.slug.trim().toLowerCase();
+    /* Check if another user's business has this slug */
+    if (businessId) {
+      const { data: existing } = await sb
+        .from('businesses')
+        .select('id, owner_id')
+        .eq('slug', finalSlug)
+        .neq('id', businessId)
+        .maybeSingle();
+      if (existing && existing.owner_id !== user.id) {
+        finalSlug = `${finalSlug}-${Math.random().toString(36).slice(2, 6)}`;
+      }
+    } else {
+      const { data: existing } = await sb
+        .from('businesses')
+        .select('id, owner_id')
+        .eq('slug', finalSlug)
+        .maybeSingle();
+      if (existing && existing.owner_id !== user.id) {
+        finalSlug = `${finalSlug}-${Math.random().toString(36).slice(2, 6)}`;
+      }
     }
+    businessPayload.slug = finalSlug;
   }
 
-  if (!businessId) {
+  if (businessId) {
+    /* Update existing */
+    const { error } = await sb.from('businesses').update(businessPayload).eq('id', businessId);
+    if (error) {
+      console.error('[save] update failed', error);
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+  } else {
+    /* Try to find an existing draft for this user first */
     const { data: draft } = await sb
       .from('businesses')
-      .select('id, slug')
+      .select('id')
       .eq('owner_id', user.id)
       .eq('is_live', false)
       .order('created_at', { ascending: false })
@@ -91,56 +107,80 @@ export async function POST(req: NextRequest) {
 
     if (draft) {
       businessId = draft.id;
-    }
-  }
-
-  // Handle slug — only set it if we have one, only suffix if someone
-  // ELSE owns it.
-  if (state.slug) {
-    const desiredSlug = state.slug.trim().toLowerCase();
-
-    const { data: slugOwner } = await sb
-      .from('businesses')
-      .select('id, owner_id')
-      .eq('slug', desiredSlug)
-      .maybeSingle();
-
-    if (!slugOwner || slugOwner.id === businessId) {
-      // Slug is available or we already own it — keep as requested
-      businessPayload.slug = desiredSlug;
-    } else if (slugOwner.owner_id === user.id) {
-      // It's owned by another of the user's draft rows — claim it
-      businessPayload.slug = desiredSlug;
+      const { error } = await sb.from('businesses').update(businessPayload).eq('id', businessId);
+      if (error) {
+        console.error('[save] update-draft failed', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
     } else {
-      // Someone else owns this slug, generate a suffix
-      businessPayload.slug = `${desiredSlug}-${Math.random().toString(36).slice(2, 6)}`;
+      /* Insert new */
+      if (!businessPayload.slug) {
+        businessPayload.slug = `draft-${Math.random().toString(36).slice(2, 8)}`;
+      }
+      if (!businessPayload.name) businessPayload.name = 'Draft';
+      const { data: inserted, error } = await sb
+        .from('businesses')
+        .insert(businessPayload)
+        .select('id, slug')
+        .single();
+      if (error) {
+        console.error('[save] insert failed', error);
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+      businessId = inserted.id;
+      finalSlug = inserted.slug;
     }
   }
 
-  // Now either UPDATE or INSERT
-  if (businessId) {
-    const { error } = await sb.from('businesses').update(businessPayload).eq('id', businessId);
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-  } else {
-    // First save for this owner — must have at least a name (guarded above)
-    // Must also have a slug for insert
-    if (!businessPayload.slug) {
-      businessPayload.slug = state.name.trim().toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
-    }
-
-    const { data, error } = await sb
-      .from('businesses')
-      .insert(businessPayload)
-      .select('id, slug')
-      .single();
-
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-    businessId = data.id;
-    businessPayload.slug = data.slug;
+  if (!businessId) {
+    return NextResponse.json({ error: 'Could not resolve business ID' }, { status: 500 });
   }
 
-  // Update owner step pointer
-  await sb.from('owners').update({ onboarding_step: step }).eq('id', user.id);
+  /* --- 2. Persist services --- */
+  if (Array.isArray(state.services) && state.services.length > 0) {
+    const validServices = state.services
+      .filter((s: any) => s.name?.trim())
+      .map((s: any) => ({
+        business_id: businessId,
+        name: s.name.trim(),
+        description: s.description?.trim() || null,
+        duration_minutes: s.duration_minutes || 60,
+        price_cents: s.price_cents ?? 0,
+        is_active: true,
+      }));
 
-  return NextResponse.json({ businessId, slug: businessPayload.slug });
+    if (validServices.length) {
+      /* Delete existing and re-insert: simplest correctness guarantee */
+      await sb.from('services').delete().eq('business_id', businessId);
+      const { error: svcErr } = await sb.from('services').insert(validServices);
+      if (svcErr) {
+        console.error('[save] services insert failed', svcErr);
+        /* Don't fail whole save over services */
+      }
+    }
+  }
+
+  /* --- 3. Persist hours --- */
+  if (Array.isArray(state.hours) && state.hours.length > 0) {
+    const hourRows = state.hours.map((h: any) => ({
+      business_id: businessId,
+      day_of_week: h.day_of_week,
+      open_time: h.is_closed ? null : h.open_time ?? '09:00',
+      close_time: h.is_closed ? null : h.close_time ?? '17:00',
+      is_closed: !!h.is_closed,
+    }));
+    await sb.from('business_hours').delete().eq('business_id', businessId);
+    await sb.from('business_hours').insert(hourRows);
+  }
+
+  /* --- 4. Update owner onboarding_step --- */
+  if (typeof step === 'number') {
+    await sb.from('owners').update({ onboarding_step: step }).eq('id', user.id);
+  }
+
+  return NextResponse.json({
+    ok: true,
+    businessId,
+    slug: finalSlug,
+  });
 }
