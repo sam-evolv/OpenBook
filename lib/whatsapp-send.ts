@@ -24,9 +24,14 @@ export async function sendWhatsAppMessage({
     }
   )
   if (!res.ok) {
-    const responseText = await res.text()
-    console.error('WhatsApp send failed:', responseText)
-    console.error('Phone number ID used:', phoneNumberId)
-    console.error('Token starts with:', process.env.WHATSAPP_ACCESS_TOKEN?.slice(0, 20))
+    console.error('Sending from phone_number_id:', phoneNumberId)
+    try {
+      const responseData = await res.json()
+      console.error('WhatsApp send failed - code:', responseData?.error?.code)
+      console.error('WhatsApp send failed - message:', responseData?.error?.message)
+      console.error('WhatsApp send failed - type:', responseData?.error?.type)
+    } catch (e) {
+      console.error('WhatsApp send failed - raw status:', res.status)
+    }
   }
 }
