@@ -1,25 +1,27 @@
 import { createBrowserClient } from '@supabase/ssr';
 
 /**
- * Browser-side Supabase client. We configure the auth cookie with
- * domain=.openbook.ie so the session works across app.openbook.ie
- * and dash.openbook.ie.
+ * Browser-side Supabase client. The auth cookie is scoped to .openbook.ie
+ * (leading dot) so the session is readable on both app.openbook.ie and
+ * dash.openbook.ie. Local dev falls back to host-scoped cookies.
  */
 export function createSupabaseBrowserClient() {
+  const onOpenbookDomain =
+    typeof window !== 'undefined' &&
+    window.location.hostname.endsWith('openbook.ie');
+
   return createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookieOptions: {
-        /* Only set domain in production — local dev uses localhost */
-        domain:
-          typeof window !== 'undefined' && window.location.hostname.endsWith('openbook.ie')
-            ? '.openbook.ie'
-            : undefined,
-        sameSite: 'lax',
-        secure:
-          typeof window !== 'undefined' && window.location.protocol === 'https:',
-      },
-    }
+    onOpenbookDomain
+      ? {
+          cookieOptions: {
+            domain: '.openbook.ie',
+            sameSite: 'lax',
+            secure: true,
+            path: '/',
+          },
+        }
+      : undefined
   );
 }

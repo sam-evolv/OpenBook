@@ -1,50 +1,36 @@
-import { createServerClient, type CookieOptions } from '@supabase/ssr';
+import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 
 /**
- * Returns a Supabase client configured for server-side use with cookies
- * scoped to .openbook.ie so the session works across app.openbook.ie
- * and dash.openbook.ie.
+ * Server-side Supabase client. Uses the modern getAll/setAll cookie API
+ * (the deprecated get/set/remove chunks the auth token across multiple
+ * calls and can corrupt sessions). Cookies are scoped to .openbook.ie
+ * in production so the session is shared between app.* and dash.*.
  */
 export function createSupabaseServerClient() {
   const cookieStore = cookies();
-
-  /* In local dev, cookies can't use the .openbook.ie domain. Only apply
-     it in production. */
-  const domain = process.env.NODE_ENV === 'production' ? '.openbook.ie' : undefined;
+  const isProduction = process.env.NODE_ENV === 'production';
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      cookieOptions: isProduction ? { domain: '.openbook.ie' } : undefined,
       cookies: {
-        get(name: string) {
-          return cookieStore.get(name)?.value;
+        getAll() {
+          return cookieStore.getAll();
         },
-        set(name: string, value: string, options: CookieOptions) {
+        setAll(cookiesToSet) {
           try {
-            cookieStore.set({
-              name,
-              value,
-              ...options,
-              domain: domain ?? options.domain,
+            cookiesToSet.forEach(({ name, value, options }) => {
+              const opts = isProduction
+                ? { ...options, domain: '.openbook.ie' }
+                : options;
+              cookieStore.set({ name, value, ...opts });
             });
           } catch {
-            /* Called from a Server Component — can't set cookies.
-             * This is OK because middleware handles session refresh. */
-          }
-        },
-        remove(name: string, options: CookieOptions) {
-          try {
-            cookieStore.set({
-              name,
-              value: '',
-              ...options,
-              domain: domain ?? options.domain,
-              maxAge: 0,
-            });
-          } catch {
-            /* see above */
+            /* Called from a Server Component — cookies are read-only here.
+             * Middleware handles session refresh, so this is safe to ignore. */
           }
         },
       },
