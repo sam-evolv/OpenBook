@@ -49,7 +49,7 @@ export function Step1Basics({ state, update, next }: StepProps) {
   return (
     <div className="flex flex-col gap-8 max-w-[520px]">
       <StepHeader
-        eyebrow="Step 1 of 8 · Basics"
+        eyebrow="Step 1 of 9 · Basics"
         title={
           <>
             Let's start with <br />

@@ -1,61 +1,50 @@
 import { notFound } from 'next/navigation';
-import { supabaseAdmin, type Business, type Service } from '@/lib/supabase';
-import { heroForBusiness } from '@/lib/categories';
-import { BusinessAppShell } from './BusinessAppShell';
+import { createSupabaseServerClient } from '@/lib/supabase-server';
+import { BusinessAppShell } from '@/components/business/BusinessAppShell';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 60;
 
-export type BusinessExtended = Business & {
-  tagline: string | null;
-  about_long: string | null;
-  gallery_urls: string[] | null;
-  team: Array<{ name: string; role: string; photo_url?: string }> | null;
-  testimonials: Array<{ quote: string; author: string; rating?: number }> | null;
-  offers: Array<{ title: string; description: string; badge?: string }> | null;
-};
+interface Props {
+  params: { slug: string };
+  searchParams: { tab?: string };
+}
 
-async function getBusiness(slug: string): Promise<{
-  business: BusinessExtended | null;
-  services: Service[];
-}> {
-  const sb = supabaseAdmin();
+export default async function BusinessPage({ params, searchParams }: Props) {
+  const sb = createSupabaseServerClient();
+
+  // Fetch business + services + hours in parallel
   const { data: business } = await sb
     .from('businesses')
     .select('*')
-    .eq('slug', slug)
+    .eq('slug', params.slug)
     .eq('is_live', true)
     .maybeSingle();
 
-  if (!business) return { business: null, services: [] };
-
-  const { data: services } = await sb
-    .from('services')
-    .select('*')
-    .eq('business_id', business.id)
-    .eq('is_active', true)
-    .order('price_cents', { ascending: true });
-
-  // If no cover image set, pick a curated one for the category
-  const enhanced = {
-    ...business,
-    cover_image_url:
-      business.cover_image_url ??
-      heroForBusiness(business.slug, business.category),
-  };
-
-  return {
-    business: enhanced as BusinessExtended,
-    services: (services ?? []) as Service[],
-  };
-}
-
-export default async function BusinessPage({
-  params,
-}: {
-  params: { slug: string };
-}) {
-  const { business, services } = await getBusiness(params.slug);
   if (!business) notFound();
-  return <BusinessAppShell business={business} services={services} />;
+
+  const [{ data: services }, { data: hours }] = await Promise.all([
+    sb
+      .from('services')
+      .select('*')
+      .eq('business_id', business.id)
+      .eq('is_active', true)
+      .order('created_at', { ascending: true }),
+    sb
+      .from('business_hours')
+      .select('*')
+      .eq('business_id', business.id)
+      .order('day_of_week', { ascending: true }),
+  ]);
+
+  const initialTab =
+    (searchParams.tab as 'home' | 'book' | 'gallery' | 'about') ?? 'home';
+
+  return (
+    <BusinessAppShell
+      business={business}
+      services={services ?? []}
+      hours={hours ?? []}
+      initialTab={initialTab}
+    />
+  );
 }

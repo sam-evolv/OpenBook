@@ -17,7 +17,7 @@ export function Step4Story({ state, update, next }: StepProps) {
   return (
     <div className="flex flex-col gap-8 max-w-[520px]">
       <StepHeader
-        eyebrow="Step 4 of 8 · Your story"
+        eyebrow="Step 4 of 9 · Your story"
         title={
           <>
             Tell people <br />

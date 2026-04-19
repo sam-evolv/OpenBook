@@ -151,7 +151,7 @@ export function Step3Logo({ state, update, next }: StepProps) {
   return (
     <div className="flex flex-col gap-8 max-w-[520px]">
       <StepHeader
-        eyebrow="Step 3 of 8 · Logo"
+        eyebrow="Step 3 of 9 · Logo"
         title={
           <>
             Upload your logo.

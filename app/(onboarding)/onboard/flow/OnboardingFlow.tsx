@@ -1,16 +1,16 @@
 'use client';
 
 import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import { ArrowLeft } from 'lucide-react';
 import { Step1Basics } from './steps/Step1Basics';
 import { Step2Colours } from './steps/Step2Colours';
 import { Step3Logo } from './steps/Step3Logo';
 import { Step4Story } from './steps/Step4Story';
-import { Step5Services } from './steps/Step5Services';
-import { Step6Hours } from './steps/Step6Hours';
-import { Step7Payments } from './steps/Step7Payments';
-import { Step8Launch } from './steps/Step8Launch';
+import { Step5Images } from './steps/Step5Images';
+import { Step6Services } from './steps/Step6Services';
+import { Step7Hours } from './steps/Step7Hours';
+import { Step8Payments } from './steps/Step8Payments';
+import { Step9Launch } from './steps/Step9Launch';
 import { LivePreview } from './LivePreview';
 
 export interface OnboardingState {
@@ -24,6 +24,8 @@ export interface OnboardingState {
   secondary_colour: string;
   logo_url: string | null;
   processed_icon_url: string | null;
+  hero_image_url: string | null;
+  gallery_urls: string[];
   tagline: string;
   about_long: string;
   founder_name: string;
@@ -59,6 +61,8 @@ const emptyState: OnboardingState = {
   secondary_colour: '',
   logo_url: null,
   processed_icon_url: null,
+  hero_image_url: null,
+  gallery_urls: [],
   tagline: '',
   about_long: '',
   founder_name: '',
@@ -78,7 +82,7 @@ const emptyState: OnboardingState = {
   stripe_connected: false,
 };
 
-const TOTAL_STEPS = 8;
+const TOTAL_STEPS = 9;
 
 interface Props {
   owner: any;
@@ -102,6 +106,8 @@ export function OnboardingFlow({ owner, initialBusiness, startAt = 0 }: Props) {
       secondary_colour: initialBusiness.secondary_colour ?? '',
       logo_url: initialBusiness.logo_url,
       processed_icon_url: initialBusiness.processed_icon_url,
+      hero_image_url: initialBusiness.hero_image_url,
+      gallery_urls: initialBusiness.gallery_urls ?? [],
       tagline: initialBusiness.tagline ?? '',
       about_long: initialBusiness.about_long ?? '',
       founder_name: initialBusiness.founder_name ?? owner.full_name ?? '',
@@ -132,15 +138,8 @@ export function OnboardingFlow({ owner, initialBusiness, startAt = 0 }: Props) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ state, step: newStep }),
       });
-      if (!res.ok) {
-        console.error('[saveProgress] failed', await res.text());
-        return;
-      }
+      if (!res.ok) return;
       const data = await res.json();
-
-      /* THIS IS THE FIX: persist the businessId + canonical slug returned
-       * from the server so every downstream step (logo upload, Stripe,
-       * publish) can reference it. */
       if (data?.businessId) {
         setState((prev) => ({
           ...prev,
@@ -148,8 +147,8 @@ export function OnboardingFlow({ owner, initialBusiness, startAt = 0 }: Props) {
           slug: data.slug ?? prev.slug,
         }));
       }
-    } catch (err) {
-      console.error('[saveProgress] network error', err);
+    } catch {
+      /* silent */
     }
   }
 
@@ -158,10 +157,11 @@ export function OnboardingFlow({ owner, initialBusiness, startAt = 0 }: Props) {
     Step2Colours,
     Step3Logo,
     Step4Story,
-    Step5Services,
-    Step6Hours,
-    Step7Payments,
-    Step8Launch,
+    Step5Images,
+    Step6Services,
+    Step7Hours,
+    Step8Payments,
+    Step9Launch,
   ][step];
 
   const showPreview = step >= 1 && step <= 6;
@@ -216,11 +216,7 @@ export function OnboardingFlow({ owner, initialBusiness, startAt = 0 }: Props) {
       <div className="mx-auto max-w-6xl px-5 pb-12">
         <div className={`grid gap-8 ${showPreview ? 'lg:grid-cols-[1fr_380px]' : 'lg:grid-cols-1 lg:max-w-xl lg:mx-auto'}`}>
           <div className="min-h-[60vh]">
-            <StepComponent
-              state={state}
-              update={update}
-              next={next}
-            />
+            <StepComponent state={state} update={update} next={next} />
           </div>
           {showPreview && (
             <div className="hidden lg:block">

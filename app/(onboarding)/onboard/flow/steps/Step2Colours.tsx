@@ -28,7 +28,7 @@ export function Step2Colours({ state, update, next }: StepProps) {
   return (
     <div className="flex flex-col gap-8 max-w-[520px]">
       <StepHeader
-        eyebrow="Step 2 of 8 · Colours"
+        eyebrow="Step 2 of 9 · Colours"
         title={
           <>
             Pick your brand <br />

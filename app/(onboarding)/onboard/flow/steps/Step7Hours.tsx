@@ -19,7 +19,7 @@ const DAYS = [
   { id: 0, label: 'Sunday',    short: 'Sun' },
 ];
 
-export function Step6Hours({ state, update, next }: StepProps) {
+export function Step7Hours({ state, update, next }: StepProps) {
   const setHour = (day_of_week: number, patch: Partial<OnboardingState['hours'][0]>) => {
     const hours = state.hours.map((h) => (h.day_of_week === day_of_week ? { ...h, ...patch } : h));
     update({ hours });
@@ -28,7 +28,7 @@ export function Step6Hours({ state, update, next }: StepProps) {
   return (
     <div className="flex flex-col gap-8 max-w-[520px]">
       <StepHeader
-        eyebrow="Step 6 of 8 · Opening hours"
+        eyebrow="Step 7 of 9 · Opening hours"
         title={
           <>
             When are you <br />

@@ -63,7 +63,7 @@ const SUGGESTIONS: Record<string, Array<{ name: string; duration_minutes: number
 /** Duration snap points — matches how businesses actually think about sessions. */
 const DURATION_OPTIONS = [15, 30, 45, 60, 75, 90, 120, 150, 180];
 
-export function Step5Services({ state, update, next }: StepProps) {
+export function Step6Services({ state, update, next }: StepProps) {
   useEffect(() => {
     if (state.services.length === 0 && state.category && SUGGESTIONS[state.category]) {
       update({ services: SUGGESTIONS[state.category].map((s) => ({ ...s })) });
@@ -105,7 +105,7 @@ export function Step5Services({ state, update, next }: StepProps) {
   return (
     <div className="flex flex-col gap-8 max-w-[640px]">
       <StepHeader
-        eyebrow="Step 5 of 8 · Services"
+        eyebrow="Step 6 of 9 · Services"
         title={
           <>
             What do you <br />

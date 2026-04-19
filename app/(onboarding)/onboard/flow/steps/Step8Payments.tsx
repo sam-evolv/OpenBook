@@ -11,7 +11,7 @@ interface StepProps {
   next: () => void;
 }
 
-export function Step7Payments({ state, update, next }: StepProps) {
+export function Step8Payments({ state, update, next }: StepProps) {
   const [connecting, setConnecting] = useState(false);
 
   async function connectStripe() {
@@ -33,7 +33,7 @@ export function Step7Payments({ state, update, next }: StepProps) {
   return (
     <div className="flex flex-col gap-8 max-w-[520px]">
       <StepHeader
-        eyebrow="Step 7 of 8 · Get paid"
+        eyebrow="Step 8 of 9 · Get paid"
         title={
           <>
             Connect Stripe <br />

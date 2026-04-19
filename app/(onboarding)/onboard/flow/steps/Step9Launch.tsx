@@ -11,7 +11,7 @@ interface StepProps {
   next: () => void;
 }
 
-export function Step8Launch({ state, update }: StepProps) {
+export function Step9Launch({ state, update }: StepProps) {
   const router = useRouter();
   const [publishing, setPublishing] = useState(false);
   const [published, setPublished] = useState(false);
