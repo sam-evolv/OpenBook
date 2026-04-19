@@ -24,14 +24,10 @@ export async function sendWhatsAppMessage({
     }
   )
   if (!res.ok) {
-    console.error('Sending from phone_number_id:', phoneNumberId)
-    try {
-      const responseData = await res.json()
-      console.error('WhatsApp send failed - code:', responseData?.error?.code)
-      console.error('WhatsApp send failed - message:', responseData?.error?.message)
-      console.error('WhatsApp send failed - type:', responseData?.error?.type)
-    } catch (e) {
-      console.error('WhatsApp send failed - raw status:', res.status)
-    }
+    const responseData = await res.json()
+    console.error('WA_CODE:' + (responseData?.error?.code || 'none'))
+    console.error('WA_MSG:' + (responseData?.error?.message || 'none'))
+    console.error('WA_PID:' + phoneNumberId)
+    console.error('WA_TOK:' + (process.env.WHATSAPP_ACCESS_TOKEN?.slice(0, 15) || 'missing'))
   }
 }
