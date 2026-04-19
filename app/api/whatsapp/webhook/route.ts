@@ -44,16 +44,29 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Find business by phone number ID
-    const { data: business } = await supabase
+    // Find business by phone number ID, fall back to first live business for testing
+    const { data: exactMatch } = await supabase
       .from('businesses')
       .select('*, services(*), business_hours(*)')
       .eq('whatsapp_phone_number_id', phoneNumberId)
       .eq('is_live', true)
       .single()
 
+    let business = exactMatch
+
     if (!business) {
-      return new Response('OK', { status: 200 })
+      const { data: fallbackBusiness } = await supabase
+        .from('businesses')
+        .select('*, services(*), business_hours(*)')
+        .eq('is_live', true)
+        .limit(1)
+        .single()
+
+      if (!fallbackBusiness) {
+        return new Response('OK', { status: 200 })
+      }
+
+      business = fallbackBusiness
     }
 
     // Get or create conversation
