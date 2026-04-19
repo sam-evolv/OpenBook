@@ -22,48 +22,36 @@ export function Step8Launch({ state, update }: StepProps) {
   const appHost = typeof window !== 'undefined'
     ? window.location.host.replace('dash.', 'app.').replace(/^localhost.*$/, 'app.openbook.ie')
     : 'app.openbook.ie';
-  const publicUrl = `https://${appHost}/business/${state.slug}`;
+  const publicUrl = state.slug
+    ? `https://${appHost}/business/${state.slug}`
+    : '';
 
-  async function ensureBusinessId(currentState: OnboardingState): Promise<string | null> {
-    if (currentState.businessId) return currentState.businessId;
-    try {
-      const res = await fetch('/api/onboarding/save', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state: currentState, step: 7 }),
-      });
-      if (!res.ok) return null;
-      const data = await res.json();
-      if (data?.businessId) {
-        update({ businessId: data.businessId, slug: data.slug ?? currentState.slug });
-        return data.businessId;
-      }
-    } catch {
-      return null;
-    }
-    return null;
-  }
-
+  /**
+   * Publish: only proceed if we have a real businessId AND non-empty state.
+   * No defensive "ensure" helpers — if state is empty, bail and show an error.
+   * The fix is for the user to go back, not for us to write a ghost row.
+   */
   async function publish() {
     if (publishOnce.current) return;
     publishOnce.current = true;
 
-    setPublishing(true);
-    setError(null);
-
-    const businessId = await ensureBusinessId(state);
-    if (!businessId) {
-      setError('We couldn\'t find your business. Please go back to Step 1 and try again.');
-      setPublishing(false);
+    // Gate: require real state before attempting publish
+    if (!state.businessId || !state.name?.trim() || !state.slug) {
+      setError(
+        'Your onboarding data isn\'t loaded. Go back and complete Step 1 — we\'ll publish from there.'
+      );
       publishOnce.current = false;
       return;
     }
+
+    setPublishing(true);
+    setError(null);
 
     try {
       const res = await fetch('/api/onboarding/complete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ state: { ...state, businessId } }),
+        body: JSON.stringify({ state }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? 'Could not publish');
@@ -122,17 +110,28 @@ export function Step8Launch({ state, update }: StepProps) {
 
   if (error) {
     return (
-      <div className="flex flex-col items-center justify-center py-20 text-center max-w-[400px] mx-auto">
+      <div className="flex flex-col items-center justify-center py-20 text-center max-w-[420px] mx-auto">
         <p className="text-[16px] font-semibold text-red-400 mb-2">Couldn't publish</p>
         <p className="text-[13px]" style={{ color: 'var(--label-2)' }}>
           {error}
         </p>
-        <button
-          onClick={publish}
-          className="mt-6 h-11 px-6 rounded-full bg-[#D4AF37] text-black font-semibold text-[14px]"
-        >
-          Try again
-        </button>
+        <div className="mt-6 flex gap-3">
+          <button
+            onClick={() => {
+              publishOnce.current = false;
+              publish();
+            }}
+            className="h-11 px-6 rounded-full bg-[#D4AF37] text-black font-semibold text-[14px] active:scale-95 transition-transform"
+          >
+            Try again
+          </button>
+          <a
+            href="/onboard/flow"
+            className="h-11 px-6 rounded-full mat-card flex items-center font-medium text-[14px] active:scale-95 transition-transform"
+          >
+            Start over
+          </a>
+        </div>
       </div>
     );
   }
