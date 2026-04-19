@@ -24,6 +24,9 @@ export async function sendWhatsAppMessage({
     }
   )
   if (!res.ok) {
-    console.error('WhatsApp send failed:', await res.text())
+    const responseText = await res.text()
+    console.error('WhatsApp send failed:', responseText)
+    console.error('Phone number ID used:', phoneNumberId)
+    console.error('Token starts with:', process.env.WHATSAPP_ACCESS_TOKEN?.slice(0, 20))
   }
 }
