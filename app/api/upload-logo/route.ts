@@ -8,27 +8,19 @@ export const maxDuration = 30;
 
 /**
  * POST /api/upload-logo
- * Form data: { businessId, file }
  *
- * The Apple-standard icon pipeline.
- *
- * Pipeline stages:
- *   1. Read uploaded image buffer
- *   2. Auto-trim near-white/transparent edges (threshold-based alpha)
- *   3. Detect dominant brand colour from the logo (the colour the user's
- *      brand actually uses — not the background they happened to upload on)
- *   4. Scale logo to 62% of canvas (Apple's visual-centre ratio)
- *   5. Compose on radial-gradient background in the chosen primary colour
- *   6. Add drop shadow under the logo
- *   7. Add subtle top highlight arc for 3D feel
- *   8. Apply squircle mask (Apple super-ellipse n=5)
- *   9. Output 1024x1024 processed icon + keep the stripped logo PNG
- *  10. Upload both to Supabase Storage
- *  11. Return URLs + detected colour
+ * Form data:
+ *   - businessId (required)
+ *   - file (required on first upload)
+ *   - background: 'auto' | 'black' | 'white' | 'primary' | '#<hex>'
+ *     Defaults to 'auto' which uses smart contrast detection.
+ *   - cachedLogoPath (optional) — when regenerating with a new bg,
+ *     client passes the previously-uploaded logo path so we don't
+ *     re-upload the same raw file.
  */
 
 const FINAL_SIZE = 1024;
-const LOGO_RATIO = 0.62;  // logo fills 62% of canvas
+const LOGO_RATIO = 0.62;
 const WHITE_THRESHOLD = 240;
 const SHADOW_BLUR = 16;
 const HIGHLIGHT_HEIGHT_RATIO = 0.15;
@@ -38,20 +30,20 @@ export async function POST(req: NextRequest) {
   const {
     data: { user },
   } = await sb.auth.getUser();
-
   if (!user) {
     return NextResponse.json({ error: 'Not signed in' }, { status: 401 });
   }
 
   const formData = await req.formData();
   const businessId = formData.get('businessId') as string;
-  const file = formData.get('file') as File;
+  const file = formData.get('file') as File | null;
+  const backgroundInput = (formData.get('background') as string) ?? 'auto';
+  const cachedLogoPath = formData.get('cachedLogoPath') as string | null;
 
-  if (!businessId || !file) {
-    return NextResponse.json({ error: 'Missing businessId or file' }, { status: 400 });
+  if (!businessId) {
+    return NextResponse.json({ error: 'Missing businessId' }, { status: 400 });
   }
 
-  // Verify ownership
   const { data: business } = await sb
     .from('businesses')
     .select('id, owner_id, primary_colour')
@@ -62,20 +54,50 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Business not found' }, { status: 404 });
   }
 
-  const buffer = Buffer.from(await file.arrayBuffer());
-
   try {
-    // --- 1. Strip near-white/transparent edges ---
-    const stripped = await stripBackground(buffer);
+    /* Get the raw logo buffer — either from new upload or from storage */
+    let rawBuffer: Buffer;
+    let logoPath: string;
 
-    // --- 2. Detect dominant brand colour from the logo ---
-    const detectedColour = await detectBrandColour(stripped);
-    const backgroundColour = business.primary_colour ?? detectedColour ?? '#D4AF37';
+    if (file) {
+      rawBuffer = Buffer.from(await file.arrayBuffer());
+      logoPath = `${business.id}/logo-${Date.now()}.png`;
+    } else if (cachedLogoPath) {
+      const { data: downloadedBuffer, error: dlErr } = await sb.storage
+        .from('logos')
+        .download(cachedLogoPath);
+      if (dlErr || !downloadedBuffer) {
+        return NextResponse.json(
+          { error: 'Could not reload your logo. Please re-upload it.' },
+          { status: 400 }
+        );
+      }
+      rawBuffer = Buffer.from(await downloadedBuffer.arrayBuffer());
+      logoPath = cachedLogoPath;
+    } else {
+      return NextResponse.json(
+        { error: 'No file provided and no cached logo to recompose' },
+        { status: 400 }
+      );
+    }
 
-    // --- 3. Trim to content (no extra whitespace) ---
+    /* 1. Strip near-white/transparent edges */
+    const stripped = await stripBackground(rawBuffer);
+
+    /* 2. Detect the logo's dominant colour (for smart contrast) */
+    const logoColour = await detectBrandColour(stripped);
+
+    /* 3. Resolve what background to use */
+    const backgroundColour = resolveBackground({
+      input: backgroundInput,
+      logoColour,
+      primaryColour: business.primary_colour ?? '#D4AF37',
+    });
+
+    /* 4. Trim whitespace */
     const trimmed = await sharp(stripped).trim({ threshold: 5 }).toBuffer();
 
-    // --- 4. Scale logo to target proportions ---
+    /* 5. Scale logo to target proportions */
     const targetBox = Math.floor(FINAL_SIZE * LOGO_RATIO);
     const scaledLogo = await sharp(trimmed)
       .resize(targetBox, targetBox, {
@@ -91,47 +113,47 @@ export async function POST(req: NextRequest) {
     const lx = Math.floor((FINAL_SIZE - lw) / 2);
     const ly = Math.floor((FINAL_SIZE - lh) / 2);
 
-    // --- 5. Build the radial gradient background ---
+    /* 6. Build the background (radial gradient in chosen colour) */
     const bgSvg = makeBackgroundSvg(FINAL_SIZE, backgroundColour);
     const bgBuffer = await sharp(Buffer.from(bgSvg)).png().toBuffer();
 
-    // --- 6. Build drop shadow under the logo ---
-    const shadowLogo = await sharp(scaledLogo)
-      .tint({ r: 0, g: 0, b: 0 })  // convert logo to pure black
-      .modulate({ brightness: 0.001 })  // force near-black
-      .blur(SHADOW_BLUR)
-      .composite([
-        {
-          input: Buffer.from([0, 0, 0, Math.floor(255 * 0.35)]),
-          raw: { width: 1, height: 1, channels: 4 },
-          tile: true,
-          blend: 'in', // keep shape, replace colour
-        },
-      ])
+    /* 7. Drop shadow under logo */
+    const alphaOnly = await sharp(scaledLogo).extractChannel('alpha').toBuffer();
+    const shadowLayer = await sharp({
+      create: {
+        width: lw,
+        height: lh,
+        channels: 4,
+        background: { r: 0, g: 0, b: 0, alpha: 0 },
+      },
+    })
+      .composite([{ input: alphaOnly, blend: 'dest-in' }])
       .png()
       .toBuffer();
 
-    // --- 7. Build top highlight as SVG ---
+    const shadowBlurred = await sharp(shadowLayer)
+      .blur(SHADOW_BLUR)
+      .png()
+      .toBuffer();
+
+    /* 8. Top highlight arc */
     const highlightSvg = makeHighlightSvg(FINAL_SIZE);
 
-    // --- 8. Compose all layers on the background ---
+    /* 9. Compose all */
     const composed = await sharp(bgBuffer)
       .composite([
-        // Drop shadow (offset down-right)
-        { input: shadowLogo, left: lx + 2, top: ly + 6 },
-        // Main logo
+        { input: shadowBlurred, left: lx + 2, top: ly + 6, blend: 'over' },
         { input: scaledLogo, left: lx, top: ly },
-        // Top highlight
         { input: Buffer.from(highlightSvg), top: 0, left: 0 },
       ])
       .png()
       .toBuffer();
 
-    // --- 9. Apply squircle mask ---
+    /* 10. Apply squircle mask */
     const maskSvg = makeSquircleMaskSvg(FINAL_SIZE);
     const maskBuffer = await sharp(Buffer.from(maskSvg))
       .resize(FINAL_SIZE, FINAL_SIZE)
-      .toColourspace('b-w')  // just the alpha
+      .extractChannel('alpha')
       .toBuffer();
 
     const finalIcon = await sharp(composed)
@@ -139,18 +161,18 @@ export async function POST(req: NextRequest) {
       .png({ compressionLevel: 9, quality: 95 })
       .toBuffer();
 
-    // --- 10. Upload both to Supabase Storage ---
-    const logoPath = `${business.id}/logo-${Date.now()}.png`;
+    /* 11. Upload (raw logo only if first upload) */
+    if (file) {
+      const { error: logoErr } = await sb.storage
+        .from('logos')
+        .upload(logoPath, stripped, {
+          contentType: 'image/png',
+          upsert: true,
+        });
+      if (logoErr) throw logoErr;
+    }
+
     const iconPath = `${business.id}/icon-${Date.now()}.png`;
-
-    const { error: logoErr } = await sb.storage
-      .from('logos')
-      .upload(logoPath, stripped, {
-        contentType: 'image/png',
-        upsert: true,
-      });
-    if (logoErr) throw logoErr;
-
     const { error: iconErr } = await sb.storage
       .from('icons')
       .upload(iconPath, finalIcon, {
@@ -162,11 +184,13 @@ export async function POST(req: NextRequest) {
     const { data: logoUrlData } = sb.storage.from('logos').getPublicUrl(logoPath);
     const { data: iconUrlData } = sb.storage.from('icons').getPublicUrl(iconPath);
 
-    // --- 11. Return ---
     return NextResponse.json({
       logoUrl: logoUrlData.publicUrl,
       iconUrl: iconUrlData.publicUrl,
-      detectedColour,
+      logoPath,
+      iconPath,
+      detectedLogoColour: logoColour,
+      backgroundColour,
     });
   } catch (err: any) {
     console.error('[upload-logo] failed', err);
@@ -177,13 +201,32 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// -------- Helper functions --------
+/* ---------- Helpers ---------- */
 
 /**
- * Strip near-white pixels to transparent.
- * We detect any pixel where R, G, B are all above the threshold
- * and set its alpha to 0.
+ * Resolve which background colour to use based on the picker selection.
+ * Smart-default rule: when 'auto', pick whichever of black/white provides
+ * the strongest contrast with the logo's dominant colour.
  */
+function resolveBackground(args: {
+  input: string;
+  logoColour: string;
+  primaryColour: string;
+}): string {
+  const { input, logoColour, primaryColour } = args;
+
+  if (input === 'black') return '#080808';
+  if (input === 'white') return '#FFFFFF';
+  if (input === 'primary') return primaryColour;
+  if (input.startsWith('#') && /^#[0-9a-fA-F]{6}$/.test(input)) return input;
+
+  // 'auto' — smart contrast
+  const { r, g, b } = hexToRgb(logoColour);
+  const lum = relativeLuminance(r, g, b);
+  // If logo is light, black bg gives contrast. If logo is dark, white bg gives contrast.
+  return lum > 0.5 ? '#080808' : '#FFFFFF';
+}
+
 async function stripBackground(buffer: Buffer): Promise<Buffer> {
   const { data, info } = await sharp(buffer)
     .ensureAlpha()
@@ -211,13 +254,9 @@ async function stripBackground(buffer: Buffer): Promise<Buffer> {
     .toBuffer();
 }
 
-/**
- * Detect the dominant non-transparent colour of the logo.
- * Averages all non-transparent pixels weighted by saturation.
- */
 async function detectBrandColour(buffer: Buffer): Promise<string> {
   try {
-    const { data, info } = await sharp(buffer)
+    const { data } = await sharp(buffer)
       .ensureAlpha()
       .raw()
       .toBuffer({ resolveWithObject: true });
@@ -225,11 +264,10 @@ async function detectBrandColour(buffer: Buffer): Promise<string> {
     let rSum = 0, gSum = 0, bSum = 0, total = 0;
     for (let i = 0; i < data.length; i += 4) {
       const a = data[i + 3];
-      if (a < 128) continue;  // skip transparent
+      if (a < 128) continue;
       const r = data[i];
       const g = data[i + 1];
       const b = data[i + 2];
-      // Skip near-black and near-white (usually outline/bg noise)
       const avg = (r + g + b) / 3;
       if (avg < 20 || avg > 235) continue;
       rSum += r;
@@ -238,8 +276,7 @@ async function detectBrandColour(buffer: Buffer): Promise<string> {
       total += 1;
     }
 
-    if (total < 100) return '#D4AF37';  // fallback gold
-
+    if (total < 100) return '#D4AF37';
     const r = Math.round(rSum / total);
     const g = Math.round(gSum / total);
     const b = Math.round(bSum / total);
@@ -249,18 +286,11 @@ async function detectBrandColour(buffer: Buffer): Promise<string> {
   }
 }
 
-/**
- * Radial gradient background in the brand colour.
- * Brighter at top-left, darker at bottom-right.
- * Adjusts factor based on luminance so light colours darken more.
- */
 function makeBackgroundSvg(size: number, hex: string): string {
   const { r, g, b } = hexToRgb(hex);
   const lum = relativeLuminance(r, g, b);
-
-  const topFactor = lum > 0.5 ? 1.15 : 1.45;
-  const bottomFactor = lum > 0.5 ? 0.65 : 0.85;
-
+  const topFactor = lum > 0.5 ? 1.06 : 1.4;
+  const bottomFactor = lum > 0.5 ? 0.82 : 0.85;
   const top = rgbToHex(adjust(r, topFactor), adjust(g, topFactor), adjust(b, topFactor));
   const bottom = rgbToHex(adjust(r, bottomFactor), adjust(g, bottomFactor), adjust(b, bottomFactor));
 
@@ -277,16 +307,13 @@ function makeBackgroundSvg(size: number, hex: string): string {
   `.trim();
 }
 
-/**
- * Subtle top highlight for 3D feel.
- */
 function makeHighlightSvg(size: number): string {
   const h = Math.floor(size * HIGHLIGHT_HEIGHT_RATIO);
   return `
     <svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
       <defs>
         <linearGradient id="hl" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="white" stop-opacity="0.25" />
+          <stop offset="0%" stop-color="white" stop-opacity="0.2" />
           <stop offset="100%" stop-color="white" stop-opacity="0" />
         </linearGradient>
       </defs>
@@ -295,15 +322,9 @@ function makeHighlightSvg(size: number): string {
   `.trim();
 }
 
-/**
- * Apple squircle mask. Uses a super-ellipse approximation
- * via SVG path with quadratic bezier curves. Visually identical
- * to iOS app icon shape.
- */
 function makeSquircleMaskSvg(size: number): string {
   const s = size;
-  // Apple squircle path approximation
-  const r = s * 0.234;  // Apple's icon corner radius as fraction of size
+  const r = s * 0.234;
   return `
     <svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" viewBox="0 0 ${s} ${s}">
       <path d="
@@ -331,7 +352,9 @@ function hexToRgb(hex: string): { r: number; g: number; b: number } {
 }
 
 function rgbToHex(r: number, g: number, b: number): string {
-  return `#${[r, g, b].map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('')}`;
+  return `#${[r, g, b]
+    .map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0'))
+    .join('')}`;
 }
 
 function adjust(c: number, factor: number): number {

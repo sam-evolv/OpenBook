@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef } from 'react';
-import { Upload, CheckCircle2, Loader2 } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Upload, CheckCircle2, Loader2, Check } from 'lucide-react';
 import { StepHeader, NextButton, SkipLink } from './shared';
 import type { OnboardingState } from '../OnboardingFlow';
 
@@ -11,17 +11,20 @@ interface StepProps {
   next: () => void;
 }
 
+type BackgroundChoice = 'auto' | 'black' | 'white' | 'primary' | `#${string}`;
+
 export function Step3Logo({ state, update, next }: StepProps) {
   const [uploading, setUploading] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [bgChoice, setBgChoice] = useState<BackgroundChoice>('auto');
+  const [customHex, setCustomHex] = useState('#080808');
+  const [showCustom, setShowCustom] = useState(false);
+  const [logoPath, setLogoPath] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   async function ensureBusinessId(): Promise<string | null> {
     if (state.businessId) return state.businessId;
-
-    /* If we don't have a businessId yet, force a save now.
-     * This makes logo upload work even if the user came back to step 3
-     * or their state got dropped. */
     try {
       const res = await fetch('/api/onboarding/save', {
         method: 'POST',
@@ -64,21 +67,57 @@ export function Step3Logo({ state, update, next }: StepProps) {
     const formData = new FormData();
     formData.append('businessId', businessId);
     formData.append('file', file);
+    formData.append('background', bgChoice);
 
     try {
       const res = await fetch('/api/upload-logo', { method: 'POST', body: formData });
       const data = await res.json();
       if (!res.ok) throw new Error(data?.error ?? 'Upload failed');
 
+      setLogoPath(data.logoPath);
       update({
         logo_url: data.logoUrl,
         processed_icon_url: data.iconUrl,
-        primary_colour: data.detectedColour ?? state.primary_colour,
       });
     } catch (err: any) {
       setError(err?.message ?? 'Upload failed. Try a different file.');
     } finally {
       setUploading(false);
+    }
+  }
+
+  async function regenerate(newBg: BackgroundChoice) {
+    if (!state.businessId || !logoPath) return;
+    setRegenerating(true);
+    setError(null);
+
+    const formData = new FormData();
+    formData.append('businessId', state.businessId);
+    formData.append('background', newBg);
+    formData.append('cachedLogoPath', logoPath);
+
+    try {
+      const res = await fetch('/api/upload-logo', { method: 'POST', body: formData });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? 'Regenerate failed');
+      update({ processed_icon_url: data.iconUrl });
+    } catch (err: any) {
+      setError(err?.message ?? 'Could not regenerate icon');
+    } finally {
+      setRegenerating(false);
+    }
+  }
+
+  function pickBg(choice: BackgroundChoice) {
+    setBgChoice(choice);
+    setShowCustom(choice.startsWith('#') && choice !== '#080808' && choice !== '#FFFFFF');
+    if (state.processed_icon_url) regenerate(choice);
+  }
+
+  function commitCustom() {
+    const hex = customHex.trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
+      pickBg(hex as BackgroundChoice);
     }
   }
 
@@ -93,7 +132,7 @@ export function Step3Logo({ state, update, next }: StepProps) {
             We'll make it shine.
           </>
         }
-        subtitle="Drop any logo — PNG, JPG, SVG. We'll auto-crop it, extract your brand colour, and turn it into a beautiful app icon your customers will recognise."
+        subtitle="Drop any logo — PNG, JPG, SVG. We'll auto-crop it and turn it into a premium app icon your customers will recognise."
       />
 
       {!state.processed_icon_url ? (
@@ -147,8 +186,9 @@ export function Step3Logo({ state, update, next }: StepProps) {
           </p>
         </div>
       ) : (
-        <div className="flex flex-col items-center gap-6">
-          <div className="flex items-center gap-5">
+        <div className="flex flex-col gap-7">
+          {/* Before / after preview */}
+          <div className="flex items-center justify-center gap-5">
             {state.logo_url && (
               <div className="flex flex-col items-center gap-2">
                 <div className="h-[96px] w-[96px] rounded-2xl bg-white/5 p-3 hairline flex items-center justify-center">
@@ -165,14 +205,24 @@ export function Step3Logo({ state, update, next }: StepProps) {
 
             <div className="flex flex-col items-center gap-2">
               <div
-                className="relative h-[96px] w-[96px] overflow-hidden"
+                className="relative h-[96px] w-[96px] overflow-hidden transition-opacity"
                 style={{
                   borderRadius: 22,
                   boxShadow: '0 12px 30px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.2)',
+                  opacity: regenerating ? 0.6 : 1,
                 }}
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={state.processed_icon_url} alt="" className="h-full w-full object-cover" />
+                <img
+                  src={state.processed_icon_url}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+                {regenerating && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                    <Loader2 className="h-5 w-5 animate-spin text-white" />
+                  </div>
+                )}
               </div>
               <span className="text-[11px] font-semibold" style={{ color: 'var(--brand-gold)' }}>
                 Your app icon
@@ -180,26 +230,108 @@ export function Step3Logo({ state, update, next }: StepProps) {
             </div>
           </div>
 
-          <div
-            className="flex items-center gap-2 px-4 py-2 rounded-full"
-            style={{
-              backgroundColor: 'rgba(16, 185, 129, 0.1)',
-              border: '0.5px solid rgba(16, 185, 129, 0.35)',
-            }}
-          >
-            <CheckCircle2 className="h-4 w-4 text-emerald-400" strokeWidth={2.2} />
-            <span className="text-[13px] font-medium text-emerald-300">
-              Looks beautiful. Ready to go.
-            </span>
+          {/* Background picker */}
+          <div className="flex flex-col gap-3">
+            <p
+              className="text-[11px] font-semibold tracking-[0.14em] uppercase text-center"
+              style={{ color: 'var(--label-3)' }}
+            >
+              Background
+            </p>
+            <div className="grid grid-cols-5 gap-2">
+              <BgSwatch
+                label="Auto"
+                active={bgChoice === 'auto'}
+                onClick={() => pickBg('auto')}
+                preview="gradient"
+              />
+              <BgSwatch
+                label="Black"
+                active={bgChoice === 'black'}
+                onClick={() => pickBg('black')}
+                preview="#080808"
+              />
+              <BgSwatch
+                label="White"
+                active={bgChoice === 'white'}
+                onClick={() => pickBg('white')}
+                preview="#FFFFFF"
+              />
+              <BgSwatch
+                label="Brand"
+                active={bgChoice === 'primary'}
+                onClick={() => pickBg('primary')}
+                preview={state.primary_colour}
+              />
+              <BgSwatch
+                label="Custom"
+                active={bgChoice.startsWith('#') && bgChoice !== '#080808' && bgChoice !== '#FFFFFF'}
+                onClick={() => {
+                  setShowCustom(true);
+                  pickBg(customHex as BackgroundChoice);
+                }}
+                preview={customHex}
+                hashIndicator
+              />
+            </div>
+
+            {showCustom && (
+              <div className="flex items-center gap-2 mt-2 animate-reveal-up">
+                <input
+                  type="color"
+                  value={customHex}
+                  onChange={(e) => setCustomHex(e.target.value)}
+                  onBlur={commitCustom}
+                  className="h-10 w-14 rounded-lg border-0 bg-transparent cursor-pointer"
+                />
+                <input
+                  type="text"
+                  value={customHex}
+                  onChange={(e) => setCustomHex(e.target.value)}
+                  onBlur={commitCustom}
+                  onKeyDown={(e) => e.key === 'Enter' && commitCustom()}
+                  placeholder="#080808"
+                  className="flex-1 h-10 px-3 rounded-lg mat-card text-[13px] font-mono focus:outline-none"
+                  style={{ color: 'var(--label-1)' }}
+                />
+                <button
+                  onClick={commitCustom}
+                  className="h-10 px-3 rounded-lg mat-card-elevated text-[12px] font-semibold"
+                  style={{ color: 'var(--brand-gold)' }}
+                >
+                  Apply
+                </button>
+              </div>
+            )}
           </div>
 
-          <button
-            onClick={() => update({ logo_url: null, processed_icon_url: null })}
-            className="text-[13px] font-medium"
-            style={{ color: 'var(--label-3)' }}
-          >
-            Try a different logo
-          </button>
+          <div className="flex flex-col items-center gap-3">
+            <div
+              className="flex items-center gap-2 px-4 py-2 rounded-full"
+              style={{
+                backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                border: '0.5px solid rgba(16, 185, 129, 0.35)',
+              }}
+            >
+              <CheckCircle2 className="h-4 w-4 text-emerald-400" strokeWidth={2.2} />
+              <span className="text-[13px] font-medium text-emerald-300">
+                Looks beautiful. Ready to go.
+              </span>
+            </div>
+
+            <button
+              onClick={() => {
+                update({ logo_url: null, processed_icon_url: null });
+                setLogoPath(null);
+                setBgChoice('auto');
+                setShowCustom(false);
+              }}
+              className="text-[13px] font-medium"
+              style={{ color: 'var(--label-3)' }}
+            >
+              Try a different logo
+            </button>
+          </div>
         </div>
       )}
 
@@ -212,5 +344,64 @@ export function Step3Logo({ state, update, next }: StepProps) {
         <SkipLink onClick={next} label="No logo yet? I'll add it later" />
       </div>
     </div>
+  );
+}
+
+/* A little swatch button for the background picker */
+function BgSwatch({
+  label,
+  active,
+  onClick,
+  preview,
+  hashIndicator = false,
+}: {
+  label: string;
+  active: boolean;
+  onClick: () => void;
+  preview: string;
+  hashIndicator?: boolean;
+}) {
+  const swatchStyle: React.CSSProperties = preview === 'gradient'
+    ? {
+        background:
+          'radial-gradient(ellipse at 30% 30%, #D4AF37 0%, #8B6428 100%)',
+      }
+    : { backgroundColor: preview };
+
+  // If preview is white, give a hairline border so it's visible against dark UI
+  if (preview === '#FFFFFF') {
+    swatchStyle.border = '0.5px solid rgba(255,255,255,0.2)';
+  }
+
+  return (
+    <button
+      onClick={onClick}
+      className={`group flex flex-col items-center gap-1.5 py-2 px-1 rounded-xl transition-all active:scale-95 ${
+        active ? 'mat-card-elevated' : 'hover:bg-white/5'
+      }`}
+      style={{
+        border: active ? '1px solid var(--brand-gold)' : '1px solid transparent',
+      }}
+    >
+      <div
+        className="h-7 w-7 rounded-full flex items-center justify-center"
+        style={swatchStyle}
+      >
+        {hashIndicator && (
+          <span className="text-[10px] font-bold" style={{ color: 'rgba(255,255,255,0.7)' }}>
+            #
+          </span>
+        )}
+        {active && !hashIndicator && (
+          <Check className="h-3.5 w-3.5" strokeWidth={3} style={{ color: preview === '#FFFFFF' ? '#000' : '#fff' }} />
+        )}
+      </div>
+      <span
+        className={`text-[10px] font-medium ${active ? '' : 'opacity-70'}`}
+        style={{ color: active ? 'var(--brand-gold)' : 'var(--label-2)' }}
+      >
+        {label}
+      </span>
+    </button>
   );
 }
