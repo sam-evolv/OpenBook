@@ -13,8 +13,18 @@ const config: Config = {
         paper: "#f0f0f0",
         gold: {
           DEFAULT: "#D4AF37",
+          50: "rgba(212,175,55,0.04)",
+          100: "rgba(212,175,55,0.10)",
+          200: "rgba(212,175,55,0.18)",
+          300: "rgba(212,175,55,0.28)",
+          400: "rgba(212,175,55,0.45)",
+          500: "#D4AF37",
+          600: "#b88a18",
           light: "#e8c547",
           dark: "#b88a18",
+        },
+        brand: {
+          500: "#D4AF37",
         },
         line: "rgba(255,255,255,0.08)",
       },
@@ -26,6 +36,19 @@ const config: Config = {
       letterSpacing: {
         tightest: "-0.04em",
         tighter: "-0.02em",
+      },
+      transitionTimingFunction: {
+        premium: "cubic-bezier(0.22, 1, 0.36, 1)",
+      },
+      boxShadow: {
+        premium:
+          "0 1px 0 rgba(255,255,255,0.04) inset, 0 24px 80px rgba(0,0,0,0.55)",
+        "gold-glow":
+          "0 0 0 1px rgba(212,175,55,0.30), 0 10px 40px rgba(212,175,55,0.20)",
+      },
+      fontSize: {
+        "display-lg": ["44px", { lineHeight: "1.04", letterSpacing: "-0.025em", fontWeight: "700" }],
+        "display-md": ["32px", { lineHeight: "1.06", letterSpacing: "-0.022em", fontWeight: "700" }],
       },
       animation: {
         "marquee": "marquee 38s linear infinite",
