@@ -14,8 +14,10 @@ export function createClient() {
   }
 
   const cookieStore = cookies();
+  const isProduction = process.env.NODE_ENV === 'production';
 
   return createServerClient<Database>(url, key, {
+    cookieOptions: isProduction ? { domain: '.openbook.ie' } : undefined,
     cookies: {
       getAll() {
         return cookieStore.getAll();
@@ -23,7 +25,10 @@ export function createClient() {
       setAll(cookiesToSet) {
         try {
           cookiesToSet.forEach(({ name, value, options }) => {
-            cookieStore.set(name, value, options);
+            const opts = isProduction
+              ? { ...options, domain: '.openbook.ie' }
+              : options;
+            cookieStore.set({ name, value, ...opts });
           });
         } catch {
           // Called from a Server Component — middleware refreshes the
