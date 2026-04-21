@@ -124,7 +124,7 @@ export function Step1Basics({ state, update, next }: StepProps) {
 
         <Field
           label="Your URL"
-          hint={`openbook.ie/${state.slug || 'your-slug'}`}
+          hint={`openbook.ie/${state.slug || 'your-booking-page'}`}
         >
           <TextInput
             value={state.slug}
