@@ -15,10 +15,16 @@
 - 2026-04-21: **Pairing rule for Phase 2.** Phase 2 ships in **two PRs, not four**: (a) Hours + Settings, (b) Bookings + Services. Pairing pages that share patterns (two write-forms, two read-heavy screens) reduces reviewer overhead and keeps design-system usage consistent across closely-related surfaces. Future phases should pair logically adjacent pages when the form/read-style is shared and the risk of coupling is low.
 - 2026-04-21: **`requireCurrentBusiness()` helper.** `lib/queries/business.ts` exports an async server function that reads the authed owner, fetches the live business row, and redirects on miss. Returns `{ owner, business }`. Replaces the inline 4-line server-query block that every dashboard page currently repeats. Not a React hook — it's a server-side fetch-or-redirect utility.
 - 2026-04-21: **`businesses.automations` column.** New `jsonb` column on `businesses`, default `'{}'::jsonb`, persists the on/off state of the 8 Settings automation toggles (auto_reviews, auto_waitlist_fill, auto_reminders, win_back_offers, smart_rescheduling, low_stock_alerts, membership_renewal_nudges, class_fill_notifications). Wiring each toggle to real automation logic is a tier-gating-and-eligibility concern for a future PR — Phase 2 persists state only.
-- 2026-04-21: **Customer name normalisation (out of scope).** The `customers` table carries both `full_name` and `first_name`/`last_name`. Existing code reads inconsistently: consumer `/me` uses `full_name`, dashboard reads `first_name`/`last_name`, booking API writes only `full_name`. Phase 2 Bookings reads with fallback `first_name last_name || full_name || 'Guest'`. Canonical cleanup (derive `full_name` server-side, drop or deprecate the other pair) is a **separate cleanup PR after Phase 4**, tracked in §8.
+- 2026-04-21: ~~**Customer name normalisation (out of scope).** The `customers` table carries both `full_name` and `first_name`/`last_name`…~~ **Superseded 2026-04-22 (see below).** This entry was based on a wrong reading of the schema — `first_name`/`last_name` don't actually exist on `customers`. The cleanup-PR-after-Phase-4 note still stands for the `full_name` vs `name` duplication.
 - 2026-04-21: **Phase 3 open question — where does revenue goal editing live?** The prototype shows "Monthly revenue goal" under Settings → Business info, but the brief's §5 migration lists `businesses.monthly_revenue_goal` as a Phase 3 Overview concern. **Decide during Phase 3 Overview work** whether the edit UI lives on Overview (closer to the goal's visualisation) or Settings (closer to other business config). Phase 2 Settings ships without this field.
 - 2026-04-21: **Phase 3 prerequisite — generate Supabase types.** Before Phase 3 PR #1 starts, run `supabase gen types typescript` and commit the output. Phase 2 pages are narrow enough to type by hand; Phase 3+ (Overview, Calendar, Intelligence) touch enough tables that generated types become worth the setup.
 - 2026-04-21: **Auto-merge rule** added to §7 Deployment Strategy. PRs that are UI-only or additive-migration-only, with no changes to auth/payments/webhooks/RLS and no new secrets, auto-merge after Sam's preview sign-off. Momentum-first for the rest of Phase 2 and all of Phase 3; human-in-the-loop retained for anything touching auth, payments, webhooks, RLS, or destructive schema changes.
+- 2026-04-22: **Schema reality — `ai_insights` exists as the `insights` table proposed in §5.** No migration needed. Columns: `id, business_id, headline, body, insight_type, data_snapshot jsonb, dismissed bool, generated_at, model`. Phase 3 Overview + Intelligence read from this table directly. §5 updated.
+- 2026-04-22: **Schema reality — `customer_businesses` pivot replaces the `customers.favourited` column proposed in §5.** Per-business favouriting via `customer_businesses.is_favourite` is a better design than a global customer flag (a customer can favourite multiple businesses). Phase 3 Customers queries this pivot. §5 updated.
+- 2026-04-22: **Schema reality — `flash_sales` exists with a different shape than §5 proposed.** Actual columns: `id, business_id, service_id, discount_percent, original_price_cents, sale_price_cents, slot_time, expires_at, max_bookings, bookings_taken, status, message`. Single-service + single-slot, not the multi-service `service_ids[]` + `target_audience` shape the brief imagined. Phase 4 Flash Sales will work with the real shape.
+- 2026-04-22: **Customer name bug + hotfix.** Both `app/(dashboard)/dashboard/bookings/page.tsx` (v5b.2) and `app/(dashboard-v2)/v2/bookings/page.tsx` (Phase 2 PR 2) queried `customers(first_name, last_name, email, phone)`, but `first_name`/`last_name` don't exist on the `customers` table (it has `full_name` and `name`). PostgREST returns 42703 for the query, so both pages fail against real data. Hotfix in Phase 3 PR 3.0 updates `/v2/bookings` to select `full_name, name, email, phone` and simplifies `displayCustomerName` to `full_name || name || 'Guest'`. v5b.2 `/dashboard/bookings` is left as-is — it's a cutover casualty, not worth fixing code we're deleting.
+- 2026-04-22: **Computed-field policy for Phase 3.** For every computed metric (customer cohort status, LTV, staff utilisation, health score, top customers): **default to computing server-side per request** while we're under ~1,000 bookings per business. No cron-persisted derived columns in Phase 3. Each Phase 3 PR plan must explicitly call out computed-vs-persisted decisions for its metrics. We revisit once a single business's dashboard request gets uncomfortably slow (> 300ms P50 on the main query).
+- 2026-04-22: **Empty states mandate for Phase 3.** Brief §6 already flags this but it's being upgraded to a hard rule: **every Phase 3 page must ship a meaningful first-time-user empty state, and the preview must show the empty state**, not just the populated state. "Coming soon" placeholders don't count — the empty state must point the user at a concrete first action. Each preview will render both populated and empty variants side-by-side so Sam can eyeball both in one pass.
 
 ---
 
@@ -117,23 +123,30 @@ Each PR:
 - Includes matching Supabase queries in `lib/queries/` or equivalent
 - Ships without touching the other pages
 
-### Phase 3: Complex pages with new data (5 PRs)
+### Phase 3: Complex pages with new data (4 feature PRs + 1 prereqs PR)
 
-5. **Overview** — the hero page. Needs:
-   - A revenue goal setting on `businesses.monthly_revenue_goal` (add column, migration required). **Open question — decide this PR**: does the edit UI live on Overview (closer to the goal's visualisation) or on Settings (closer to other business config)? Prototype suggests Settings; existing v5b.2 doesn't have a goal yet; the visual feedback loop is strongest on Overview. Flag to Sam.
-   - Waitlist component (already exists? Check `waitlist` table)
-   - AI Intelligence cards: these should be backed by a new `insights` table or computed on-the-fly via a Postgres view. Decide which in this PR.
-   - **Prerequisite:** run `supabase gen types typescript` before this PR and commit the generated types. Phase 3 touches enough tables that hand-typing per page is no longer the cheap path.
-6. **Calendar** — week view with multi-staff filter. Requires:
-   - `staff` table already exists per memory. Confirm schema.
-   - A booking detail drawer component
-   - A new booking modal
-   - Drag-and-drop for rescheduling is **out of scope for v1**. Click-to-open, button-to-reschedule is enough.
-7. **Customers CRM** — read-heavy. Add `customers.favourited` boolean column if missing. Win-back cohort query.
-8. **Team page** — read the `staff` table. Compute utilisation from bookings. Roles & permissions can be hardcoded in v1; full RBAC is a separate project.
-9. **Intelligence page** — analytics-heavy. Requires:
-   - `business_health_score` — a view or materialized view
-   - Category benchmarks — these need a seed table of anonymised category averages. Use hardcoded values for v1, mark with a TODO.
+Split per the 2026-04-22 scope assessment: Calendar gets its own PR (biggest piece of the rebuild); Customers + Team pair up (shared list+drawer CRM pattern + shared `staff.colour` migration); Overview and Intelligence stay solo because each is dense enough on its own.
+
+- **PR 3.0 — Prereqs.** Commit generated types to `lib/database.types.ts`, hotfix the `/v2/bookings` `first_name`/`last_name` bug (see 2026-04-22 change-log), reconcile §5 migrations with real schema. Auto-merge eligible.
+- **PR 3.1 — Overview (solo).** Hero page.
+  - Revenue goal widget. **Decision landed 2026-04-22:** edit UI lives on **Overview** — that's where the visual feedback loop is and the one place it's glanced at every day. Settings stays focused on business info + automations.
+  - Additive migration: `businesses.monthly_revenue_goal numeric`.
+  - Waitlist summary card reads from the `waitlist` table (`business_id, customer_id, service_id, requested_date, notified_at`).
+  - AI Intelligence cards read from the existing `ai_insights` table (`headline, body, insight_type, data_snapshot, dismissed`). Dismiss action flips `dismissed` to true.
+  - Top customers widget: computed server-side from `bookings` grouped by `customer_id` in the last 30 days — no persisted rollup column.
+- **PR 3.2 — Calendar (solo).** Biggest piece in the rebuild.
+  - Week view + day view, multi-staff filter with per-staff colour.
+  - Additive migration: `staff.colour text` (palette slug from `lib/tile-palette.ts`; constrained client-side to avoid clashing with brand gold).
+  - Honours `business_hours`, `service_schedules` (per-service day/time constraints), `business_closures` (per-date overrides — bank holidays etc), and `businesses.buffer_minutes` when generating and laying out slots.
+  - Reuses the `Drawer` primitive for booking detail; adds a `NewBookingModal` (service + staff + customer + time). Click-to-open + button-to-reschedule; drag-to-reschedule out of scope for v1 per brief §8.
+- **PR 3.3 — Customers + Team (paired).** Both are list + detail-drawer CRM patterns.
+  - **Customers**: favourite indicator from `customer_businesses.is_favourite` (pivot — *not* a column on `customers` as brief originally proposed). Cohort filters (regular / slipping / churned) computed server-side from `bookings.created_at` aggregates — no `customers.status` column. LTV computed server-side from `SUM(bookings.price_cents)` — no `customers.lifetime_value` column. Only `customers.notes text` gets persisted (additive migration) since it's user-entered, not derived.
+  - **Team**: staff list from `staff` table (has `name, title, bio, email, avatar_url, instagram_handle, specialties, is_active, sort_order` already). Utilisation computed server-side from `bookings.staff_id` grouped by `staff_id` over the last 30 days. `staff.colour` picker — shares the migration with Calendar.
+- **PR 3.4 — Intelligence (solo).** Analytics-heavy.
+  - Business health score computed server-side per request (no materialized view in v1). Single query combining booking volume, show rate, review rating, and waitlist depth.
+  - Category benchmarks **hardcoded in v1** with a clear TODO: replace with real aggregates once the platform hosts >100 businesses per category. Hardcoded values live in `lib/dashboard-v2/benchmarks.ts` with source citations in comments.
+  - AI insights feed from `ai_insights` (shared query helper with Overview).
+  - Distribution metrics (source breakdown, device, channel) from `bookings.source`.
 
 ### Phase 4: New features requiring backend work (5 PRs)
 
@@ -243,7 +256,24 @@ lib/
 
 ## 5. Database migrations needed
 
-Likely missing columns/tables (verify against actual schema first):
+**Reality-check status** (after the 2026-04-22 schema reconciliation):
+
+| Item | Brief proposed | Schema reality |
+|---|---|---|
+| `businesses.monthly_revenue_goal` | Add column | ❌ Still needed — Phase 3 Overview |
+| `businesses.stripe_payout_schedule` | Add column | ❌ Still needed — Phase 4 Finance |
+| `customers.favourited` | Add column | ✅ **Use `customer_businesses.is_favourite`** pivot instead — already exists |
+| `customers.status` / `notes` / `lifetime_value` | Add columns | ❌ Still needed — Phase 3 Customers (or compute server-side; prefer compute for `status` + `lifetime_value`, persist `notes`) |
+| `flash_sales` table | New table | ✅ **Exists** — different shape than proposed, see 2026-04-22 change-log |
+| `flash_sale_notifications` table | New table | ❌ Still needed — Phase 4 Flash Sales |
+| `broadcasts` table | New table | ❌ Still needed — Phase 4 Marketing |
+| `insights` table | New table | ✅ **Exists as `ai_insights`** — see 2026-04-22 change-log |
+| `ai_queries` table | New table | ❌ Still needed — Phase 4 Messages / MCP |
+| `staff.colour` | Not in brief | ❌ **Add column** — Phase 3 Team + Calendar (multi-staff colour coding) |
+
+The rest of this section shows the original proposed DDL. **Only treat the "❌ Still needed" rows as migration tasks.**
+
+```sql
 
 ```sql
 -- businesses
@@ -325,6 +355,25 @@ create table if not exists ai_queries (
 ```
 
 **RLS policies:** every new table needs `business_id = auth.uid()` check (via join to `businesses.owner_id`). Copy patterns from existing `bookings` table RLS.
+
+### 5.1 Bonus discoveries — existing schema features to wire up (2026-04-22)
+
+These already exist in the real schema but weren't enumerated in the brief. Phase 3+ pages should honour them rather than reinventing:
+
+- **`businesses.buffer_minutes`** — gap between consecutive bookings. Calendar slot generation must respect it.
+- **`businesses.instagram_access_token` / `instagram_handle` / `instagram_connected_at`** — Instagram integration already live. Overview can show connection status; Marketing (Phase 4) uses this for cross-posting.
+- **`businesses.whatsapp_enabled` / `whatsapp_number` / `whatsapp_display_name` / `whatsapp_phone_number`** — WhatsApp Cloud API config already wired. Messages (Phase 4) reads from this.
+- **`businesses.stripe_charges_enabled`** — Stripe onboarding flag separate from `stripe_onboarding_completed`. Finance (Phase 4) uses the charges flag as the canonical "ready for payouts" signal.
+- **`bookings.staff_id`** — staff assignment lives on the booking row already. Calendar + Team compute utilisation from this directly; no new column needed.
+- **`bookings.source`** — string noting how the booking was made (`whatsapp`, `web`, etc). Intelligence distribution metrics read from this. Marketing broadcast attribution (Phase 4) reads from this.
+- **`bookings.reminder_24h_sent` / `reminder_2h_sent`** — reminder pipeline flags. Settings automations toggles should gate which reminder cron writes these; the flags themselves exist already.
+- **`bookings.stripe_payment_intent_id`** — live on the booking row. Finance (Phase 4) joins on this for payout reconciliation.
+- **`business_closures`** — per-date closure overrides (`business_id, date, name, is_bank_holiday`). Calendar honours these; availability API (consumer side) already does.
+- **`service_schedules`** — per-service day-of-week + start-time constraints (`service_id, day_of_week, start_time`). Calendar slot generation intersects these with `business_hours`.
+- **`customer_credits`** — package credits tracking (`customer_id, package_id, business_id, sessions_remaining, expires_at, purchased_at, stripe_payment_intent_id`). Phase 4 Catalog Packages tab reads this.
+- **`reviews`** — booking-linked reviews with business response (`booking_id, customer_id, rating, comment, business_response`). Overview AI insights can surface recent negative reviews; review auto-request automation (Phase 4) writes here.
+- **`instagram_posts`** — cached IG posts for the business page. Not a Phase 3 concern but worth knowing it exists.
+- **`whatsapp_sessions`** — WA session state (separate from `whatsapp_conversations`). Phase 4 Messages.
 
 ---
 
