@@ -53,5 +53,3 @@ ALTER TABLE businesses
 
 COMMENT ON COLUMN businesses.primary_colour IS
   'Canonical tile colour slug. Must be one of the 24 values in the OpenBook tile palette (see lib/tile-palette.ts).';
-COMMENT ON COLUMN businesses.logo_url IS
-  'Pre-processed monochrome white logo for use on the business tile. Auto-generated at upload time.';

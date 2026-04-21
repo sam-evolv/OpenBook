@@ -6,6 +6,7 @@ import { supabaseAdmin, formatPrice } from '@/lib/supabase';
 import { ConsumerHeader } from '@/components/consumer/ConsumerHeader';
 import { BottomTabBar } from '@/components/consumer/BottomTabBar';
 import { getTileColour } from '@/lib/tile-palette';
+import { EmptyState, WalletEmptyIcon } from '@/components/EmptyState';
 
 export const dynamic = 'force-dynamic';
 
@@ -73,6 +74,7 @@ async function getWalletData() {
 
 export default async function WalletPage() {
   const { credits, packages, totalCents } = await getWalletData();
+  const walletIsEmpty = credits.length === 0 && packages.length === 0;
 
   return (
     <main className="relative min-h-[100dvh] text-white antialiased overflow-hidden">
@@ -93,6 +95,14 @@ export default async function WalletPage() {
           My <span className="text-[#D4AF37]">wallet</span>
         </h1>
 
+        {walletIsEmpty ? (
+          <EmptyState
+            icon={<WalletEmptyIcon />}
+            title="Your wallet's ready when you are"
+            description="Credits and packages you buy from your favourite businesses show up here. Use them like cash."
+          />
+        ) : (
+          <>
         {/* Balance hero */}
         <div
           className="
@@ -274,6 +284,8 @@ export default async function WalletPage() {
             </div>
           )}
         </section>
+          </>
+        )}
       </div>
 
       <BottomTabBar />
