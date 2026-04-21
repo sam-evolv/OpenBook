@@ -30,7 +30,7 @@ export default async function BookingsV2Page({
   let query = sb
     .from('bookings')
     .select(
-      'id, starts_at, ends_at, status, price_cents, notes, services(name, duration_minutes), customers(first_name, last_name, full_name, email, phone)',
+      'id, starts_at, ends_at, status, price_cents, notes, services(name, duration_minutes), customers(full_name, name, email, phone)',
     )
     .eq('business_id', business.id);
 
@@ -56,17 +56,14 @@ export default async function BookingsV2Page({
 
   const filtered = q
     ? bookings.filter((b) => {
-        const name = [b.customers?.first_name, b.customers?.last_name]
-          .filter(Boolean)
-          .join(' ')
-          .toLowerCase();
         const full = (b.customers?.full_name ?? '').toLowerCase();
+        const shortName = (b.customers?.name ?? '').toLowerCase();
         const email = (b.customers?.email ?? '').toLowerCase();
         const service = (b.services?.name ?? '').toLowerCase();
         const needle = q.toLowerCase();
         return (
-          name.includes(needle) ||
           full.includes(needle) ||
+          shortName.includes(needle) ||
           email.includes(needle) ||
           service.includes(needle)
         );
