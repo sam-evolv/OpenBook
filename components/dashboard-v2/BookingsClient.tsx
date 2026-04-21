@@ -22,9 +22,8 @@ export type BookingRow = {
   notes: string | null;
   services: { name: string | null; duration_minutes: number | null } | null;
   customers: {
-    first_name: string | null;
-    last_name: string | null;
     full_name: string | null;
+    name: string | null;
     email: string | null;
     phone: string | null;
   } | null;
