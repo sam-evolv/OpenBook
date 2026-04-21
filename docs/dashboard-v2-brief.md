@@ -10,6 +10,8 @@
 - 2026-04-20: File casing standardised to PascalCase (matches repo convention); the companion components file and this brief updated accordingly.
 - 2026-04-20: All Phase 1 components live under `components/dashboard-v2/` (not `components/dashboard/`) so old and new coexist until cutover.
 - 2026-04-20: Added convention rule — *"When in doubt on any convention, match the nearest existing file in the same folder."*
+- 2026-04-21: **Icon prop convention** — `Button` and `FieldRow` take `icon: ReactNode`, not `icon: LucideIcon`. Callers pass a pre-rendered element (`<Plus size={14} />`), not a component reference. Reason: function/component references can't be serialised across the React Server Component boundary, so the `LucideIcon` prop pattern fails when a server component renders these client components. Passing a ReactNode works in both server and client trees. Tradeoff: caller now sets `size` and `strokeWidth` on the icon explicitly (previously inferred from Button size). `EmptyState` keeps `icon: LucideIcon` because it is itself a server component — function refs flow fine across server→server.
+- 2026-04-21: **Theme toggle — production pattern.** The Phase 1 preview page toggles theme by setting the `theme` cookie client-side and calling `window.location.reload()`. This is fine for a throwaway preview, but **production dashboard pages should use `router.refresh()` instead of a full reload** after flipping the cookie. The server layout re-reads the cookie on refresh and streams the new theme; the `ThemeProvider` hook updates `document.documentElement[data-theme]` optimistically so the flip feels instant.
 
 ---
 
