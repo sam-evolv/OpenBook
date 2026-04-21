@@ -8,7 +8,7 @@ import { TopBar } from './TopBar';
 import { StatusPill } from './StatusPill';
 import { Avatar } from './Avatar';
 import { EmptyState } from './EmptyState';
-import { BookingDetailDrawer } from './BookingDetailDrawer';
+import { BookingDetailDrawer, type BookingDetailData } from './BookingDetailDrawer';
 import { displayCustomerName } from '@/lib/dashboard-v2/customer';
 import { formatPrice } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
@@ -273,10 +273,26 @@ export function BookingsClient({ bookings, filters, previewMode = false }: Booki
       </div>
 
       <BookingDetailDrawer
-        booking={selected}
+        booking={selected ? toDetailData(selected) : null}
         open={selected !== null}
         onClose={() => setSelected(null)}
       />
     </>
   );
+}
+
+function toDetailData(b: BookingRow): BookingDetailData {
+  return {
+    id: b.id,
+    starts_at: b.starts_at,
+    ends_at: b.ends_at,
+    status: b.status,
+    price_cents: b.price_cents,
+    notes: b.notes,
+    service_name: b.services?.name ?? null,
+    service_duration_minutes: b.services?.duration_minutes ?? null,
+    customer_name: displayCustomerName(b.customers),
+    customer_email: b.customers?.email ?? null,
+    customer_phone: b.customers?.phone ?? null,
+  };
 }

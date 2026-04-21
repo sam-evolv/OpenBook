@@ -447,6 +447,7 @@ Flag these for future work:
 - Memberships renewal nudges (a cron job; separate project)
 - Low-stock alerts (depends on inventory shipping)
 - **Customer name normalisation** — the `customers` table currently carries both `full_name` and `first_name`/`last_name`, and different code paths read/write each inconsistently. Separate cleanup PR after Phase 4. Canonical suggestion: `full_name` derived server-side from a trigger or application logic; the split columns either go away or become the canonical source of truth, but not both.
+- **Multi-staff bookings.** `bookings.staff_id` is a single column — the schema assumes **one booking = one staff member**. If a multi-staff business signs up (combined massage+facial where two therapists attend the same appointment, or relay-style class coaching), the model needs a `booking_staff` pivot table, UI to attach multiple staff to a booking, and revenue-share logic for staff utilisation metrics. Out of scope for this migration; flag as a data-model change when the first multi-staff business asks.
 
 ---
 
