@@ -12,6 +12,13 @@
 - 2026-04-20: Added convention rule — *"When in doubt on any convention, match the nearest existing file in the same folder."*
 - 2026-04-21: **Icon prop convention** — `Button` and `FieldRow` take `icon: ReactNode`, not `icon: LucideIcon`. Callers pass a pre-rendered element (`<Plus size={14} />`), not a component reference. Reason: function/component references can't be serialised across the React Server Component boundary, so the `LucideIcon` prop pattern fails when a server component renders these client components. Passing a ReactNode works in both server and client trees. Tradeoff: caller now sets `size` and `strokeWidth` on the icon explicitly (previously inferred from Button size). `EmptyState` keeps `icon: LucideIcon` because it is itself a server component — function refs flow fine across server→server.
 - 2026-04-21: **Theme toggle — production pattern.** The Phase 1 preview page toggles theme by setting the `theme` cookie client-side and calling `window.location.reload()`. This is fine for a throwaway preview, but **production dashboard pages should use `router.refresh()` instead of a full reload** after flipping the cookie. The server layout re-reads the cookie on refresh and streams the new theme; the `ThemeProvider` hook updates `document.documentElement[data-theme]` optimistically so the flip feels instant.
+- 2026-04-21: **Pairing rule for Phase 2.** Phase 2 ships in **two PRs, not four**: (a) Hours + Settings, (b) Bookings + Services. Pairing pages that share patterns (two write-forms, two read-heavy screens) reduces reviewer overhead and keeps design-system usage consistent across closely-related surfaces. Future phases should pair logically adjacent pages when the form/read-style is shared and the risk of coupling is low.
+- 2026-04-21: **`requireCurrentBusiness()` helper.** `lib/queries/business.ts` exports an async server function that reads the authed owner, fetches the live business row, and redirects on miss. Returns `{ owner, business }`. Replaces the inline 4-line server-query block that every dashboard page currently repeats. Not a React hook — it's a server-side fetch-or-redirect utility.
+- 2026-04-21: **`businesses.automations` column.** New `jsonb` column on `businesses`, default `'{}'::jsonb`, persists the on/off state of the 8 Settings automation toggles (auto_reviews, auto_waitlist_fill, auto_reminders, win_back_offers, smart_rescheduling, low_stock_alerts, membership_renewal_nudges, class_fill_notifications). Wiring each toggle to real automation logic is a tier-gating-and-eligibility concern for a future PR — Phase 2 persists state only.
+- 2026-04-21: **Customer name normalisation (out of scope).** The `customers` table carries both `full_name` and `first_name`/`last_name`. Existing code reads inconsistently: consumer `/me` uses `full_name`, dashboard reads `first_name`/`last_name`, booking API writes only `full_name`. Phase 2 Bookings reads with fallback `first_name last_name || full_name || 'Guest'`. Canonical cleanup (derive `full_name` server-side, drop or deprecate the other pair) is a **separate cleanup PR after Phase 4**, tracked in §8.
+- 2026-04-21: **Phase 3 open question — where does revenue goal editing live?** The prototype shows "Monthly revenue goal" under Settings → Business info, but the brief's §5 migration lists `businesses.monthly_revenue_goal` as a Phase 3 Overview concern. **Decide during Phase 3 Overview work** whether the edit UI lives on Overview (closer to the goal's visualisation) or Settings (closer to other business config). Phase 2 Settings ships without this field.
+- 2026-04-21: **Phase 3 prerequisite — generate Supabase types.** Before Phase 3 PR #1 starts, run `supabase gen types typescript` and commit the output. Phase 2 pages are narrow enough to type by hand; Phase 3+ (Overview, Calendar, Intelligence) touch enough tables that generated types become worth the setup.
+- 2026-04-21: **Auto-merge rule** added to §7 Deployment Strategy. PRs that are UI-only or additive-migration-only, with no changes to auth/payments/webhooks/RLS and no new secrets, auto-merge after Sam's preview sign-off. Momentum-first for the rest of Phase 2 and all of Phase 3; human-in-the-loop retained for anything touching auth, payments, webhooks, RLS, or destructive schema changes.
 
 ---
 
@@ -95,14 +102,15 @@ Each component must:
 
 Ship this as PR #1. Merge before touching pages.
 
-### Phase 2: Simple pages (4 PRs, one per page, ~2 hours each)
+### Phase 2: Simple pages (2 PRs, paired) — see 2026-04-21 change-log entry for pairing rationale
 
-Order from lowest risk to highest:
-
+**PR 1 — Hours + Settings** (two write-forms):
 1. **Hours page** — lightweight, just a form. Reads/writes `business_hours` table.
-2. **Settings page** — the Automations toggles + business info form. Writes to `businesses` table.
-3. **Bookings page** — read-only table with filters. Queries `bookings` joined with `customers`, `services`.
-4. **Services/Catalog page** — CRUD on `services`, `packages` tables. The Catalog sub-tabs (Services / Packages / Classes / Inventory) should lazily load each dataset.
+2. **Settings page** — the Automations toggles + business info form. Writes to `businesses` table (automations persisted as JSON column; wiring the toggles to real automation logic is out of scope).
+
+**PR 2 — Bookings + Services** (two read-heavy screens):
+3. **Bookings page** — read-only table with tabs (Upcoming/Past/Cancelled/All), search, status filtering. Queries `bookings` joined with `customers`, `services`.
+4. **Services page** — list with Top Seller / Under-booked badges, edit drawer per service. Only the Services sub-tab of the Catalog page; Packages/Classes/Inventory are deferred.
 
 Each PR:
 - Replaces the existing page under the real route (not `v2`) once verified on staging
@@ -112,9 +120,10 @@ Each PR:
 ### Phase 3: Complex pages with new data (5 PRs)
 
 5. **Overview** — the hero page. Needs:
-   - A revenue goal setting on `businesses.monthly_revenue_goal` (add column, migration required)
+   - A revenue goal setting on `businesses.monthly_revenue_goal` (add column, migration required). **Open question — decide this PR**: does the edit UI live on Overview (closer to the goal's visualisation) or on Settings (closer to other business config)? Prototype suggests Settings; existing v5b.2 doesn't have a goal yet; the visual feedback loop is strongest on Overview. Flag to Sam.
    - Waitlist component (already exists? Check `waitlist` table)
    - AI Intelligence cards: these should be backed by a new `insights` table or computed on-the-fly via a Postgres view. Decide which in this PR.
+   - **Prerequisite:** run `supabase gen types typescript` before this PR and commit the generated types. Phase 3 touches enough tables that hand-typing per page is no longer the cheap path.
 6. **Calendar** — week view with multi-staff filter. Requires:
    - `staff` table already exists per memory. Confirm schema.
    - A booking detail drawer component
@@ -343,6 +352,21 @@ Be aware of these as you build the real thing:
 - Each PR merges to `main`, which auto-deploys to Vercel preview
 - Promote to production only after smoke testing on the preview URL
 
+### Auto-merge rule (2026-04-21)
+For the remainder of Phase 2 and all of Phase 3, a PR **auto-merges** after Sam's preview sign-off if it meets **all** of these criteria:
+
+- UI / frontend code only, **or** additive database migrations (new column, new table, new index)
+- No changes to authentication or authorisation logic
+- No changes to payment code (Stripe)
+- No changes to public webhook handlers (WhatsApp, any inbound route from the public internet)
+- No changes to RLS policies
+- No destructive migrations (drop / rename / data backfill)
+- No new environment variables or secrets required
+
+**Workflow:** prereqs check → build → preview → Sam's visual sign-off → commit → push → open PR → auto-merge → delete branch → start next PR's prereqs immediately (don't wait for a "go" between merge and next prereqs — Sam reviews prereqs reports as they arrive).
+
+If a PR fails **any** criterion, stop before merging and ask Sam to review the GitHub diff first. Auth, payments, webhooks, RLS, and destructive migrations always get a human in the loop.
+
 ### Feature flags
 The `(dashboard-v2)` route group with `/v2/*` URLs gives us a parallel namespace — no env flag required until cutover. Users hit the old dashboard at `/dashboard/*`; the new one is at `/v2/*` until we swap routes.
 
@@ -373,6 +397,7 @@ Flag these for future work:
 - Real-time Messages via Supabase Realtime (poll first, realtime later)
 - Memberships renewal nudges (a cron job; separate project)
 - Low-stock alerts (depends on inventory shipping)
+- **Customer name normalisation** — the `customers` table currently carries both `full_name` and `first_name`/`last_name`, and different code paths read/write each inconsistently. Separate cleanup PR after Phase 4. Canonical suggestion: `full_name` derived server-side from a trigger or application logic; the split columns either go away or become the canonical source of truth, but not both.
 
 ---
 
