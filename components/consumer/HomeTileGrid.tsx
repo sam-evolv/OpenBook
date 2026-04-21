@@ -46,7 +46,7 @@ export function HomeTileGrid({ businesses }: { businesses: HomeBusiness[] }) {
                 name={b.name}
                 colour={b.primary_colour}
                 logoUrl={b.processed_icon_url ?? b.logo_url ?? null}
-                size={64}
+                size={72}
                 status={openness.status}
                 animationDelay={i * 30}
                 viewTransitionName={`tile-${b.slug}`}
