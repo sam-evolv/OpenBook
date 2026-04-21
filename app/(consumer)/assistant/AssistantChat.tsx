@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowUp, Sparkles, Loader2, Star } from 'lucide-react';
+import { getTileColour } from '@/lib/tile-palette';
 
 type BizRef = {
   slug: string;
@@ -255,7 +256,9 @@ function MessageBubble({ msg }: { msg: Msg }) {
 
       {msg.businesses && msg.businesses.length > 0 && (
         <div className="flex flex-col gap-2 max-w-[86%]">
-          {msg.businesses.map((b) => (
+          {msg.businesses.map((b) => {
+            const bizColour = getTileColour(b.primary_colour).mid;
+            return (
             <Link
               key={b.slug}
               href={`/business/${b.slug}`}
@@ -268,7 +271,7 @@ function MessageBubble({ msg }: { msg: Msg }) {
               <div
                 className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0"
                 style={{
-                  background: `linear-gradient(140deg, ${b.primary_colour} 0%, ${b.primary_colour}55 100%)`,
+                  background: `linear-gradient(140deg, ${bizColour} 0%, ${bizColour}55 100%)`,
                 }}
               >
                 {b.cover_image_url && (
@@ -293,14 +296,15 @@ function MessageBubble({ msg }: { msg: Msg }) {
                 <Star
                   className="w-[12px] h-[12px]"
                   strokeWidth={0}
-                  style={{ fill: b.primary_colour, color: b.primary_colour }}
+                  style={{ fill: bizColour, color: bizColour }}
                 />
                 <span className="text-[12px] font-medium text-white/80">
                   {(b.rating ?? 5).toFixed(1)}
                 </span>
               </div>
             </Link>
-          ))}
+            );
+          })}
         </div>
       )}
     </div>

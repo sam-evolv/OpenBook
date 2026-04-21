@@ -1,23 +1,22 @@
-import { supabaseAdmin, type Business } from '@/lib/supabase';
+import { supabaseAdmin } from '@/lib/supabase';
 import { ConsumerHeader } from '@/components/consumer/ConsumerHeader';
 import { BottomTabBar } from '@/components/consumer/BottomTabBar';
-import { AppIcon } from '@/components/consumer/AppIcon';
-import { SystemAppIcon } from '@/components/consumer/SystemAppIcon';
 import { HomeWallpaper } from '@/components/consumer/HomeWallpaper';
+import { HomeTileGrid, type HomeBusiness } from '@/components/consumer/HomeTileGrid';
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 60;
 
-async function getBusinesses(): Promise<Business[]> {
+async function getBusinesses(): Promise<HomeBusiness[]> {
   const sb = supabaseAdmin();
   const { data } = await sb
     .from('businesses')
     .select(
-      'id, slug, name, category, city, primary_colour, cover_image_url, logo_url, processed_icon_url, description, price_tier, rating, is_live'
+      'id, slug, name, category, city, primary_colour, cover_image_url, logo_url, processed_icon_url, description, price_tier, rating, is_live, business_hours(day_of_week, open_time, close_time)'
     )
     .eq('is_live', true)
     .order('name', { ascending: true });
-  return (data ?? []) as Business[];
+  return (data ?? []) as unknown as HomeBusiness[];
 }
 
 function timeGreeting(): string {
@@ -58,14 +57,7 @@ export default async function HomePage() {
         className="mt-10 px-5 pb-44 animate-reveal-up"
         style={{ animationDelay: '60ms' }}
       >
-        <div className="grid grid-cols-4 gap-x-4 gap-y-7">
-          <SystemAppIcon kind="discover" />
-          {businesses.map((biz) => (
-            <AppIcon key={biz.id} biz={biz} />
-          ))}
-          <SystemAppIcon kind="wallet" />
-          <SystemAppIcon kind="me" />
-        </div>
+        <HomeTileGrid businesses={businesses} />
 
         {/* iOS page dots */}
         <div className="mt-12 flex items-center justify-center gap-1.5">

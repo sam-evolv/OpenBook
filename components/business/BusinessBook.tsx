@@ -3,6 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { Clock, Check } from 'lucide-react';
 import { useState } from 'react';
+import { getTileColour } from '@/lib/tile-palette';
 
 interface Props {
   business: any;
@@ -13,7 +14,7 @@ interface Props {
 
 export function BusinessBook({ business, services, selectedService, onSelectService }: Props) {
   const router = useRouter();
-  const primary = business.primary_colour ?? '#D4AF37';
+  const primary = getTileColour(business.primary_colour).mid;
 
   function continueToBooking() {
     if (selectedService) {

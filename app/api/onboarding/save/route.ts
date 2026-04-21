@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
     category: state.category || null,
     city: state.city || null,
     address_line: state.address_line || null,
-    primary_colour: state.primary_colour || '#D4AF37',
+    primary_colour: state.primary_colour || 'gold',
     secondary_colour: state.secondary_colour || null,
     logo_url: state.logo_url ?? null,
     processed_icon_url: state.processed_icon_url ?? null,

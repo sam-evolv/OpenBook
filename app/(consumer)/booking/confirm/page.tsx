@@ -10,6 +10,7 @@ import {
 import { ConsumerHeader } from '@/components/consumer/ConsumerHeader';
 import { BottomTabBar } from '@/components/consumer/BottomTabBar';
 import { ConfirmationHero } from './ConfirmationHero';
+import { getTileColour } from '@/lib/tile-palette';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,7 +39,7 @@ export default async function ConfirmPage({
   const booking = await getBooking(searchParams.id);
   if (!booking) notFound();
 
-  const colour = booking.businesses.primary_colour || '#D4AF37';
+  const colour = getTileColour(booking.businesses.primary_colour).mid;
   const startAt = new Date(booking.starts_at);
   const dateStr = startAt.toLocaleDateString('en-IE', {
     weekday: 'long',

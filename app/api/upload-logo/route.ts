@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sharp from 'sharp';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
+import { getTileColour } from '@/lib/tile-palette';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -91,7 +92,7 @@ export async function POST(req: NextRequest) {
     const backgroundColour = resolveBackground({
       input: backgroundInput,
       logoColour,
-      primaryColour: business.primary_colour ?? '#D4AF37',
+      primaryColour: getTileColour(business.primary_colour).mid,
     });
 
     /* 4. Trim whitespace */

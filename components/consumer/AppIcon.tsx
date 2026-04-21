@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { Business } from '@/lib/supabase';
 import { resolveCategory, CATEGORIES } from '@/lib/categories';
+import { getTileColour, isValidTileColour } from '@/lib/tile-palette';
 
 /**
  * Apple-quality app icon.
@@ -32,9 +33,12 @@ export function AppIcon({
   // If business has uploaded processed icon, use it directly
   const hasProcessedIcon = Boolean(biz.processed_icon_url);
 
-  // If business has a brand primary_colour that differs from default, wash it
-  const brandColour = biz.primary_colour;
-  const useBrandTint = brandColour && brandColour.toLowerCase() !== '#d4af37';
+  // If business uses a palette slug, resolve to hex for the brand wash.
+  // Pre-migration hex values are also accepted (getTileColour falls back).
+  const brandColour = isValidTileColour(biz.primary_colour)
+    ? getTileColour(biz.primary_colour).mid
+    : biz.primary_colour;
+  const useBrandTint = Boolean(brandColour) && brandColour.toLowerCase() !== '#d4af37';
 
   const radius = Math.round(size * 0.235); // iOS superellipse approximation
 

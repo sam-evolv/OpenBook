@@ -7,6 +7,7 @@ import { BusinessHome } from './BusinessHome';
 import { BusinessBook } from './BusinessBook';
 import { BusinessGallery } from './BusinessGallery';
 import { BusinessAbout } from './BusinessAbout';
+import { getTileColour } from '@/lib/tile-palette';
 
 export type BusinessTab = 'home' | 'book' | 'gallery' | 'about';
 
@@ -22,7 +23,7 @@ export function BusinessAppShell({ business, services, hours, initialTab = 'home
   const [tab, setTab] = useState<BusinessTab>(initialTab);
   const [selectedService, setSelectedService] = useState<any>(null);
 
-  const primary = business.primary_colour ?? '#D4AF37';
+  const primary = getTileColour(business.primary_colour).mid;
   const gallery = business.gallery_urls ?? [];
   const hasGallery = gallery.length > 0;
 

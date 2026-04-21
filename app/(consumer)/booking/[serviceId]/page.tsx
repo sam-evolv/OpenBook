@@ -4,6 +4,7 @@ import { supabaseAdmin, formatPrice, formatDuration } from '@/lib/supabase';
 import { ConsumerHeader } from '@/components/consumer/ConsumerHeader';
 import { BottomTabBar } from '@/components/consumer/BottomTabBar';
 import { SlotPicker } from './SlotPicker';
+import { getTileColour } from '@/lib/tile-palette';
 
 export const dynamic = 'force-dynamic';
 
@@ -39,7 +40,7 @@ export default async function BookingPage({
   if (!ctx) notFound();
 
   const { service, business } = ctx;
-  const colour = business.primary_colour || '#D4AF37';
+  const colour = getTileColour(business.primary_colour).mid;
 
   return (
     <main className="relative min-h-[100dvh] text-white antialiased overflow-hidden">
