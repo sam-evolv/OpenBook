@@ -31,6 +31,13 @@
   - `regular`: lifetime bookings ≥ 3 AND last booking ≤ 30 days ago
   If none of the top three conditions match, fall through to `slipping` (safer default — surfaces ambiguous customers for owner attention rather than hiding them as "regular"). Implemented in `lib/dashboard-v2/customers-queries.ts`.
 - 2026-04-24: **Staff utilisation formula caveat.** Phase 3 Team computes `utilisation% = booked_minutes / business_open_minutes × 100` over 30 days. This **overestimates for part-time staff** — a staff member who only works Tuesdays sees their utilisation diluted across all 7 business-open days. The approximation is intentional for v1 and stays in place until the `staff_hours` table exists to give each staff member their own available-hours denominator. Don't "fix" this without introducing `staff_hours` first — it's a known compromise, not a bug.
+- 2026-04-25: **Business health score formula.** Phase 3 Intelligence composes a 0–100 score from 5 weighted components over the last 30 days:
+  - **Show rate (25 pts):** `100 − (cancelled + no-show) / (confirmed + completed + cancelled + no-show) × 100`
+  - **Retention (25 pts):** % of non-cancelled bookings in the window made by customers with ≥ 2 lifetime bookings
+  - **Utilisation (20 pts):** same formula as Team page (`booked_minutes / business_open_minutes × 100`), capped at 100
+  - **Booking velocity (20 pts):** `100 × min(1, this_30d_count / prior_30d_count)`. If prior-30d is 0 and this-30d ≥ 1, score 100; if both 0, score 0
+  - **Review signal (10 pts):** `avg(reviews.rating in last 90d) × 2` (5 stars → 10 pts); 0 if no reviews in window
+  Each component is normalised 0–100 then multiplied by its weight; sum is rounded to int. **Minimum signal threshold:** < 10 non-cancelled bookings **in the last 30 days** (dormant businesses with old bookings see the calibration message, not a stale score). The trend delta is this-30d score minus prior-30d score using the same formula. Percentile claims ("Top 18% of personal trainers") are hidden until cross-business aggregates exist. Implemented in `lib/dashboard-v2/intelligence-queries.ts`.
 - 2026-04-22: **Empty states mandate for Phase 3.** Brief §6 already flags this but it's being upgraded to a hard rule: **every Phase 3 page must ship a meaningful first-time-user empty state, and the preview must show the empty state**, not just the populated state. "Coming soon" placeholders don't count — the empty state must point the user at a concrete first action. Each preview will render both populated and empty variants side-by-side so Sam can eyeball both in one pass.
 
 ---
