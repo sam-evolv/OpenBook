@@ -18,6 +18,7 @@
 - 2026-04-21: **Customer name normalisation (out of scope).** The `customers` table carries both `full_name` and `first_name`/`last_name`. Existing code reads inconsistently: consumer `/me` uses `full_name`, dashboard reads `first_name`/`last_name`, booking API writes only `full_name`. Phase 2 Bookings reads with fallback `first_name last_name || full_name || 'Guest'`. Canonical cleanup (derive `full_name` server-side, drop or deprecate the other pair) is a **separate cleanup PR after Phase 4**, tracked in §8.
 - 2026-04-21: **Phase 3 open question — where does revenue goal editing live?** The prototype shows "Monthly revenue goal" under Settings → Business info, but the brief's §5 migration lists `businesses.monthly_revenue_goal` as a Phase 3 Overview concern. **Decide during Phase 3 Overview work** whether the edit UI lives on Overview (closer to the goal's visualisation) or Settings (closer to other business config). Phase 2 Settings ships without this field.
 - 2026-04-21: **Phase 3 prerequisite — generate Supabase types.** Before Phase 3 PR #1 starts, run `supabase gen types typescript` and commit the output. Phase 2 pages are narrow enough to type by hand; Phase 3+ (Overview, Calendar, Intelligence) touch enough tables that generated types become worth the setup.
+- 2026-04-21: **Auto-merge rule** added to §7 Deployment Strategy. PRs that are UI-only or additive-migration-only, with no changes to auth/payments/webhooks/RLS and no new secrets, auto-merge after Sam's preview sign-off. Momentum-first for the rest of Phase 2 and all of Phase 3; human-in-the-loop retained for anything touching auth, payments, webhooks, RLS, or destructive schema changes.
 
 ---
 
@@ -350,6 +351,21 @@ Be aware of these as you build the real thing:
 - Work happens on feature branches: `dashboard-v2/phase-0-setup`, `dashboard-v2/phase-1-design-system`, `dashboard-v2/overview`, etc.
 - Each PR merges to `main`, which auto-deploys to Vercel preview
 - Promote to production only after smoke testing on the preview URL
+
+### Auto-merge rule (2026-04-21)
+For the remainder of Phase 2 and all of Phase 3, a PR **auto-merges** after Sam's preview sign-off if it meets **all** of these criteria:
+
+- UI / frontend code only, **or** additive database migrations (new column, new table, new index)
+- No changes to authentication or authorisation logic
+- No changes to payment code (Stripe)
+- No changes to public webhook handlers (WhatsApp, any inbound route from the public internet)
+- No changes to RLS policies
+- No destructive migrations (drop / rename / data backfill)
+- No new environment variables or secrets required
+
+**Workflow:** prereqs check → build → preview → Sam's visual sign-off → commit → push → open PR → auto-merge → delete branch → start next PR's prereqs immediately (don't wait for a "go" between merge and next prereqs — Sam reviews prereqs reports as they arrive).
+
+If a PR fails **any** criterion, stop before merging and ask Sam to review the GitHub diff first. Auth, payments, webhooks, RLS, and destructive migrations always get a human in the loop.
 
 ### Feature flags
 The `(dashboard-v2)` route group with `/v2/*` URLs gives us a parallel namespace — no env flag required until cutover. Users hit the old dashboard at `/dashboard/*`; the new one is at `/v2/*` until we swap routes.
