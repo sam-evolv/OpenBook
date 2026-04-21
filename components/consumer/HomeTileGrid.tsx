@@ -5,6 +5,7 @@ import { useState } from 'react';
 import { Tile } from '@/components/Tile';
 import { TilePeek, type TilePeekAction } from '@/components/TilePeek';
 import { SystemAppIcon } from '@/components/consumer/SystemAppIcon';
+import { PullToRefresh } from '@/components/PullToRefresh';
 import {
   getBusinessOpenness,
   type BusinessHourRow,
@@ -18,6 +19,13 @@ export interface HomeBusiness extends Business {
 
 export function HomeTileGrid({ businesses }: { businesses: HomeBusiness[] }) {
   const router = useRouter();
+
+  async function refresh() {
+    // router.refresh() re-runs the server component and refetches data.
+    // Await a microtask so PullToRefresh's min-display-time still applies.
+    router.refresh();
+    await new Promise((r) => setTimeout(r, 400));
+  }
   const [peekState, setPeekState] = useState<{
     business: HomeBusiness;
     rect: DOMRect;
@@ -34,7 +42,7 @@ export function HomeTileGrid({ businesses }: { businesses: HomeBusiness[] }) {
   }
 
   return (
-    <>
+    <PullToRefresh onRefresh={refresh}>
       <div className="grid grid-cols-4 gap-x-4 gap-y-7">
         <SystemAppIcon kind="discover" />
         {businesses.map((b, i) => {
@@ -68,7 +76,7 @@ export function HomeTileGrid({ businesses }: { businesses: HomeBusiness[] }) {
           onNavigate={(href) => navigate(href)}
         />
       )}
-    </>
+    </PullToRefresh>
   );
 }
 

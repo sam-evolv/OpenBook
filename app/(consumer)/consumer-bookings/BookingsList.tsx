@@ -3,10 +3,12 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { Calendar, ArrowRight } from 'lucide-react';
 import { type BookingWithDetails, formatPrice } from '@/lib/supabase';
 import { friendlyDate, timeLabel } from '@/lib/time';
 import { getTileColour } from '@/lib/tile-palette';
+import { EmptyState, CalendarEmptyIcon } from '@/components/EmptyState';
 
 export function BookingsList({
   bookings,
@@ -14,6 +16,7 @@ export function BookingsList({
   bookings: BookingWithDetails[];
 }) {
   const [tab, setTab] = useState<'upcoming' | 'past'>('upcoming');
+  const router = useRouter();
   const now = Date.now();
 
   const { upcoming, past } = useMemo(() => {
@@ -61,7 +64,23 @@ export function BookingsList({
 
       <div className="mt-5">
         {list.length === 0 ? (
-          <EmptyState tab={tab} />
+          tab === 'upcoming' ? (
+            <EmptyState
+              icon={<CalendarEmptyIcon />}
+              title="Your bookings will live here"
+              description="Once you book with a business, you'll see it here with quick links to reschedule, message, or rebook."
+              action={{
+                label: 'Find a business',
+                onClick: () => router.push('/explore'),
+              }}
+            />
+          ) : (
+            <EmptyState
+              icon={<CalendarEmptyIcon />}
+              title="No past bookings yet"
+              description="Once you've completed a booking, it'll show up here so you can rebook in one tap."
+            />
+          )
         ) : (
           <div className="flex flex-col gap-2.5">
             {list.map((b) => (
@@ -138,37 +157,3 @@ function BookingCard({ booking }: { booking: BookingWithDetails }) {
   );
 }
 
-function EmptyState({ tab }: { tab: 'upcoming' | 'past' }) {
-  return (
-    <div
-      className="
-        flex flex-col items-center justify-center
-        py-16 px-6 rounded-2xl
-        bg-white/[0.02] border border-dashed border-white/[0.08]
-        text-center
-      "
-    >
-      <Calendar className="w-8 h-8 text-white/25 mb-3" strokeWidth={1.5} />
-      <p className="text-[15px] font-medium text-white/70">
-        No {tab} bookings
-      </p>
-      <p className="mt-1 text-[13px] text-white/45 max-w-[220px]">
-        {tab === 'upcoming'
-          ? 'Book something in Explore and it will show up here.'
-          : 'Past appointments will appear here.'}
-      </p>
-      {tab === 'upcoming' && (
-        <Link
-          href="/explore"
-          className="
-            mt-5 inline-flex items-center h-10 px-5 rounded-full
-            bg-[#D4AF37] text-black text-[13px] font-semibold
-            active:scale-95 transition
-          "
-        >
-          Explore businesses
-        </Link>
-      )}
-    </div>
-  );
-}
