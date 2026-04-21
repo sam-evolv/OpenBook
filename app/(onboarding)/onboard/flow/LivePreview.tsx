@@ -1,6 +1,7 @@
 'use client';
 
 import { Dumbbell, Scissors, Flame, Sparkles, Stethoscope, HandHelping, Brush, Waves, type LucideIcon } from 'lucide-react';
+import { getTileColour } from '@/lib/tile-palette';
 import type { OnboardingState } from './OnboardingFlow';
 
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
@@ -35,8 +36,9 @@ function resolveCategoryKey(categoryText: string): string {
 export function LivePreview({ state }: { state: OnboardingState }) {
   const categoryKey = resolveCategoryKey(state.category);
   const CategoryIcon = CATEGORY_ICONS[categoryKey] ?? CATEGORY_ICONS.default;
-  const colour = state.primary_colour || '#D4AF37';
-  const secondary = state.secondary_colour || colour;
+  const tile = getTileColour(state.primary_colour);
+  const colour = tile.mid;
+  const secondary = state.secondary_colour || tile.light;
   const name = state.name || 'Your business';
   const shortName = name.split(' ').find((w) => !['the', 'a', 'an'].includes(w.toLowerCase())) ?? name;
 

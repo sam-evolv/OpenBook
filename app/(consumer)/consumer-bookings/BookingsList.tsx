@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Calendar, ArrowRight } from 'lucide-react';
 import { type BookingWithDetails, formatPrice } from '@/lib/supabase';
 import { friendlyDate, timeLabel } from '@/lib/time';
+import { getTileColour } from '@/lib/tile-palette';
 
 export function BookingsList({
   bookings,
@@ -74,7 +75,7 @@ export function BookingsList({
 }
 
 function BookingCard({ booking }: { booking: BookingWithDetails }) {
-  const colour = booking.businesses.primary_colour || '#D4AF37';
+  const colour = getTileColour(booking.businesses.primary_colour).mid;
   const start = new Date(booking.starts_at);
   const isPast = Date.now() > new Date(booking.ends_at).getTime();
 

@@ -1,6 +1,7 @@
 'use client';
 
 import { Phone, Globe, MapPin, Instagram, Clock } from 'lucide-react';
+import { getTileColour } from '@/lib/tile-palette';
 
 interface Props {
   business: any;
@@ -10,7 +11,7 @@ interface Props {
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
 export function BusinessAbout({ business, hours }: Props) {
-  const primary = business.primary_colour ?? '#D4AF37';
+  const primary = getTileColour(business.primary_colour).mid;
   const socials = business.socials ?? {};
 
   // Order hours Mon-Sun for display

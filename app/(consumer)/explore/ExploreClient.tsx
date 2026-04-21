@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useMemo, useState } from 'react';
 import { Search, Star, TrendingUp } from 'lucide-react';
 import type { Business } from '@/lib/supabase';
+import { getTileColour } from '@/lib/tile-palette';
 
 const CATEGORIES = [
   { id: 'all', label: 'All' },
@@ -172,7 +173,7 @@ export function ExploreClient({ businesses }: { businesses: Business[] }) {
 }
 
 function TrendingCard({ biz }: { biz: Business }) {
-  const colour = biz.primary_colour || '#D4AF37';
+  const colour = getTileColour(biz.primary_colour).mid;
   return (
     <Link
       href={`/business/${biz.slug}`}
@@ -228,7 +229,7 @@ function TrendingCard({ biz }: { biz: Business }) {
 }
 
 function FeaturedCard({ biz }: { biz: Business }) {
-  const colour = biz.primary_colour || '#D4AF37';
+  const colour = getTileColour(biz.primary_colour).mid;
   const initials = biz.name
     .split(' ')
     .slice(0, 2)
@@ -298,7 +299,7 @@ function FeaturedCard({ biz }: { biz: Business }) {
 }
 
 function NearbyRow({ biz }: { biz: Business }) {
-  const colour = biz.primary_colour || '#D4AF37';
+  const colour = getTileColour(biz.primary_colour).mid;
   return (
     <Link
       href={`/business/${biz.slug}`}

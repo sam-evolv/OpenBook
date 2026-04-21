@@ -5,6 +5,7 @@ import { Gift, Package, Coins } from 'lucide-react';
 import { supabaseAdmin, formatPrice } from '@/lib/supabase';
 import { ConsumerHeader } from '@/components/consumer/ConsumerHeader';
 import { BottomTabBar } from '@/components/consumer/BottomTabBar';
+import { getTileColour } from '@/lib/tile-palette';
 
 export const dynamic = 'force-dynamic';
 
@@ -163,7 +164,10 @@ export default async function WalletPage() {
                   <div
                     className="relative w-12 h-12 rounded-xl overflow-hidden shrink-0"
                     style={{
-                      background: `linear-gradient(145deg, ${c.businesses.primary_colour} 0%, ${c.businesses.primary_colour}55 100%)`,
+                      background: (() => {
+                        const mid = getTileColour(c.businesses.primary_colour).mid;
+                        return `linear-gradient(145deg, ${mid} 0%, ${mid}55 100%)`;
+                      })(),
                     }}
                   >
                     {c.businesses.cover_image_url && (
@@ -188,7 +192,7 @@ export default async function WalletPage() {
                   </div>
                   <span
                     className="text-[16px] font-bold tracking-tight"
-                    style={{ color: c.businesses.primary_colour }}
+                    style={{ color: getTileColour(c.businesses.primary_colour).mid }}
                   >
                     {formatPrice(c.amount_cents)}
                   </span>
@@ -215,7 +219,7 @@ export default async function WalletPage() {
                 const pct = Math.round(
                   (p.sessions_remaining / Math.max(1, p.total_sessions)) * 100
                 );
-                const colour = p.businesses.primary_colour;
+                const colour = getTileColour(p.businesses.primary_colour).mid;
                 return (
                   <Link
                     key={p.id}

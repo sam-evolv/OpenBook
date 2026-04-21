@@ -1,6 +1,7 @@
 'use client';
 
 import { Clock, ChevronRight, Sparkles } from 'lucide-react';
+import { getTileColour } from '@/lib/tile-palette';
 
 interface Props {
   business: any;
@@ -11,7 +12,7 @@ interface Props {
 }
 
 export function BusinessHome({ business, services, onBookService, onOpenGallery, hasGallery }: Props) {
-  const primary = business.primary_colour ?? '#D4AF37';
+  const primary = getTileColour(business.primary_colour).mid;
   const gallery: string[] = business.gallery_urls ?? [];
 
   return (

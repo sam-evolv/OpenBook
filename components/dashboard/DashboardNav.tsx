@@ -14,6 +14,7 @@ import {
   Moon,
 } from 'lucide-react';
 import { useDashboardTheme } from './ThemeProvider';
+import { getTileColour } from '@/lib/tile-palette';
 
 interface Props {
   business: {
@@ -68,7 +69,7 @@ export function DashboardNav({ business, ownerName }: Props) {
           ) : (
             <div
               className="h-9 w-9 rounded-[8px] shrink-0 flex items-center justify-center"
-              style={{ background: business.primary_colour ?? 'var(--accent)' }}
+              style={{ background: business.primary_colour ? getTileColour(business.primary_colour).mid : 'var(--accent)' }}
             >
               <span className="text-[16px] font-bold" style={{ color: 'var(--accent-fg)' }}>
                 {business.name.charAt(0).toUpperCase()}

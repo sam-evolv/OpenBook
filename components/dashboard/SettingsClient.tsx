@@ -2,6 +2,13 @@
 
 import { useState, useRef } from 'react';
 import { Loader2, Check, Upload, X, Image as ImageIcon, ExternalLink } from 'lucide-react';
+import { ColourPicker } from '@/components/ColourPicker';
+import {
+  DEFAULT_TILE_COLOUR,
+  getTileColour,
+  isValidTileColour,
+  type TileColourSlug,
+} from '@/lib/tile-palette';
 
 interface Props {
   initialBusiness: any;
@@ -126,30 +133,16 @@ export function SettingsClient({ initialBusiness }: Props) {
           </Section>
 
           <Section title="Branding">
-            <div className="grid grid-cols-2 gap-3">
-              <Field label="Primary colour">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={business.primary_colour ?? '#D4AF37'}
-                    onChange={(e) => update({ primary_colour: e.target.value })}
-                    className="h-9 w-12 rounded-md border-0 bg-transparent cursor-pointer"
-                  />
-                  <TextInput value={business.primary_colour ?? '#D4AF37'} onChange={(v) => update({ primary_colour: v })} />
-                </div>
-              </Field>
-              <Field label="Secondary colour">
-                <div className="flex items-center gap-2">
-                  <input
-                    type="color"
-                    value={business.secondary_colour ?? '#080808'}
-                    onChange={(e) => update({ secondary_colour: e.target.value })}
-                    className="h-9 w-12 rounded-md border-0 bg-transparent cursor-pointer"
-                  />
-                  <TextInput value={business.secondary_colour ?? ''} onChange={(v) => update({ secondary_colour: v })} />
-                </div>
-              </Field>
-            </div>
+            <ColourPicker
+              value={
+                isValidTileColour(business.primary_colour)
+                  ? (business.primary_colour as TileColourSlug)
+                  : DEFAULT_TILE_COLOUR
+              }
+              onChange={(slug) => update({ primary_colour: slug })}
+              businessName={business.name ?? 'Your business'}
+              logoUrl={business.processed_icon_url ?? business.logo_url ?? null}
+            />
           </Section>
 
           <ImagesSection business={business} update={update} />
@@ -211,7 +204,7 @@ export function SettingsClient({ initialBusiness }: Props) {
 }
 
 function LivePreview({ business }: { business: any }) {
-  const primary = business.primary_colour ?? '#D4AF37';
+  const primary = getTileColour(business.primary_colour).mid;
   return (
     <div>
       <p
