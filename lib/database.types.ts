@@ -58,9 +58,56 @@ export type Database = {
           },
         ]
       }
+      ai_queries: {
+        Row: {
+          business_id: string
+          created_at: string
+          id: string
+          query: string
+          region: string | null
+          resulted_in_booking_id: string | null
+          source: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string
+          id?: string
+          query: string
+          region?: string | null
+          resulted_in_booking_id?: string | null
+          source: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string
+          id?: string
+          query?: string
+          region?: string | null
+          resulted_in_booking_id?: string | null
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_queries_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_queries_resulted_in_booking_id_fkey"
+            columns: ["resulted_in_booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           business_id: string
+          cancelled_at: string | null
+          cancelled_by: string | null
           created_at: string | null
           customer_id: string
           ends_at: string
@@ -78,6 +125,8 @@ export type Database = {
         }
         Insert: {
           business_id: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           created_at?: string | null
           customer_id: string
           ends_at: string
@@ -95,6 +144,8 @@ export type Database = {
         }
         Update: {
           business_id?: string
+          cancelled_at?: string | null
+          cancelled_by?: string | null
           created_at?: string | null
           customer_id?: string
           ends_at?: string
@@ -233,6 +284,7 @@ export type Database = {
           instagram_handle: string | null
           is_live: boolean | null
           logo_url: string | null
+          monthly_revenue_goal: number | null
           name: string
           offers: Json | null
           owner_id: string
@@ -278,6 +330,7 @@ export type Database = {
           instagram_handle?: string | null
           is_live?: boolean | null
           logo_url?: string | null
+          monthly_revenue_goal?: number | null
           name: string
           offers?: Json | null
           owner_id: string
@@ -323,6 +376,7 @@ export type Database = {
           instagram_handle?: string | null
           is_live?: boolean | null
           logo_url?: string | null
+          monthly_revenue_goal?: number | null
           name?: string
           offers?: Json | null
           owner_id?: string
@@ -458,6 +512,7 @@ export type Database = {
           full_name: string | null
           id: string
           name: string | null
+          notes: string | null
           phone: string | null
           stripe_customer_id: string | null
           user_id: string | null
@@ -471,6 +526,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           name?: string | null
+          notes?: string | null
           phone?: string | null
           stripe_customer_id?: string | null
           user_id?: string | null
@@ -484,6 +540,7 @@ export type Database = {
           full_name?: string | null
           id?: string
           name?: string | null
+          notes?: string | null
           phone?: string | null
           stripe_customer_id?: string | null
           user_id?: string | null
@@ -836,6 +893,7 @@ export type Database = {
           avatar_url: string | null
           bio: string | null
           business_id: string
+          colour: string | null
           email: string | null
           id: string
           instagram_handle: string | null
@@ -849,6 +907,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           business_id: string
+          colour?: string | null
           email?: string | null
           id?: string
           instagram_handle?: string | null
@@ -862,6 +921,7 @@ export type Database = {
           avatar_url?: string | null
           bio?: string | null
           business_id?: string
+          colour?: string | null
           email?: string | null
           id?: string
           instagram_handle?: string | null
@@ -942,6 +1002,7 @@ export type Database = {
           customer_phone: string
           id: string
           last_message_at: string | null
+          last_read_at: string | null
           state: string | null
           updated_at: string | null
         }
@@ -953,6 +1014,7 @@ export type Database = {
           customer_phone: string
           id?: string
           last_message_at?: string | null
+          last_read_at?: string | null
           state?: string | null
           updated_at?: string | null
         }
@@ -964,6 +1026,7 @@ export type Database = {
           customer_phone?: string
           id?: string
           last_message_at?: string | null
+          last_read_at?: string | null
           state?: string | null
           updated_at?: string | null
         }
@@ -984,6 +1047,7 @@ export type Database = {
           created_at: string | null
           direction: string
           id: string
+          source: string | null
           status: string | null
           twilio_sid: string | null
         }
@@ -993,6 +1057,7 @@ export type Database = {
           created_at?: string | null
           direction: string
           id?: string
+          source?: string | null
           status?: string | null
           twilio_sid?: string | null
         }
@@ -1002,6 +1067,7 @@ export type Database = {
           created_at?: string | null
           direction?: string
           id?: string
+          source?: string | null
           status?: string | null
           twilio_sid?: string | null
         }

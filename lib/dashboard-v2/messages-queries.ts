@@ -13,10 +13,11 @@ import { displayCustomerName } from './customer';
  * we still filter explicitly so the queries are deterministic in local
  * dev where RLS can be bypassed via service role.
  *
- * Type drift: the generated database.types.ts is stale vs the Stage 1
- * migration — `whatsapp_messages.source`, `whatsapp_conversations.last_read_at`
- * and the `ai_queries` table aren't typed yet. We use explicit casts
- * below. Next scheduled type regen will make these disappear.
+ * The `unknown as` casts below are belt-and-braces against PostgREST's
+ * relationship-inference typing — the generated types cover these rows
+ * as of 2026-04-23, but nested-select shapes still collapse to
+ * overly-loose types that the compiler won't narrow. Drop the casts
+ * in a separate cleanup pass if/when Supabase ships tighter typings.
  */
 
 export type MessageSource = 'bot' | 'manual' | 'automation';
