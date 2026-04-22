@@ -1,8 +1,13 @@
-import { NextRequest, NextResponse } from 'next/server'
+import { NextRequest } from 'next/server'
+import crypto from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 import { processWhatsAppMessage } from '@/lib/whatsapp-brain'
 import { sendWhatsAppMessage } from '@/lib/whatsapp-send'
 
+/**
+ * GET: Meta's subscription verification dance — echo the challenge
+ * back if the verify token matches. Unchanged from the original.
+ */
 export async function GET(req: NextRequest) {
   const url = new URL(req.url)
   const mode = url.searchParams.get('hub.mode')
@@ -19,9 +24,57 @@ export async function GET(req: NextRequest) {
   return new Response('Forbidden', { status: 403 })
 }
 
-export async function POST(req: NextRequest) {
+/**
+ * Verify the x-hub-signature-256 header against an HMAC-SHA256 of the
+ * raw request body using WHATSAPP_APP_SECRET. Returns true only if the
+ * signature is present and matches. Fails closed — missing secret env
+ * or missing header both return false.
+ *
+ * Constant-time comparison via crypto.timingSafeEqual, which throws on
+ * length mismatch so we guard that ourselves.
+ *
+ * Meta signs as `sha256=<hex>`. Ref:
+ * https://developers.facebook.com/docs/graph-api/webhooks/getting-started#event-notifications
+ */
+function verifyMetaSignature(rawBody: string, headerValue: string | null): boolean {
+  const appSecret = process.env.WHATSAPP_APP_SECRET
+  if (!appSecret) {
+    console.error('WA_WEBHOOK_MISSING_APP_SECRET')
+    return false
+  }
+  if (!headerValue || !headerValue.startsWith('sha256=')) {
+    return false
+  }
+  const provided = headerValue.slice('sha256='.length)
+  const expected = crypto
+    .createHmac('sha256', appSecret)
+    .update(rawBody, 'utf8')
+    .digest('hex')
+
+  if (provided.length !== expected.length) return false
   try {
-    const body = await req.json()
+    return crypto.timingSafeEqual(
+      Buffer.from(provided, 'hex'),
+      Buffer.from(expected, 'hex'),
+    )
+  } catch {
+    return false
+  }
+}
+
+export async function POST(req: NextRequest) {
+  // Read the raw body text first — we need it verbatim for HMAC.
+  const rawBody = await req.text()
+  const signatureHeader = req.headers.get('x-hub-signature-256')
+
+  if (!verifyMetaSignature(rawBody, signatureHeader)) {
+    // 403 rather than 200: signals upstream proxies and dashboards
+    // that this request was rejected. Meta won't retry on 4xx.
+    return new Response('Forbidden', { status: 403 })
+  }
+
+  try {
+    const body = JSON.parse(rawBody)
     const entry = body.entry?.[0]
     const change = entry?.changes?.[0]
     const value = change?.value
@@ -44,29 +97,22 @@ export async function POST(req: NextRequest) {
       process.env.SUPABASE_SERVICE_ROLE_KEY!
     )
 
-    // Find business by phone number ID, fall back to first live business for testing
-    const { data: exactMatch } = await supabase
+    // Resolve the business by phone_number_id — exact match only.
+    // The previous "fall back to first live business" path is gone:
+    // a second onboarded business would have misrouted any no-match
+    // inbound to the first row in the DB, corrupting the wrong
+    // customer's inbox. On no match we log and 200 — Meta won't
+    // retry and no state is touched.
+    const { data: business } = await supabase
       .from('businesses')
       .select('*, services(*), business_hours(*)')
       .eq('whatsapp_phone_number_id', phoneNumberId)
       .eq('is_live', true)
       .single()
 
-    let business = exactMatch
-
     if (!business) {
-      const { data: fallbackBusiness } = await supabase
-        .from('businesses')
-        .select('*, services(*), business_hours(*)')
-        .eq('is_live', true)
-        .limit(1)
-        .single()
-
-      if (!fallbackBusiness) {
-        return new Response('OK', { status: 200 })
-      }
-
-      business = fallbackBusiness
+      console.error(`WA_WEBHOOK_NO_BUSINESS phone_number_id=${phoneNumberId}`)
+      return new Response('OK', { status: 200 })
     }
 
     // Get or create conversation
@@ -116,17 +162,22 @@ export async function POST(req: NextRequest) {
       message: reply
     })
 
-    // Save outbound message
+    // Save outbound message. `source: 'bot'` marks this as an auto-reply
+    // from the webhook brain so the dashboard Messages view can render
+    // the "Auto" pill. Manual sends from the dashboard stamp 'manual'.
     await supabase.from('whatsapp_messages').insert({
       conversation_id: conversation?.id,
       direction: 'outbound',
-      body: reply
+      body: reply,
+      source: 'bot'
     })
 
     return new Response('OK', { status: 200 })
   } catch (error) {
     console.error('WhatsApp webhook error:', error)
-    // Always return 200 to Meta to prevent retries
+    // Always return 200 to Meta to prevent retries on our parse/DB bugs.
+    // Note: we only reach here after signature verification has passed,
+    // so this doesn't mask rejected traffic.
     return new Response('OK', { status: 200 })
   }
 }
