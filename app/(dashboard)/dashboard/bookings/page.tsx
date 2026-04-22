@@ -1,48 +1,79 @@
-import { createSupabaseServerClient, getCurrentOwner } from '@/lib/supabase-server';
-import { redirect } from 'next/navigation';
-import { BookingsClient } from '@/components/dashboard/BookingsClient';
+import { requireCurrentBusiness } from '@/lib/queries/business';
+import {
+  BookingsClient,
+  type BookingRow,
+  type TabId,
+  type StatusFilter,
+} from '@/components/dashboard-v2/BookingsClient';
 
 export const dynamic = 'force-dynamic';
 
-export default async function BookingsPage({
+const VALID_TABS: TabId[] = ['upcoming', 'past', 'cancelled', 'all'];
+const VALID_STATUSES: StatusFilter[] = ['all', 'pending', 'confirmed', 'completed'];
+
+export default async function BookingsV2Page({
   searchParams,
 }: {
-  searchParams: { filter?: 'upcoming' | 'past' | 'cancelled' | 'all' };
+  searchParams: { tab?: string; q?: string; status?: string };
 }) {
-  const owner = await getCurrentOwner();
-  if (!owner) redirect('/onboard');
+  const { business, sb } = await requireCurrentBusiness<{ id: string }>('id');
 
-  const sb = createSupabaseServerClient();
-  const { data: business } = await sb
-    .from('businesses')
-    .select('id')
-    .eq('owner_id', owner.id)
-    .eq('is_live', true)
-    .maybeSingle();
+  const tab: TabId = VALID_TABS.includes(searchParams.tab as TabId)
+    ? (searchParams.tab as TabId)
+    : 'upcoming';
+  const q = (searchParams.q ?? '').trim();
+  const statusFilter: StatusFilter = VALID_STATUSES.includes(searchParams.status as StatusFilter)
+    ? (searchParams.status as StatusFilter)
+    : 'all';
 
-  if (!business) redirect('/onboard/flow');
-
-  const filter = searchParams.filter ?? 'upcoming';
   const now = new Date().toISOString();
-
   let query = sb
     .from('bookings')
     .select(
-      'id, starts_at, ends_at, status, price_cents, notes, services(name, duration_minutes), customers(first_name, last_name, email, phone)'
+      'id, starts_at, ends_at, status, price_cents, notes, services(name, duration_minutes), customers(full_name, name, email, phone)',
     )
     .eq('business_id', business.id);
 
-  if (filter === 'upcoming') {
-    query = query.gte('starts_at', now).neq('status', 'cancelled').order('starts_at', { ascending: true });
-  } else if (filter === 'past') {
-    query = query.lt('starts_at', now).neq('status', 'cancelled').order('starts_at', { ascending: false });
-  } else if (filter === 'cancelled') {
-    query = query.eq('status', 'cancelled').order('starts_at', { ascending: false });
-  } else {
-    query = query.order('starts_at', { ascending: false });
+  if (tab === 'upcoming') {
+    query = query.gte('starts_at', now).neq('status', 'cancelled');
+  } else if (tab === 'past') {
+    query = query.lt('starts_at', now).neq('status', 'cancelled');
+  } else if (tab === 'cancelled') {
+    query = query.eq('status', 'cancelled');
   }
 
-  const { data: bookings } = await query.limit(100);
+  if (statusFilter !== 'all' && tab !== 'cancelled') {
+    query = query.eq('status', statusFilter);
+  }
 
-  return <BookingsClient bookings={bookings ?? []} activeFilter={filter} />;
+  const ordered =
+    tab === 'upcoming'
+      ? query.order('starts_at', { ascending: true })
+      : query.order('starts_at', { ascending: false });
+
+  const { data: rows } = await ordered.limit(100);
+  const bookings = (rows ?? []) as unknown as BookingRow[];
+
+  const filtered = q
+    ? bookings.filter((b) => {
+        const full = (b.customers?.full_name ?? '').toLowerCase();
+        const shortName = (b.customers?.name ?? '').toLowerCase();
+        const email = (b.customers?.email ?? '').toLowerCase();
+        const service = (b.services?.name ?? '').toLowerCase();
+        const needle = q.toLowerCase();
+        return (
+          full.includes(needle) ||
+          shortName.includes(needle) ||
+          email.includes(needle) ||
+          service.includes(needle)
+        );
+      })
+    : bookings;
+
+  return (
+    <BookingsClient
+      bookings={filtered}
+      filters={{ tab, q, status: statusFilter }}
+    />
+  );
 }

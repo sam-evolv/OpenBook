@@ -51,7 +51,7 @@ export async function toggleCustomerFavourite(
     if (insErr) return { ok: false as const, error: insErr.message };
   }
 
-  revalidatePath('/v2/customers');
+  revalidatePath('/dashboard/customers');
   return { ok: true as const };
 }
 
@@ -77,6 +77,6 @@ export async function saveCustomerNotes(customerId: string, notes: string) {
     .eq('id', customerId);
 
   if (upErr) return { ok: false as const, error: upErr.message };
-  revalidatePath('/v2/customers');
+  revalidatePath('/dashboard/customers');
   return { ok: true as const };
 }

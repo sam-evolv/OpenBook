@@ -31,6 +31,10 @@
   - `regular`: lifetime bookings ≥ 3 AND last booking ≤ 30 days ago
   If none of the top three conditions match, fall through to `slipping` (safer default — surfaces ambiguous customers for owner attention rather than hiding them as "regular"). Implemented in `lib/dashboard-v2/customers-queries.ts`.
 - 2026-04-24: **Staff utilisation formula caveat.** Phase 3 Team computes `utilisation% = booked_minutes / business_open_minutes × 100` over 30 days. This **overestimates for part-time staff** — a staff member who only works Tuesdays sees their utilisation diluted across all 7 business-open days. The approximation is intentional for v1 and stays in place until the `staff_hours` table exists to give each staff member their own available-hours denominator. Don't "fix" this without introducing `staff_hours` first — it's a known compromise, not a bug.
+- 2026-04-22: **Cutover complete.** v5b.2 dashboard deleted (`app/(dashboard)/dashboard/*` old pages and `components/dashboard/*` old clients). Phase 3 pages moved from `app/(dashboard-v2)/v2/*` to `app/(dashboard)/dashboard/*` so `/dashboard/*` is now the canonical URL space. The `(dashboard-v2)` route group is gone. Skipped the planned NEXT_PUBLIC_DASHBOARD_V2 feature flag machinery — business isn't live, single-user dogfooding, progressive rollout was unnecessary ceremony. The first_name/last_name bug in the old Bookings page is moot because the file is deleted.
+
+  **Naming holdover:** `components/dashboard-v2/*` and `lib/dashboard-v2/*` folder names kept for now. Renaming to `components/dashboard/*` and `lib/dashboard/*` is a separate small cleanup PR — deferred to avoid mixing structural rename with a code-moving PR.
+
 - 2026-04-25: **Business health score formula.** Phase 3 Intelligence composes a 0–100 score from 5 weighted components over the last 30 days:
   - **Show rate (25 pts):** `100 − (cancelled + no-show) / (confirmed + completed + cancelled + no-show) × 100`
   - **Retention (25 pts):** % of non-cancelled bookings in the window made by customers with ≥ 2 lifetime bookings

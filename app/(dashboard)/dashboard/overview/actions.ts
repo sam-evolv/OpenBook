@@ -29,7 +29,7 @@ export async function saveMonthlyRevenueGoal(amount: number | null) {
     .eq('id', businessId);
 
   if (upErr) return { ok: false as const, error: upErr.message };
-  revalidatePath('/v2/overview');
+  revalidatePath('/dashboard/overview');
   return { ok: true as const };
 }
 
@@ -44,7 +44,7 @@ export async function dismissInsight(id: string) {
     .eq('business_id', businessId);
 
   if (upErr) return { ok: false as const, error: upErr.message };
-  revalidatePath('/v2/overview');
+  revalidatePath('/dashboard/overview');
   return { ok: true as const };
 }
 
@@ -59,6 +59,6 @@ export async function markWaitlistNotified(id: string) {
     .eq('business_id', businessId);
 
   if (upErr) return { ok: false as const, error: upErr.message };
-  revalidatePath('/v2/overview');
+  revalidatePath('/dashboard/overview');
   return { ok: true as const };
 }

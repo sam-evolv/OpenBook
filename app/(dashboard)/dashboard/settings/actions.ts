@@ -63,6 +63,6 @@ export async function saveSettings(payload: SettingsPayload) {
 
   if (error) return { ok: false as const, error: error.message };
 
-  revalidatePath('/v2/settings');
+  revalidatePath('/dashboard/settings');
   return { ok: true as const };
 }

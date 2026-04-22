@@ -5,7 +5,7 @@ import { Sparkles, Target, AlertTriangle, Activity, X, ArrowUpRight } from 'luci
 import { Card } from '../Card';
 import { Button } from '../Button';
 import { EmptyState } from '../EmptyState';
-import { dismissInsight } from '@/app/(dashboard-v2)/v2/overview/actions';
+import { dismissInsight } from '@/app/(dashboard)/dashboard/overview/actions';
 import type { InsightsPayload, InsightRow } from '@/lib/dashboard-v2/overview-queries';
 import { cn } from '@/lib/utils';
 

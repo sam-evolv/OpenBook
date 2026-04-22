@@ -17,7 +17,7 @@ import {
   rescheduleBooking,
   fetchAvailableSlots,
   type CreateBookingResult,
-} from '@/app/(dashboard-v2)/v2/calendar/actions';
+} from '@/app/(dashboard)/dashboard/calendar/actions';
 import { formatPrice, formatDuration } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
 

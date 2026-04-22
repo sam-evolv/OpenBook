@@ -5,7 +5,7 @@ import { Trash2 } from 'lucide-react';
 import { Drawer } from './Drawer';
 import { Button } from './Button';
 import { FieldRow } from './FieldRow';
-import { saveService, deleteService } from '@/app/(dashboard-v2)/v2/catalog/actions';
+import { saveService, deleteService } from '@/app/(dashboard)/dashboard/catalog/actions';
 import { cn } from '@/lib/utils';
 
 export interface ServiceRow {

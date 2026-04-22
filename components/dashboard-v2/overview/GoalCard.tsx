@@ -6,7 +6,7 @@ import { Card } from '../Card';
 import { Button } from '../Button';
 import { Drawer } from '../Drawer';
 import { formatPrice } from '@/lib/supabase';
-import { saveMonthlyRevenueGoal } from '@/app/(dashboard-v2)/v2/overview/actions';
+import { saveMonthlyRevenueGoal } from '@/app/(dashboard)/dashboard/overview/actions';
 import type { GoalPayload } from '@/lib/dashboard-v2/overview-queries';
 import { cn } from '@/lib/utils';
 

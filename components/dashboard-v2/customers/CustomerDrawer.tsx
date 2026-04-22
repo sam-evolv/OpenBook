@@ -10,7 +10,7 @@ import { ContextRow } from '../ContextRow';
 import {
   toggleCustomerFavourite,
   saveCustomerNotes,
-} from '@/app/(dashboard-v2)/v2/customers/actions';
+} from '@/app/(dashboard)/dashboard/customers/actions';
 import type { CustomerRow } from '@/lib/dashboard-v2/customers-queries';
 import { formatPrice } from '@/lib/supabase';
 import { cn } from '@/lib/utils';

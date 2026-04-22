@@ -10,7 +10,7 @@ import {
   saveStaff,
   deactivateStaff,
   type StaffInput,
-} from '@/app/(dashboard-v2)/v2/team/actions';
+} from '@/app/(dashboard)/dashboard/team/actions';
 import type { TeamStaffRow } from '@/lib/dashboard-v2/team-queries';
 import { cn } from '@/lib/utils';
 

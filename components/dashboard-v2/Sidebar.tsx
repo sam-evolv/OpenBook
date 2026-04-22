@@ -40,19 +40,19 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { id: 'overview', label: 'Overview', href: '/v2/overview', icon: LayoutGrid },
-  { id: 'calendar', label: 'Calendar', href: '/v2/calendar', icon: CalendarDays },
-  { id: 'messages', label: 'Messages', href: '/v2/messages', icon: MessageCircle },
-  { id: 'intelligence', label: 'Intelligence', href: '/v2/intelligence', icon: Brain, badge: 'AI' },
-  { id: 'flash', label: 'Flash sales', href: '/v2/flash-sales', icon: Zap },
-  { id: 'marketing', label: 'Marketing', href: '/v2/marketing', icon: Megaphone },
-  { id: 'bookings', label: 'Bookings', href: '/v2/bookings', icon: Calendar },
-  { id: 'customers', label: 'Customers', href: '/v2/customers', icon: Users },
-  { id: 'catalog', label: 'Catalog', href: '/v2/catalog', icon: Layers },
-  { id: 'team', label: 'Team', href: '/v2/team', icon: UserCog },
-  { id: 'finance', label: 'Finance', href: '/v2/finance', icon: Wallet },
-  { id: 'hours', label: 'Hours', href: '/v2/hours', icon: Clock },
-  { id: 'settings', label: 'Settings', href: '/v2/settings', icon: Settings },
+  { id: 'overview', label: 'Overview', href: '/dashboard/overview', icon: LayoutGrid },
+  { id: 'calendar', label: 'Calendar', href: '/dashboard/calendar', icon: CalendarDays },
+  { id: 'messages', label: 'Messages', href: '/dashboard/messages', icon: MessageCircle },
+  { id: 'intelligence', label: 'Intelligence', href: '/dashboard/intelligence', icon: Brain, badge: 'AI' },
+  { id: 'flash', label: 'Flash sales', href: '/dashboard/flash-sales', icon: Zap },
+  { id: 'marketing', label: 'Marketing', href: '/dashboard/marketing', icon: Megaphone },
+  { id: 'bookings', label: 'Bookings', href: '/dashboard/bookings', icon: Calendar },
+  { id: 'customers', label: 'Customers', href: '/dashboard/customers', icon: Users },
+  { id: 'catalog', label: 'Catalog', href: '/dashboard/catalog', icon: Layers },
+  { id: 'team', label: 'Team', href: '/dashboard/team', icon: UserCog },
+  { id: 'finance', label: 'Finance', href: '/dashboard/finance', icon: Wallet },
+  { id: 'hours', label: 'Hours', href: '/dashboard/hours', icon: Clock },
+  { id: 'settings', label: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
 
 interface SidebarProps {
@@ -164,7 +164,7 @@ export function Sidebar({
       </nav>
 
       <Link
-        href="/v2/intelligence#ai-distribution"
+        href="/dashboard/intelligence#ai-distribution"
         className="block rounded-xl border border-gold-border bg-gradient-to-br from-gold-soft to-transparent p-3 mb-2.5 hover:from-gold-soft/70 transition-colors"
       >
         <div className="flex items-center gap-1.5 mb-1.5">

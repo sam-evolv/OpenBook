@@ -5,7 +5,7 @@ import { Clock3, MessageCircle, Check } from 'lucide-react';
 import { Card } from '../Card';
 import { Button } from '../Button';
 import { Avatar } from '../Avatar';
-import { markWaitlistNotified } from '@/app/(dashboard-v2)/v2/overview/actions';
+import { markWaitlistNotified } from '@/app/(dashboard)/dashboard/overview/actions';
 import type { WaitlistEntry } from '@/lib/dashboard-v2/overview-queries';
 
 interface WaitlistCardProps {

@@ -8,7 +8,7 @@ import type { CustomerOption } from '@/lib/dashboard-v2/calendar-queries';
 import {
   createCustomer,
   type CreateCustomerResult,
-} from '@/app/(dashboard-v2)/v2/calendar/actions';
+} from '@/app/(dashboard)/dashboard/calendar/actions';
 import { cn } from '@/lib/utils';
 
 type Mode =
