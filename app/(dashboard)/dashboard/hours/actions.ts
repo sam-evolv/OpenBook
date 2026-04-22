@@ -38,6 +38,6 @@ export async function saveHours(rows: HourRowInput[]) {
   const { error } = await sb.from('business_hours').insert(insertRows);
   if (error) return { ok: false as const, error: error.message };
 
-  revalidatePath('/v2/hours');
+  revalidatePath('/dashboard/hours');
   return { ok: true as const };
 }

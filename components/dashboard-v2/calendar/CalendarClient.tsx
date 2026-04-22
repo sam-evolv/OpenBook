@@ -12,7 +12,7 @@ import { QuietZoneNudge } from './QuietZoneNudge';
 import { CalendarEmptyState } from './CalendarEmptyState';
 import { NewBookingModal } from './NewBookingModal';
 import type { BookingBlock, StaffRow, WeekPayload } from '@/lib/dashboard-v2/calendar-queries';
-import { cancelBooking } from '@/app/(dashboard-v2)/v2/calendar/actions';
+import { cancelBooking } from '@/app/(dashboard)/dashboard/calendar/actions';
 import { formatPrice } from '@/lib/supabase';
 
 export interface CalendarClientProps {

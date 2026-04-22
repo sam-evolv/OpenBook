@@ -39,8 +39,8 @@ export async function cancelBooking(bookingId: string) {
     .eq('business_id', businessId);
 
   if (upErr) return { ok: false as const, error: upErr.message };
-  revalidatePath('/v2/calendar');
-  revalidatePath('/v2/bookings');
+  revalidatePath('/dashboard/calendar');
+  revalidatePath('/dashboard/bookings');
   return { ok: true as const };
 }
 
@@ -141,9 +141,9 @@ export async function createBooking(input: CreateBookingInput): Promise<CreateBo
 
   if (insertErr) return { ok: false, code: 'generic', error: insertErr.message };
 
-  revalidatePath('/v2/calendar');
-  revalidatePath('/v2/bookings');
-  revalidatePath('/v2/overview');
+  revalidatePath('/dashboard/calendar');
+  revalidatePath('/dashboard/bookings');
+  revalidatePath('/dashboard/overview');
   return { ok: true, bookingId: (inserted as { id: string }).id };
 }
 
@@ -204,9 +204,9 @@ export async function rescheduleBooking(
 
   if (upErr) return { ok: false, code: 'generic', error: upErr.message };
 
-  revalidatePath('/v2/calendar');
-  revalidatePath('/v2/bookings');
-  revalidatePath('/v2/overview');
+  revalidatePath('/dashboard/calendar');
+  revalidatePath('/dashboard/bookings');
+  revalidatePath('/dashboard/overview');
   return { ok: true, bookingId: input.bookingId };
 }
 

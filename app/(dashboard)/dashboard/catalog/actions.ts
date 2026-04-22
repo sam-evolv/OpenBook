@@ -2,7 +2,15 @@
 
 import { revalidatePath } from 'next/cache';
 import { createSupabaseServerClient, getCurrentOwner } from '@/lib/supabase-server';
-import { STAFF_COLOUR_PALETTE } from '@/lib/dashboard-v2/staff-colours';
+
+export interface ServiceInput {
+  id?: string;
+  name: string;
+  description: string | null;
+  duration_minutes: number;
+  price_cents: number;
+  is_active: boolean;
+}
 
 async function requireOwnedBusinessId() {
   const owner = await getCurrentOwner();
@@ -18,25 +26,7 @@ async function requireOwnedBusinessId() {
   return { sb, businessId: (data as { id: string }).id, error: null };
 }
 
-export interface StaffInput {
-  id?: string;
-  name: string;
-  title: string | null;
-  bio: string | null;
-  email: string | null;
-  instagram_handle: string | null;
-  specialties: string[];
-  /** Palette slug from STAFF_COLOUR_PALETTE, or null for hash fallback. */
-  colour: string | null;
-  is_active: boolean;
-}
-
-function validateColour(colour: string | null): string | null {
-  if (!colour) return null;
-  return (STAFF_COLOUR_PALETTE as readonly string[]).includes(colour) ? colour : null;
-}
-
-export async function saveStaff(input: StaffInput) {
+export async function saveService(input: ServiceInput) {
   const { sb, businessId, error } = await requireOwnedBusinessId();
   if (error) return { ok: false as const, error };
 
@@ -46,48 +36,40 @@ export async function saveStaff(input: StaffInput) {
   const payload = {
     business_id: businessId,
     name,
-    title: input.title?.trim() || null,
-    bio: input.bio?.trim() || null,
-    email: input.email?.trim() || null,
-    instagram_handle: input.instagram_handle?.trim() || null,
-    specialties: input.specialties.map((s) => s.trim()).filter(Boolean),
-    colour: validateColour(input.colour),
+    description: input.description?.trim() || null,
+    duration_minutes: Math.max(5, Math.round(input.duration_minutes)),
+    price_cents: Math.max(0, Math.round(input.price_cents)),
     is_active: input.is_active,
   };
 
   if (input.id) {
     const { error: upErr } = await sb
-      .from('staff')
+      .from('services')
       .update(payload)
       .eq('id', input.id)
       .eq('business_id', businessId);
     if (upErr) return { ok: false as const, error: upErr.message };
   } else {
-    const { error: insErr } = await sb.from('staff').insert(payload);
+    const { error: insErr } = await sb.from('services').insert(payload);
     if (insErr) return { ok: false as const, error: insErr.message };
   }
 
-  revalidatePath('/v2/team');
-  revalidatePath('/v2/calendar');
+  revalidatePath('/dashboard/catalog');
   return { ok: true as const };
 }
 
-/**
- * Soft-deactivate — keeps bookings.staff_id foreign-key intact and
- * preserves utilisation history. Hard delete is out of scope for v1.
- */
-export async function deactivateStaff(id: string) {
+export async function deleteService(id: string) {
   const { sb, businessId, error } = await requireOwnedBusinessId();
   if (error) return { ok: false as const, error };
 
-  const { error: upErr } = await sb
-    .from('staff')
-    .update({ is_active: false })
+  const { error: delErr } = await sb
+    .from('services')
+    .delete()
     .eq('id', id)
     .eq('business_id', businessId);
 
-  if (upErr) return { ok: false as const, error: upErr.message };
-  revalidatePath('/v2/team');
-  revalidatePath('/v2/calendar');
+  if (delErr) return { ok: false as const, error: delErr.message };
+
+  revalidatePath('/dashboard/catalog');
   return { ok: true as const };
 }

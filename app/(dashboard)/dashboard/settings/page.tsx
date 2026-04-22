@@ -1,22 +1,11 @@
-import { createSupabaseServerClient, getCurrentOwner } from '@/lib/supabase-server';
-import { redirect } from 'next/navigation';
-import { SettingsClient } from '@/components/dashboard/SettingsClient';
+import { requireCurrentBusiness } from '@/lib/queries/business';
+import { SettingsForm, type SettingsInitial } from '@/components/dashboard-v2/SettingsForm';
 
 export const dynamic = 'force-dynamic';
 
-export default async function SettingsPage() {
-  const owner = await getCurrentOwner();
-  if (!owner) redirect('/onboard');
-
-  const sb = createSupabaseServerClient();
-  const { data: business } = await sb
-    .from('businesses')
-    .select('*')
-    .eq('owner_id', owner.id)
-    .eq('is_live', true)
-    .maybeSingle();
-
-  if (!business) redirect('/onboard/flow');
-
-  return <SettingsClient initialBusiness={business} />;
+export default async function SettingsV2Page() {
+  const { business } = await requireCurrentBusiness<SettingsInitial & { id: string }>(
+    'id, name, tagline, about_long, founder_name, phone, website, address_line, city, socials, automations',
+  );
+  return <SettingsForm initial={business} />;
 }

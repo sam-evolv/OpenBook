@@ -1,28 +1,16 @@
-import { createSupabaseServerClient, getCurrentOwner } from '@/lib/supabase-server';
-import { redirect } from 'next/navigation';
-import { HoursClient } from '@/components/dashboard/HoursClient';
+import { requireCurrentBusiness } from '@/lib/queries/business';
+import { HoursForm, type HourRow } from '@/components/dashboard-v2/HoursForm';
 
 export const dynamic = 'force-dynamic';
 
-export default async function HoursPage() {
-  const owner = await getCurrentOwner();
-  if (!owner) redirect('/onboard');
+export default async function HoursV2Page() {
+  const { business, sb } = await requireCurrentBusiness<{ id: string }>('id');
 
-  const sb = createSupabaseServerClient();
-  const { data: business } = await sb
-    .from('businesses')
-    .select('id')
-    .eq('owner_id', owner.id)
-    .eq('is_live', true)
-    .maybeSingle();
-
-  if (!business) redirect('/onboard/flow');
-
-  const { data: hours } = await sb
+  const { data: rows } = await sb
     .from('business_hours')
-    .select('*')
+    .select('day_of_week, open_time, close_time, is_closed')
     .eq('business_id', business.id)
     .order('day_of_week', { ascending: true });
 
-  return <HoursClient businessId={business.id} initialHours={hours ?? []} />;
+  return <HoursForm initialHours={(rows ?? []) as HourRow[]} />;
 }

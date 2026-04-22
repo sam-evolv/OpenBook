@@ -5,7 +5,7 @@ import { Check, RotateCcw } from 'lucide-react';
 import { Card } from './Card';
 import { Button } from './Button';
 import { TopBar } from './TopBar';
-import { saveHours, type HourRowInput } from '@/app/(dashboard-v2)/v2/hours/actions';
+import { saveHours, type HourRowInput } from '@/app/(dashboard)/dashboard/hours/actions';
 import { cn } from '@/lib/utils';
 
 export interface HourRow {

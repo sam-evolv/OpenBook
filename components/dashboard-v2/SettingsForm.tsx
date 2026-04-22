@@ -22,7 +22,7 @@ import {
   saveSettings,
   type Automations,
   type SettingsPayload,
-} from '@/app/(dashboard-v2)/v2/settings/actions';
+} from '@/app/(dashboard)/dashboard/settings/actions';
 import { cn } from '@/lib/utils';
 
 type AutomationKey = keyof Automations;
