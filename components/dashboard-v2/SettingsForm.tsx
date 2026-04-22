@@ -69,7 +69,7 @@ const AUTOMATIONS: AutomationDef[] = [
     key: 'smart_rescheduling',
     title: 'Smart rescheduling',
     description:
-      "When a customer asks to reschedule, Claude offers slots matching their pattern.",
+      'When a customer asks to reschedule, the AI offers slots matching their booking pattern.',
     icon: CalendarPlus,
     default: true,
   },
