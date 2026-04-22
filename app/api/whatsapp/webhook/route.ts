@@ -116,11 +116,14 @@ export async function POST(req: NextRequest) {
       message: reply
     })
 
-    // Save outbound message
+    // Save outbound message. `source: 'bot'` marks this as an auto-reply
+    // from the webhook brain so the dashboard Messages view can render
+    // the "Auto" pill. Manual sends from the dashboard stamp 'manual'.
     await supabase.from('whatsapp_messages').insert({
       conversation_id: conversation?.id,
       direction: 'outbound',
-      body: reply
+      body: reply,
+      source: 'bot'
     })
 
     return new Response('OK', { status: 200 })

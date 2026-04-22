@@ -2,6 +2,7 @@ import { cookies } from 'next/headers';
 import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import { requireCurrentBusiness } from '@/lib/queries/business';
+import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { Sidebar } from '@/components/dashboard-v2/Sidebar';
 import { ThemeProvider } from '@/components/dashboard-v2/ThemeProvider';
 
@@ -14,16 +15,34 @@ interface BusinessContext {
 }
 
 /**
- * Fixes the cutover gap from PR #30: v5b.2 DashboardNav was deleted but
- * the v2 Sidebar was never mounted in the route-group layout. Phase 1–3
- * pages rendered in isolation (TopBar + content only), so the missing
- * cross-page nav didn't surface until Messages needed the unread counter.
- *
  * Pages still fetch their own business context via requireCurrentBusiness —
  * the layout's fetch is not shared with them. Minor perf cost, kept for
- * simplicity. Unread / upcoming-bookings / flash-sale signals are passed
- * as zero/false placeholders here; the Messages PR wires them up properly.
+ * simplicity. The Messages unread count is fetched here because the
+ * Sidebar badge needs it on every dashboard page; upcoming-bookings /
+ * flash-sale signals are still zero/false placeholders until their
+ * respective PRs.
  */
+async function countUnreadMessages(businessId: string): Promise<number> {
+  const sb = createSupabaseServerClient();
+  // PostgREST can't compare two columns in one filter, so we fetch the
+  // bounded set (≤200 rows per business in practice) and count in-memory.
+  // This is the same shape loadInbox uses; consolidating into one loader
+  // is polish.
+  const { data } = await sb
+    .from('whatsapp_conversations')
+    .select('last_message_at, last_read_at')
+    .eq('business_id', businessId)
+    .limit(500);
+
+  const rows = (data ?? []) as Array<{
+    last_message_at: string | null;
+    last_read_at: string | null;
+  }>;
+  return rows.filter(
+    (r) => r.last_message_at && (!r.last_read_at || r.last_message_at > r.last_read_at),
+  ).length;
+}
+
 function initialsFor(name: string | null | undefined): string {
   if (!name) return 'YO';
   const parts = name.trim().split(/\s+/).filter(Boolean);
@@ -47,6 +66,8 @@ export default async function DashboardLayout({
   const ownerName = owner.full_name ?? 'You';
   const initials = initialsFor(owner.full_name ?? null);
 
+  const unreadMessagesCount = await countUnreadMessages(business.id);
+
   return (
     <div
       data-theme={theme}
@@ -60,7 +81,7 @@ export default async function DashboardLayout({
             userName={ownerName}
             userInitials={initials}
             plan="Free"
-            unreadMessagesCount={0}
+            unreadMessagesCount={unreadMessagesCount}
             upcomingBookingsCount={0}
             hasLiveFlashSale={false}
           />
