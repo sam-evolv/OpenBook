@@ -35,6 +35,7 @@
 
   **Naming holdover:** `components/dashboard-v2/*` and `lib/dashboard-v2/*` folder names kept for now. Renaming to `components/dashboard/*` and `lib/dashboard/*` is a separate small cleanup PR — deferred to avoid mixing structural rename with a code-moving PR.
 
+- 2026-04-22: **AI provider reality correction.** The brief originally specified "Anthropic Claude API for AI" across the board. Audit (2026-04-22) found the live code is split: `lib/whatsapp-brain.ts` uses **OpenAI GPT-4o** (env `OPENAI_API_KEY`) — that's the shipped state and the provider we're building on going forward. The consumer `/api/assistant` route at `app.openbook.ie/assistant` is still on Anthropic (`claude-sonnet-4-5`, env `ANTHROPIC_API_KEY`) and is flagged for migration — to be batched into the Phase 4 Messages PR alongside the reply-suggestions endpoint, or handled separately. Brief §1 ("Tech stack"), §3 Phase 4 Messages, and §6 item 8 updated to reflect OpenAI as the canonical internal provider. **External USP stays as-is:** "queryable on ChatGPT / Claude / Gemini via MCP" is about being bookable FROM those assistants, unaffected by the internal provider choice. Legacy `src/` folder contains older Anthropic-based code (Vite prototype), unreferenced from the live app — flagged for a standalone delete-`src/` PR.
 - 2026-04-25: **Business health score formula.** Phase 3 Intelligence composes a 0–100 score from 5 weighted components over the last 30 days:
   - **Show rate (25 pts):** `100 − (cancelled + no-show) / (confirmed + completed + cancelled + no-show) × 100`
   - **Retention (25 pts):** % of non-cancelled bookings in the window made by customers with ≥ 2 lifetime bookings
@@ -57,7 +58,7 @@ OpenBook is an AI-powered booking platform for local service businesses in Irela
 - Supabase for DB, auth, storage, RLS
 - Stripe Connect for payments
 - Resend for email
-- Anthropic Claude API for AI
+- **OpenAI (GPT-4o)** for internal AI — WhatsApp bot brain (`lib/whatsapp-brain.ts`), reply suggestions, and insight generation. Env var: `OPENAI_API_KEY`. The consumer `/api/assistant` route is still on Anthropic as of 2026-04-22 and is flagged for migration. The MCP-era USP ("queryable on ChatGPT / Claude / Gemini") is **independent of the internal provider** — that's about being bookable FROM external AI assistants via the MCP server at `mcp.openbook.ie`, not about what model runs inside OpenBook.
 - Meta WhatsApp Cloud API (direct, no Twilio)
 - GitHub repo: `sam-evolv/OpenBook`
 
@@ -170,7 +171,7 @@ Split per the 2026-04-22 scope assessment: Calendar gets its own PR (biggest pie
 
 10. **Messages** — three-pane inbox. This is the biggest piece.
     - Query `whatsapp_conversations` + `whatsapp_messages`
-    - AI-suggested replies: a Next.js route handler that hits the Anthropic API with the thread context
+    - AI-suggested replies: a Next.js route handler that hits the **OpenAI API (GPT-4o)** with the thread context
     - Real-time updates via Supabase Realtime subscriptions (or poll every 5s initially — realtime can come in v2)
     - The "ChatGPT query" conversation type: needs a new table `ai_queries` to track MCP-sourced interactions
 11. **Flash Sales** — this is the marketing USP.
@@ -406,7 +407,7 @@ Be aware of these as you build the real thing:
 5. **Drag-and-drop is shown but not required.** The calendar prototype implies drag-to-reschedule. V1 can ship with click-to-edit only.
 6. **Inline styles only.** Production uses Tailwind. Use the companion components file as the style translation reference.
 7. **Staff colour assignment.** The prototype hardcodes coach colours. Production should let the business owner pick a colour per staff member, constrained to a palette that doesn't clash with brand gold.
-8. **AI suggestion chips in Messages.** These need a real endpoint. Build `POST /api/ai/suggest-reply` that takes the thread and returns 2–3 suggestions via Claude. Cache for 60s per thread to avoid hammering the API.
+8. **AI suggestion chips in Messages.** These need a real endpoint. Build `POST /api/ai/suggest-reply` that takes the thread and returns 2–3 suggestions via **OpenAI GPT-4o** (same provider as the WhatsApp brain in `lib/whatsapp-brain.ts`). Cache for 60s per thread to avoid hammering the API.
 9. **VAT tracker.** The Irish VAT calculation in the prototype assumes a €40k threshold, but the actual services threshold is €42,500 as of Jan 2025. Verify the current Revenue.ie figure at build time.
 10. **"ChatGPT query" in the Messages inbox.** The prototype shows MCP-sourced bookings in the unified inbox. For this to work, the MCP server at `mcp.openbook.ie` needs to write to the `ai_queries` table. If the MCP isn't built yet, ship Messages without this feature in v1 and add it when MCP goes live.
 
