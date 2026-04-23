@@ -111,6 +111,7 @@ export type Database = {
           created_at: string | null
           customer_id: string
           ends_at: string
+          flash_sale_id: string | null
           id: string
           notes: string | null
           price_cents: number
@@ -130,6 +131,7 @@ export type Database = {
           created_at?: string | null
           customer_id: string
           ends_at: string
+          flash_sale_id?: string | null
           id?: string
           notes?: string | null
           price_cents: number
@@ -149,6 +151,7 @@ export type Database = {
           created_at?: string | null
           customer_id?: string
           ends_at?: string
+          flash_sale_id?: string | null
           id?: string
           notes?: string | null
           price_cents?: number
@@ -174,6 +177,13 @@ export type Database = {
             columns: ["customer_id"]
             isOneToOne: false
             referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bookings_flash_sale_id_fkey"
+            columns: ["flash_sale_id"]
+            isOneToOne: false
+            referencedRelation: "flash_sales"
             referencedColumns: ["id"]
           },
           {
@@ -410,6 +420,9 @@ export type Database = {
           customer_id: string
           id: string
           is_favourite: boolean | null
+          promo_opt_in: boolean
+          promo_opt_in_at: string | null
+          promo_opt_in_source: string | null
         }
         Insert: {
           added_at?: string | null
@@ -417,6 +430,9 @@ export type Database = {
           customer_id: string
           id?: string
           is_favourite?: boolean | null
+          promo_opt_in?: boolean
+          promo_opt_in_at?: string | null
+          promo_opt_in_source?: string | null
         }
         Update: {
           added_at?: string | null
@@ -424,6 +440,9 @@ export type Database = {
           customer_id?: string
           id?: string
           is_favourite?: boolean | null
+          promo_opt_in?: boolean
+          promo_opt_in_at?: string | null
+          promo_opt_in_source?: string | null
         }
         Relationships: [
           {
@@ -547,6 +566,67 @@ export type Database = {
           whatsapp_number?: string | null
         }
         Relationships: []
+      }
+      flash_sale_notifications: {
+        Row: {
+          block_reason: string | null
+          booked_at: string | null
+          booking_id: string | null
+          created_at: string
+          customer_id: string
+          id: string
+          sale_id: string
+          sent_at: string | null
+          status: string
+          viewed_at: string | null
+        }
+        Insert: {
+          block_reason?: string | null
+          booked_at?: string | null
+          booking_id?: string | null
+          created_at?: string
+          customer_id: string
+          id?: string
+          sale_id: string
+          sent_at?: string | null
+          status?: string
+          viewed_at?: string | null
+        }
+        Update: {
+          block_reason?: string | null
+          booked_at?: string | null
+          booking_id?: string | null
+          created_at?: string
+          customer_id?: string
+          id?: string
+          sale_id?: string
+          sent_at?: string | null
+          status?: string
+          viewed_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flash_sale_notifications_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flash_sale_notifications_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flash_sale_notifications_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "flash_sales"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       flash_sales: {
         Row: {
