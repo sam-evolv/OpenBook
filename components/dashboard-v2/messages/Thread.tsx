@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
-import { Send, AlertCircle, Sparkles } from 'lucide-react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { Send, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Button } from '../Button';
+import { AISuggestionChips } from './AISuggestionChips';
 import type { ThreadMessage, InboxConversation } from '@/lib/dashboard-v2/messages-queries';
 import { formatPhoneForDisplay } from '@/lib/dashboard-v2/customer';
 import { sendMessageAction } from '@/app/(dashboard)/dashboard/messages/actions';
@@ -49,6 +50,15 @@ export function Thread({ conversation, messages }: ThreadProps) {
   const [error, setError] = useState<string | null>(null);
   const [isSending, startSend] = useTransition();
   const bottomRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const lastMessage = messages.length > 0 ? messages[messages.length - 1]! : null;
+  const lastInbound = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i]!.direction === 'inbound') return messages[i]!;
+    }
+    return null;
+  }, [messages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: 'end' });
@@ -58,6 +68,17 @@ export function Thread({ conversation, messages }: ThreadProps) {
     setDraft('');
     setError(null);
   }, [conversation.id]);
+
+  function onPickSuggestion(text: string) {
+    setDraft(text);
+    // Focus + caret-to-end so the owner can immediately edit/append.
+    const ta = textareaRef.current;
+    if (ta) {
+      ta.focus();
+      const end = text.length;
+      ta.setSelectionRange(end, end);
+    }
+  }
 
   const grouped = groupByDay(messages);
 
@@ -130,8 +151,17 @@ export function Thread({ conversation, messages }: ThreadProps) {
             <span>{error}</span>
           </div>
         )}
+        <AISuggestionChips
+          conversationId={conversation.id}
+          lastInboundId={lastInbound?.id ?? null}
+          lastInboundAt={lastInbound?.created_at ?? null}
+          lastMessageDirection={lastMessage?.direction ?? null}
+          isComposing={draft.trim().length > 0}
+          onPick={onPickSuggestion}
+        />
         <div className="flex items-end gap-2.5">
           <textarea
+            ref={textareaRef}
             value={draft}
             onChange={(e) => setDraft(e.target.value)}
             onKeyDown={onKeyDown}
@@ -139,27 +169,15 @@ export function Thread({ conversation, messages }: ThreadProps) {
             rows={2}
             className="flex-1 resize-none rounded-lg border border-paper-border dark:border-ink-border bg-paper-surface dark:bg-ink-surface px-3.5 py-2.5 text-[13.5px] text-paper-text-1 dark:text-ink-text-1 placeholder:text-paper-text-3 dark:placeholder:text-ink-text-3 focus:outline-none focus:ring-2 focus:ring-gold/30 focus:border-gold"
           />
-          <div className="flex flex-col gap-1.5">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              icon={<Sparkles size={13} />}
-              disabled
-              title="Suggest reply — Stage 2"
-            >
-              Suggest
-            </Button>
-            <Button
-              type="submit"
-              variant="primary"
-              size="sm"
-              icon={<Send size={13} />}
-              disabled={isSending || draft.trim().length === 0}
-            >
-              {isSending ? 'Sending…' : 'Send'}
-            </Button>
-          </div>
+          <Button
+            type="submit"
+            variant="primary"
+            size="sm"
+            icon={<Send size={13} />}
+            disabled={isSending || draft.trim().length === 0}
+          >
+            {isSending ? 'Sending…' : 'Send'}
+          </Button>
         </div>
         <p className="mt-2 text-[11px] text-paper-text-3 dark:text-ink-text-3">
           Press <kbd className="font-mono">⌘↵</kbd> to send
