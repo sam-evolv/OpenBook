@@ -16,11 +16,16 @@ export default async function CatalogV2Page({
     ? (searchParams.tab as CatalogTabId)
     : 'services';
 
+  // `services` has no `created_at` column — ordering by it silently
+  // returned zero rows (PostgREST 42703 swallowed by the client + our
+  // `data ?? []` fallback). Owners saw an empty Catalog despite
+  // services existing. `sort_order` is the semantically-correct key
+  // anyway — owners can manually reorder services from the editor.
   const { data: servicesData } = await sb
     .from('services')
     .select('id, name, description, duration_minutes, price_cents, is_active')
     .eq('business_id', business.id)
-    .order('created_at', { ascending: true });
+    .order('sort_order', { ascending: true, nullsFirst: false });
   const services = (servicesData ?? []) as ServiceRow[];
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
