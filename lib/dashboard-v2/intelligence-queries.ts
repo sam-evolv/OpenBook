@@ -23,7 +23,7 @@ export interface HealthScorePayload {
   };
   highlights: {
     utilisationPercent: number;
-    retentionPercent: number;
+    retentionPercent: number | null; // null = <60 days of history
     monthlyRevenueCents: number;
     noShowRatePercent: number;
   };
@@ -71,6 +71,36 @@ function computeOpenMinutes(hours: HourRow[], daysBack: number): number {
 }
 
 /**
+ * Rolling cohort retention: of customers who booked during the cohort
+ * window, what % also booked during the returner window? Returns null
+ * when the cohort is empty (caller decides whether to show 0% or an
+ * "insufficient history" empty state).
+ */
+function cohortRetention(
+  bookings: BookingForScore[],
+  cohortStartMs: number,
+  cohortEndMs: number,
+  returnerStartMs: number,
+  returnerEndMs: number,
+): number | null {
+  const inRange = (b: BookingForScore, lo: number, hi: number): boolean => {
+    if (b.status === 'cancelled' || b.status === 'no_show') return false;
+    const t = new Date(b.starts_at).getTime();
+    return t >= lo && t < hi;
+  };
+  const cohort = new Set<string>();
+  const returners = new Set<string>();
+  for (const b of bookings) {
+    if (inRange(b, cohortStartMs, cohortEndMs)) cohort.add(b.customer_id);
+    if (inRange(b, returnerStartMs, returnerEndMs)) returners.add(b.customer_id);
+  }
+  if (cohort.size === 0) return null;
+  let returning = 0;
+  for (const cid of cohort) if (returners.has(cid)) returning++;
+  return (returning / cohort.size) * 100;
+}
+
+/**
  * Scores the window that starts `offset` days ago and extends 30 days
  * back from there. offset=0 → last 30 days; offset=30 → the prior 30.
  */
@@ -78,7 +108,7 @@ function scoreWindow(
   bookings: BookingForScore[],
   reviews: ReviewForScore[],
   openMinutes: number,
-  priorBookingsByCustomer: Map<string, number>,
+  retentionPercent: number | null,
   windowStartMs: number,
   windowEndMs: number,
 ): { score: number; components: HealthScorePayload['components'] } {
@@ -98,14 +128,10 @@ function scoreWindow(
     total === 0 ? 0 : Math.max(0, 100 - (cancelledOrNoShow.length / total) * 100);
   const showRateComponent = (showRatePercent / 100) * 25;
 
-  // Retention (25): % of non-cancelled window bookings from customers
-  // with ≥ 2 lifetime bookings.
-  const repeatCount = nonCancelled.filter(
-    (b) => (priorBookingsByCustomer.get(b.customer_id) ?? 0) >= 2,
-  ).length;
-  const retentionPercent =
-    nonCancelled.length === 0 ? 0 : (repeatCount / nonCancelled.length) * 100;
-  const retentionComponent = (retentionPercent / 100) * 25;
+  // Retention (25): rolling cohort retention, precomputed by the caller.
+  // null (insufficient history) scores as 0; the highlight tile renders
+  // an empty-state message instead of "0%".
+  const retentionComponent = ((retentionPercent ?? 0) / 100) * 25;
 
   // Utilisation (20): booked minutes / open minutes, capped at 100.
   const bookedMinutes = nonCancelled.reduce(
@@ -155,13 +181,16 @@ export async function loadHealthScore(
   const now = Date.now();
   const thirtyAgo = now - 30 * MS_PER_DAY;
   const sixtyAgo = now - 60 * MS_PER_DAY;
+  // 90-day window: needed so the prior-period score (used for the delta)
+  // can compute its own rolling retention against the 60-90d cohort.
+  const ninetyAgo = now - 90 * MS_PER_DAY;
 
-  const [bookingsRes, reviewsRes, hoursRes, priorCountsRes] = await Promise.all([
+  const [bookingsRes, reviewsRes, hoursRes] = await Promise.all([
     sb
       .from('bookings')
       .select('id, starts_at, ends_at, price_cents, status, customer_id, staff_id')
       .eq('business_id', businessId)
-      .gte('starts_at', new Date(sixtyAgo).toISOString())
+      .gte('starts_at', new Date(ninetyAgo).toISOString())
       .limit(5000),
     sb
       .from('reviews')
@@ -172,22 +201,17 @@ export async function loadHealthScore(
       .from('business_hours')
       .select('day_of_week, open_time, close_time, is_closed')
       .eq('business_id', businessId),
-    // Lifetime booking counts by customer — used by the retention component.
-    sb
-      .from('bookings')
-      .select('customer_id')
-      .eq('business_id', businessId)
-      .neq('status', 'cancelled'),
   ]);
 
   const bookings = (bookingsRes.data ?? []) as BookingForScore[];
   const reviews = (reviewsRes.data ?? []) as ReviewForScore[];
   const hours = (hoursRes.data ?? []) as HourRow[];
 
-  const priorCounts = new Map<string, number>();
-  for (const row of (priorCountsRes.data ?? []) as { customer_id: string }[]) {
-    priorCounts.set(row.customer_id, (priorCounts.get(row.customer_id) ?? 0) + 1);
-  }
+  // Rolling cohort retention. "Did customers come back?" beats the old
+  // lifetime-≥-2 check, which trivially hit 100% once a business had a few
+  // months of history.
+  const currentRetention = cohortRetention(bookings, sixtyAgo, thirtyAgo, thirtyAgo, now);
+  const priorRetention = cohortRetention(bookings, ninetyAgo, sixtyAgo, sixtyAgo, thirtyAgo);
 
   const thirtyDayBookingCount = bookings.filter(
     (b) =>
@@ -215,7 +239,7 @@ export async function loadHealthScore(
   const velocityComponent = (velocityPercent / 100) * 20;
 
   // Current window (last 30d).
-  const current = scoreWindow(bookings, reviews, openMinutes30, priorCounts, thirtyAgo, now);
+  const current = scoreWindow(bookings, reviews, openMinutes30, currentRetention, thirtyAgo, now);
   current.components.velocity = velocityComponent;
   const currentScore =
     current.score - (0 * 20) + velocityComponent; // velocity was 0 in scoreWindow; add in
@@ -227,7 +251,7 @@ export async function loadHealthScore(
   // window for show-rate / retention / utilisation only. Velocity carries
   // over because that's a rate-of-change component already.
   const priorOpenMinutes30 = openMinutes30; // schedule stable over 60 days typically
-  const prior = scoreWindow(bookings, reviews, priorOpenMinutes30, priorCounts, sixtyAgo, thirtyAgo);
+  const prior = scoreWindow(bookings, reviews, priorOpenMinutes30, priorRetention, sixtyAgo, thirtyAgo);
   const priorScore = prior.score; // velocity=0 for prior — not rendered, just delta
   const priorRounded = Math.round(priorScore);
 
@@ -249,11 +273,6 @@ export async function loadHealthScore(
   );
   const utilisationPercentCurrent =
     openMinutes30 === 0 ? 0 : Math.min(100, (bookedMinutesCurrent / openMinutes30) * 100);
-  const repeatCurrent = nonCancelledCurrent.filter(
-    (b) => (priorCounts.get(b.customer_id) ?? 0) >= 2,
-  ).length;
-  const retentionPercentCurrent =
-    nonCancelledCurrent.length === 0 ? 0 : (repeatCurrent / nonCancelledCurrent.length) * 100;
   const monthlyRevenueCurrent = nonCancelledCurrent.reduce((s, b) => s + b.price_cents, 0);
   const noShowRate =
     inCurrent.length === 0 ? 0 : (cancelledOrNoShowCurrent.length / inCurrent.length) * 100;
@@ -266,7 +285,7 @@ export async function loadHealthScore(
     components: current.components,
     highlights: {
       utilisationPercent: Math.round(utilisationPercentCurrent),
-      retentionPercent: Math.round(retentionPercentCurrent),
+      retentionPercent: currentRetention === null ? null : Math.round(currentRetention),
       monthlyRevenueCents: monthlyRevenueCurrent,
       noShowRatePercent: Math.round(noShowRate * 10) / 10,
     },
