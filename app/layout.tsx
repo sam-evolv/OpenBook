@@ -1,5 +1,14 @@
 import type { Metadata, Viewport } from 'next';
+import { Fraunces } from 'next/font/google';
 import './globals.css';
+
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  variable: '--font-fraunces',
+  weight: ['500', '600', '700'],
+  style: ['normal', 'italic'],
+  display: 'swap',
+});
 
 export const viewport: Viewport = {
   themeColor: '#080808',
@@ -53,7 +62,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className="antialiased">
+    <html lang="en" className={`${fraunces.variable} antialiased`}>
       <body className="bg-black text-white min-h-screen">{children}</body>
     </html>
   );
