@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { requireCurrentBusiness } from '@/lib/queries/business';
 import { sendWhatsAppMessage } from '@/lib/whatsapp-send';
+import { hasWhatsApp } from '@/lib/integrations';
 
 interface BusinessRow {
   id: string;
@@ -55,7 +56,9 @@ export async function sendMessageAction(input: {
   let sendStatus: 'sent' | 'failed' = 'failed';
   let sendError: string | null = null;
 
-  if (!business.whatsapp_phone_number_id) {
+  if (!hasWhatsApp()) {
+    sendError = 'WhatsApp messaging is not enabled on this OpenBook deployment.';
+  } else if (!business.whatsapp_phone_number_id) {
     sendError = 'WhatsApp number not configured for this business';
   } else {
     const result = await sendWhatsAppMessage({

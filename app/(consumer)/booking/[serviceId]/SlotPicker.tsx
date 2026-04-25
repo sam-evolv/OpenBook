@@ -27,6 +27,9 @@ export function SlotPicker({
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [customerName, setCustomerName] = useState('');
+  const [customerEmail, setCustomerEmail] = useState('');
+  const [customerPhone, setCustomerPhone] = useState('');
 
   const dates = useMemo(() => {
     const today = new Date();
@@ -60,6 +63,10 @@ export function SlotPicker({
 
   async function confirmBooking() {
     if (!selectedSlot || submitting) return;
+    if (!customerName.trim()) {
+      setError('Please enter your name.');
+      return;
+    }
     setSubmitting(true);
     setError(null);
 
@@ -71,6 +78,11 @@ export function SlotPicker({
           serviceId,
           businessId,
           startAt: selectedSlot,
+          customer: {
+            name: customerName.trim(),
+            email: customerEmail.trim(),
+            phone: customerPhone.trim(),
+          },
         }),
       });
 
@@ -192,6 +204,57 @@ export function SlotPicker({
             })}
           </div>
         )}
+      </div>
+
+      {/* Contact details */}
+      <div className="mt-8 px-5">
+        <h2 className="text-[11px] font-semibold tracking-[0.16em] text-white/40 uppercase mb-3">
+          Your details
+        </h2>
+        <div className="flex flex-col gap-2">
+          <input
+            type="text"
+            value={customerName}
+            onChange={(e) => setCustomerName(e.target.value)}
+            placeholder="Full name"
+            autoComplete="name"
+            className="
+              h-12 px-4 rounded-2xl text-[14px]
+              bg-white/[0.03] border border-white/[0.08]
+              text-white placeholder:text-white/35
+              focus:outline-none focus:border-white/25
+              transition
+            "
+          />
+          <input
+            type="email"
+            value={customerEmail}
+            onChange={(e) => setCustomerEmail(e.target.value)}
+            placeholder="Email (optional)"
+            autoComplete="email"
+            className="
+              h-12 px-4 rounded-2xl text-[14px]
+              bg-white/[0.03] border border-white/[0.08]
+              text-white placeholder:text-white/35
+              focus:outline-none focus:border-white/25
+              transition
+            "
+          />
+          <input
+            type="tel"
+            value={customerPhone}
+            onChange={(e) => setCustomerPhone(e.target.value)}
+            placeholder="Phone (optional)"
+            autoComplete="tel"
+            className="
+              h-12 px-4 rounded-2xl text-[14px]
+              bg-white/[0.03] border border-white/[0.08]
+              text-white placeholder:text-white/35
+              focus:outline-none focus:border-white/25
+              transition
+            "
+          />
+        </div>
       </div>
 
       {/* Sticky confirm */}

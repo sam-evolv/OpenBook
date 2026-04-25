@@ -9,6 +9,7 @@ import {
   writeCache,
 } from '@/lib/ai/suggest-reply-cache';
 import { summariseBusinessHours } from '@/lib/ai/business-hours-summary';
+import { hasOpenAI } from '@/lib/integrations';
 
 export const dynamic = 'force-dynamic';
 
@@ -75,6 +76,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ chips: [] });
   }
   if (!body?.conversationId) {
+    return NextResponse.json({ chips: [] });
+  }
+
+  // No OPENAI_API_KEY ⇒ silently hide the chips. The client treats
+  // empty arrays as "nothing to suggest" so the UI stays clean.
+  if (!hasOpenAI()) {
     return NextResponse.json({ chips: [] });
   }
 

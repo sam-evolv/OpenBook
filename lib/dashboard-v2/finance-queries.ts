@@ -1,13 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 import { IRISH_SERVICES_VAT_THRESHOLD_CENTS } from './vat';
+import { hasStripe, requireEnv } from '@/lib/integrations';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
 function getStripe(): Stripe {
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) throw new Error('STRIPE_SECRET_KEY is not configured');
-  return new Stripe(key, { apiVersion: '2026-03-25.dahlia' });
+  return new Stripe(requireEnv('STRIPE_SECRET_KEY'), { apiVersion: '2026-03-25.dahlia' });
 }
 
 // ============================================================================
@@ -240,7 +239,13 @@ export async function loadFinance(
   const payoutsById = new Map<string, { arrivalDate: string }>();
   const refundsByPaymentIntent = new Map<string, number>();
 
-  const connected = Boolean(business.stripe_account_id && business.stripe_charges_enabled);
+  // Gate the entire Stripe path on env presence too — a deploy without
+  // STRIPE_SECRET_KEY but with stale stripe_account_id rows on businesses
+  // would otherwise crash the page when we tried to instantiate the SDK.
+  const stripeConfigured = hasStripe();
+  const connected = Boolean(
+    stripeConfigured && business.stripe_account_id && business.stripe_charges_enabled,
+  );
 
   if (connected && business.stripe_account_id) {
     const stripe = getStripe();

@@ -1,8 +1,9 @@
 import OpenAI from 'openai'
+import { requireEnv } from '@/lib/integrations'
 
 let _openai: OpenAI | null = null
 function getOpenAI() {
-  if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  if (!_openai) _openai = new OpenAI({ apiKey: requireEnv('OPENAI_API_KEY') })
   return _openai
 }
 

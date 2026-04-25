@@ -5,6 +5,7 @@ import type {
   ChatCompletionTool,
 } from 'openai/resources/chat/completions';
 import { supabaseAdmin } from '@/lib/supabase';
+import { hasOpenAI, requireEnv } from '@/lib/integrations';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -12,9 +13,7 @@ export const dynamic = 'force-dynamic';
 let _openai: OpenAI | null = null;
 function getOpenAI(): OpenAI {
   if (!_openai) {
-    const key = process.env.OPENAI_API_KEY;
-    if (!key) throw new Error('OPENAI_API_KEY is not configured');
-    _openai = new OpenAI({ apiKey: key });
+    _openai = new OpenAI({ apiKey: requireEnv('OPENAI_API_KEY') });
   }
   return _openai;
 }
@@ -220,6 +219,17 @@ export async function POST(req: NextRequest) {
 
     if (!Array.isArray(messages) || messages.length === 0) {
       return NextResponse.json({ error: 'No messages' }, { status: 400 });
+    }
+
+    if (!hasOpenAI()) {
+      // Free / manual deploy without OpenAI configured. Return a friendly
+      // fallback so the consumer assistant UI degrades cleanly instead of
+      // throwing a 500.
+      return NextResponse.json({
+        reply:
+          'The assistant is taking a break right now — try browsing the businesses on the home tab.',
+        businesses: [],
+      });
     }
 
     const openai = getOpenAI();

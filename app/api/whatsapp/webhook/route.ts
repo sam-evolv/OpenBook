@@ -3,19 +3,26 @@ import crypto from 'crypto'
 import { createClient } from '@supabase/supabase-js'
 import { processWhatsAppMessage } from '@/lib/whatsapp-brain'
 import { sendWhatsAppMessage } from '@/lib/whatsapp-send'
+import { hasOpenAI, hasWhatsApp } from '@/lib/integrations'
 
 /**
  * GET: Meta's subscription verification dance — echo the challenge
- * back if the verify token matches. Unchanged from the original.
+ * back if the verify token matches. When the WhatsApp integration
+ * isn't configured at all, treat unsigned requests as 404 so the
+ * route doesn't accidentally accept arbitrary callers.
  */
 export async function GET(req: NextRequest) {
+  const verifyToken = process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN
+  if (!verifyToken) {
+    return new Response('Not configured', { status: 404 })
+  }
+
   const url = new URL(req.url)
   const mode = url.searchParams.get('hub.mode')
   const token = url.searchParams.get('hub.verify_token')
   const challenge = url.searchParams.get('hub.challenge')
 
-  if (mode === 'subscribe' &&
-      token === process.env.WHATSAPP_WEBHOOK_VERIFY_TOKEN) {
+  if (mode === 'subscribe' && token === verifyToken) {
     return new Response(challenge, {
       status: 200,
       headers: { 'Content-Type': 'text/plain' }
@@ -63,6 +70,13 @@ function verifyMetaSignature(rawBody: string, headerValue: string | null): boole
 }
 
 export async function POST(req: NextRequest) {
+  // If WhatsApp isn't configured on this deploy, refuse the call. The
+  // webhook should only be reachable for production businesses with
+  // Meta credentials wired up.
+  if (!hasWhatsApp()) {
+    return new Response('Not configured', { status: 404 })
+  }
+
   // Read the raw body text first — we need it verbatim for HMAC.
   const rawBody = await req.text()
   const signatureHeader = req.headers.get('x-hub-signature-256')
@@ -145,7 +159,17 @@ export async function POST(req: NextRequest) {
       .order('created_at', { ascending: false })
       .limit(10)
 
-    // Process with AI brain
+    // Process with AI brain — only if OpenAI is configured. Otherwise
+    // log the inbound (already saved above) and skip the auto-reply so
+    // the conversation still appears in the dashboard inbox for the
+    // owner to handle manually.
+    if (!hasOpenAI()) {
+      console.info(
+        `WA_WEBHOOK_INBOUND_LOGGED conversation=${conversation?.id} — auto-reply skipped (OPENAI_API_KEY not configured)`,
+      )
+      return new Response('OK', { status: 200 })
+    }
+
     const reply = await processWhatsAppMessage({
       business,
       conversation: conversation || {

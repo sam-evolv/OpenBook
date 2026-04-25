@@ -34,9 +34,15 @@ export function ConnectStripePrompt({ businessId }: ConnectStripePromptProps) {
           setError(body.error ?? 'Failed to start Stripe connect');
           return;
         }
-        const { url } = await res.json();
-        if (url) {
-          window.location.href = url;
+        const data = await res.json();
+        if (data?.disabled) {
+          setError(
+            'Online payments are not enabled on this OpenBook deployment yet. You can keep taking bookings — your dashboard works without Stripe.',
+          );
+          return;
+        }
+        if (data?.url) {
+          window.location.href = data.url;
         } else {
           setError('No onboarding URL returned by Stripe.');
         }

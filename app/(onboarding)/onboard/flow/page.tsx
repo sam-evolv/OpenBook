@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getCurrentOwner, createSupabaseServerClient } from '@/lib/supabase-server';
+import { hasStripe } from '@/lib/integrations';
 import { OnboardingFlow } from './OnboardingFlow';
 
 export const dynamic = 'force-dynamic';
@@ -22,6 +23,7 @@ export default async function FlowPage() {
       owner={owner}
       initialBusiness={existingBusiness}
       startAt={owner.onboarding_step ?? 0}
+      stripeAvailable={hasStripe()}
     />
   );
 }

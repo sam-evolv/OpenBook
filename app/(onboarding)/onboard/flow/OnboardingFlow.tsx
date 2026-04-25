@@ -88,9 +88,10 @@ interface Props {
   owner: any;
   initialBusiness: any;
   startAt?: number;
+  stripeAvailable?: boolean;
 }
 
-export function OnboardingFlow({ owner, initialBusiness, startAt = 0 }: Props) {
+export function OnboardingFlow({ owner, initialBusiness, startAt = 0, stripeAvailable = false }: Props) {
   const [step, setStep] = useState(startAt);
   const [state, setState] = useState<OnboardingState>(() => {
     if (!initialBusiness) return { ...emptyState, founder_name: owner.full_name ?? '' };
@@ -216,7 +217,16 @@ export function OnboardingFlow({ owner, initialBusiness, startAt = 0 }: Props) {
       <div className="mx-auto max-w-6xl px-5 pb-12">
         <div className={`grid gap-8 ${showPreview ? 'lg:grid-cols-[1fr_380px]' : 'lg:grid-cols-1 lg:max-w-xl lg:mx-auto'}`}>
           <div className="min-h-[60vh]">
-            <StepComponent state={state} update={update} next={next} />
+            {step === 7 ? (
+              <Step8Payments
+                state={state}
+                update={update}
+                next={next}
+                stripeAvailable={stripeAvailable}
+              />
+            ) : (
+              <StepComponent state={state} update={update} next={next} />
+            )}
           </div>
           {showPreview && (
             <div className="hidden lg:block">
