@@ -8,32 +8,38 @@
 export function HomeWallpaper() {
   return (
     <>
-      {/* Base */}
+      {/* Base — top-down warm-bronze ramp into a near-black floor with
+          warmth in the red channel (#050403 not #000000). The previous
+          #0a0a0f → #000000 sat below the eye's perception threshold for
+          warmth; this gradient does real top-half work. */}
       <div
         aria-hidden
         className="fixed inset-0 -z-20"
         style={{
           background:
-            'radial-gradient(at 20% 0%, #0a0a0f 0%, #000000 70%), #000000',
+            'radial-gradient(ellipse 120% 80% at 50% 0%, #1F1A12 0%, #110E09 35%, #0A0806 70%, #050403 100%)',
         }}
       />
 
-      {/* Gold aurora — slow drift */}
+      {/* Gold aurora — top-centre, the thing your eye should land on first */}
       <div
         aria-hidden
-        className="fixed -top-40 -left-20 w-[70vw] h-[70vw] -z-10 opacity-60 pointer-events-none animate-float"
+        className="fixed -top-60 left-1/2 -translate-x-1/2 w-[90vw] h-[90vw] -z-10 opacity-50 pointer-events-none animate-float"
         style={{
           background:
-            'radial-gradient(circle, rgba(212, 175, 55, 0.18) 0%, transparent 60%)',
-          filter: 'blur(80px)',
+            'radial-gradient(circle, rgba(212, 175, 55, 0.30) 0%, rgba(212, 175, 55, 0.10) 35%, transparent 65%)',
+          filter: 'blur(120px)',
         }}
       />
+
+      {/* Bottom-left bronze pool — diagonal warmth axis from top-centre
+          down. Replaces the previous off-brand purple aurora. */}
       <div
         aria-hidden
-        className="fixed top-40 -right-20 w-[60vw] h-[60vw] -z-10 opacity-40 pointer-events-none animate-gentle-pulse"
+        className="fixed -bottom-40 -left-40 w-[70vw] h-[70vw] -z-10 opacity-40 pointer-events-none animate-gentle-pulse"
         style={{
           background:
-            'radial-gradient(circle, rgba(140, 90, 200, 0.15) 0%, transparent 60%)',
+            'radial-gradient(circle, rgba(180, 130, 60, 0.25) 0%, transparent 60%)',
           filter: 'blur(100px)',
           animationDelay: '2s',
         }}
