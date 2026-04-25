@@ -19,30 +19,43 @@ interface TileProps {
   label: string;
   value: string;
   benchmarkLabel: string;
+  description: string;
   better: boolean;
   same?: boolean;
+  unavailable?: string | null;
 }
 
-function Tile({ label, value, benchmarkLabel, better, same }: TileProps) {
+function Tile({ label, value, benchmarkLabel, description, better, same, unavailable }: TileProps) {
   return (
     <div className="rounded-lg bg-paper-surface2 dark:bg-ink-surface2 border border-paper-border dark:border-ink-border p-3.5">
       <div className="text-[10.5px] font-medium uppercase tracking-[0.3px] text-paper-text-3 dark:text-ink-text-3">
         {label}
       </div>
-      <div className="mt-1.5 text-[22px] font-semibold tracking-tight tabular-nums text-paper-text-1 dark:text-ink-text-1">
-        {value}
-      </div>
-      <div
-        className={cn(
-          'mt-1 text-[10.5px] font-medium',
-          same
-            ? 'text-paper-text-3 dark:text-ink-text-3'
-            : better
-              ? 'text-emerald-500 dark:text-emerald-400'
-              : 'text-red-500 dark:text-red-400',
-        )}
-      >
-        {same ? '=' : better ? '↑' : '↓'} vs avg {benchmarkLabel}
+      {unavailable ? (
+        <div className="mt-1.5 text-[12.5px] leading-snug text-paper-text-2 dark:text-ink-text-2">
+          {unavailable}
+        </div>
+      ) : (
+        <>
+          <div className="mt-1.5 text-[22px] font-semibold tracking-tight tabular-nums text-paper-text-1 dark:text-ink-text-1">
+            {value}
+          </div>
+          <div
+            className={cn(
+              'mt-1 text-[10.5px] font-medium',
+              same
+                ? 'text-paper-text-3 dark:text-ink-text-3'
+                : better
+                  ? 'text-emerald-500 dark:text-emerald-400'
+                  : 'text-red-500 dark:text-red-400',
+            )}
+          >
+            {same ? '=' : better ? '↑' : '↓'} vs avg {benchmarkLabel}
+          </div>
+        </>
+      )}
+      <div className="mt-2 text-[10.5px] leading-snug text-paper-text-3 dark:text-ink-text-3">
+        {description}
       </div>
     </div>
   );
@@ -65,6 +78,7 @@ export function HealthScoreHero({ health, category }: HealthScoreHeroProps) {
   const delta =
     health.previousScore === null ? null : health.score! - health.previousScore;
 
+  const retentionPct = health.highlights.retentionPercent;
   const highlights = [
     {
       label: 'Utilisation',
@@ -73,14 +87,18 @@ export function HealthScoreHero({ health, category }: HealthScoreHeroProps) {
       raw: health.highlights.utilisationPercent,
       inverted: false,
       format: (n: number) => `${n}%`,
+      description: 'Booked time vs open business hours, last 30 days',
+      unavailable: null as string | null,
     },
     {
       label: 'Retention',
-      value: `${health.highlights.retentionPercent}%`,
+      value: retentionPct === null ? '—' : `${retentionPct}%`,
       benchmarkValue: benchmark.showRatePercent, // using show-rate bench as proxy — see brief
-      raw: health.highlights.retentionPercent,
+      raw: retentionPct ?? 0,
       inverted: false,
       format: (n: number) => `${n}%`,
+      description: 'Customers who booked in the last 30 days, having booked the prior month',
+      unavailable: retentionPct === null ? 'Need 60 days of bookings' : null,
     },
     {
       label: 'MRR',
@@ -89,6 +107,8 @@ export function HealthScoreHero({ health, category }: HealthScoreHeroProps) {
       raw: health.highlights.monthlyRevenueCents / 100,
       inverted: false,
       format: (n: number) => `€${Math.round(n).toLocaleString()}`,
+      description: 'Monthly recurring revenue, last 30 days',
+      unavailable: null as string | null,
     },
     {
       label: 'No-show rate',
@@ -97,6 +117,8 @@ export function HealthScoreHero({ health, category }: HealthScoreHeroProps) {
       raw: health.highlights.noShowRatePercent,
       inverted: true, // lower is better
       format: (n: number) => `${n}%`,
+      description: 'Cancelled or no-show bookings, last 30 days',
+      unavailable: null as string | null,
     },
   ];
 
@@ -158,8 +180,10 @@ export function HealthScoreHero({ health, category }: HealthScoreHeroProps) {
                   label={h.label}
                   value={h.value}
                   benchmarkLabel={h.format(h.benchmarkValue)}
+                  description={h.description}
                   better={better}
                   same={same}
+                  unavailable={h.unavailable}
                 />
               );
             })}
