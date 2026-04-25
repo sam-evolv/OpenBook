@@ -19,11 +19,13 @@
   --brand-gold-deep: #8b6428;
   --brand-black: #000000;
 
-  /* Material surfaces — layered depth like iOS */
-  --mat-floor: #000000;        /* background base */
-  --mat-surface-1: #0e0e10;    /* lifted 1px */
-  --mat-surface-2: #16161a;    /* lifted card */
-  --mat-surface-3: #1f1f24;    /* lifted modal */
+  /* Material surfaces — layered depth like iOS.
+     Values mirror tailwind.config.ts colors.surface.* — keep in sync.
+     Floor is #0B0B0D not #000000 so highlights/shadows have headroom. */
+  --mat-floor: #0B0B0D;        /* background base */
+  --mat-surface-1: #131316;    /* lifted 1px */
+  --mat-surface-2: #1B1B20;    /* lifted card */
+  --mat-surface-3: #25252B;    /* lifted modal */
   --mat-glass-thin: rgba(30, 30, 34, 0.55);
   --mat-glass-thick: rgba(22, 22, 26, 0.82);
 
@@ -53,6 +55,13 @@ body {
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
   letter-spacing: -0.011em;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 /* Real display typography — tight tracking at size, looser at body */
@@ -170,49 +179,9 @@ body {
   }
 }
 
-:root {
-  /* OpenBook brand. Single source of truth. */
-  --ob-bg: #080808;
-  --ob-fg: #ffffff;
-  --ob-gold: #d4af37;
-  --ob-gold-soft: rgba(212, 175, 55, 0.14);
-  --ob-gold-line: rgba(212, 175, 55, 0.28);
-
-  /* Surface colours derived from bg. */
-  --ob-surface-1: rgba(255, 255, 255, 0.04);
-  --ob-surface-2: rgba(255, 255, 255, 0.06);
-  --ob-line: rgba(255, 255, 255, 0.08);
-  --ob-line-strong: rgba(255, 255, 255, 0.14);
-
-  /* Text tiers. */
-  --ob-text-1: rgba(255, 255, 255, 0.98);
-  --ob-text-2: rgba(255, 255, 255, 0.62);
-  --ob-text-3: rgba(255, 255, 255, 0.42);
-
-  /* Safe-area insets — used everywhere instead of hardcoded padding. */
-  --ob-safe-top: env(safe-area-inset-top, 0px);
-  --ob-safe-bottom: env(safe-area-inset-bottom, 0px);
-  --ob-safe-left: env(safe-area-inset-left, 0px);
-  --ob-safe-right: env(safe-area-inset-right, 0px);
-}
-
-html {
-  -webkit-text-size-adjust: 100%;
-  text-size-adjust: 100%;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
-
-html,
 body {
-  background: var(--ob-bg);
-  color: var(--ob-fg);
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior-y: contain;
-}
-
-body {
-  padding: var(--ob-safe-top) var(--ob-safe-right) var(--ob-safe-bottom) var(--ob-safe-left);
+  padding: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px)
+    env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
   min-height: 100dvh;
 }
 

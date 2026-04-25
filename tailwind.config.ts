@@ -16,13 +16,32 @@ const config: Config = {
           soft: 'rgba(212, 175, 55, 0.12)',
           border: 'rgba(212, 175, 55, 0.25)',
         },
+        // Single source of truth for dark-surface tones. Five-step ramp,
+        // ~+8 HSL lightness per step, warmer than the previous cool-blue
+        // ink.* values (red channel +3 across the board). Floor is #0B0B0D
+        // not #000000 so highlights and shadows have headroom to register.
+        surface: {
+          0: '#0B0B0D',
+          1: '#131316',
+          2: '#1B1B20',
+          3: '#25252B',
+          4: '#33333A',
+        },
+        border: {
+          weak: 'rgba(255, 255, 255, 0.06)',
+          DEFAULT: 'rgba(255, 255, 255, 0.10)',
+          strong: 'rgba(255, 255, 255, 0.16)',
+        },
+        // @deprecated — alias of surface.* / border.*. Kept so the 500+
+        // existing `bg-ink-surface` / `border-ink-border` references keep
+        // compiling. Reach for surface.* / border.* in new code.
         ink: {
-          bg: '#08090B',
-          surface: '#0F1115',
-          surface2: '#161921',
-          surface3: '#1C2029',
-          border: '#1E2230',
-          borderStrong: '#2A2F3E',
+          bg: '#0B0B0D',
+          surface: '#131316',
+          surface2: '#1B1B20',
+          surface3: '#25252B',
+          border: 'rgba(255, 255, 255, 0.10)',
+          borderStrong: 'rgba(255, 255, 255, 0.16)',
         },
         paper: {
           bg: '#FAFAFA',
