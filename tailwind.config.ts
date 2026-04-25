@@ -65,6 +65,9 @@ const config: Config = {
       fontFamily: {
         sans: ['var(--font-geist-sans)', 'system-ui', 'sans-serif'],
         mono: ['var(--font-geist-mono)', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
+        // Fraunces — for moments that should feel magazine-printed (business
+        // names, service titles). Wired in app/layout.tsx via next/font.
+        serif: ['var(--font-fraunces)', 'Georgia', 'ui-serif', 'serif'],
       },
       boxShadow: {
         'card-dark': '0 1px 2px rgba(0, 0, 0, 0.4)',
