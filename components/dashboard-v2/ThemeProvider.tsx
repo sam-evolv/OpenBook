@@ -21,13 +21,13 @@ export function useTheme() {
 interface ThemeProviderProps {
   children: ReactNode;
   initialMode?: ThemeMode;
+  className?: string;
 }
 
-export function ThemeProvider({ children, initialMode = 'dark' }: ThemeProviderProps) {
+export function ThemeProvider({ children, initialMode = 'dark', className }: ThemeProviderProps) {
   const [mode, setModeState] = useState<ThemeMode>(initialMode);
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', mode);
     document.cookie = `theme=${mode}; path=/; max-age=31536000; samesite=lax`;
   }, [mode]);
 
@@ -35,6 +35,10 @@ export function ThemeProvider({ children, initialMode = 'dark' }: ThemeProviderP
   const toggle = () => setModeState((m) => (m === 'dark' ? 'light' : 'dark'));
 
   return (
-    <ThemeContext.Provider value={{ mode, toggle, setMode }}>{children}</ThemeContext.Provider>
+    <ThemeContext.Provider value={{ mode, toggle, setMode }}>
+      <div data-theme={mode} className={className}>
+        {children}
+      </div>
+    </ThemeContext.Provider>
   );
 }

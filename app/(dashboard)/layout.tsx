@@ -69,25 +69,23 @@ export default async function DashboardLayout({
   const unreadMessagesCount = await countUnreadMessages(business.id);
 
   return (
-    <div
-      data-theme={theme}
+    <ThemeProvider
+      initialMode={theme}
       className={`${GeistSans.variable} ${GeistMono.variable} font-sans min-h-[100dvh] bg-paper-bg text-paper-text-1 dark:bg-ink-bg dark:text-ink-text-1`}
     >
-      <ThemeProvider initialMode={theme}>
-        <div className="flex min-h-[100dvh]">
-          <Sidebar
-            businessName={business.name}
-            businessSlug={business.slug}
-            userName={ownerName}
-            userInitials={initials}
-            plan="Free"
-            unreadMessagesCount={unreadMessagesCount}
-            upcomingBookingsCount={0}
-            hasLiveFlashSale={false}
-          />
-          <main className="flex-1 min-w-0 overflow-y-auto">{children}</main>
-        </div>
-      </ThemeProvider>
-    </div>
+      <div className="flex min-h-[100dvh]">
+        <Sidebar
+          businessName={business.name}
+          businessSlug={business.slug}
+          userName={ownerName}
+          userInitials={initials}
+          plan="Free"
+          unreadMessagesCount={unreadMessagesCount}
+          upcomingBookingsCount={0}
+          hasLiveFlashSale={false}
+        />
+        <main className="flex-1 min-w-0 overflow-y-auto">{children}</main>
+      </div>
+    </ThemeProvider>
   );
 }
