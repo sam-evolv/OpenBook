@@ -44,9 +44,16 @@
   --ease-apple-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
+/* Floor on html only so body stays transparent — fixed/-z wallpapers
+   like HomeWallpaper need to paint between html bg and body content
+   without the body's own bg-color blocking them. Routes without their
+   own bg inherit the html floor and stay visually identical. */
+html {
+  background: var(--mat-floor);
+}
+
 html,
 body {
-  background: var(--mat-floor);
   color: var(--label-1);
   font-family: var(--font-text);
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11', 'ss01', 'ss02';
