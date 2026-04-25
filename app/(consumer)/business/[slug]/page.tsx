@@ -28,7 +28,7 @@ export default async function BusinessPage({ params, searchParams }: Props) {
       .select('*')
       .eq('business_id', business.id)
       .eq('is_active', true)
-      .order('created_at', { ascending: true }),
+      .order('sort_order', { ascending: true, nullsFirst: false }),
     sb
       .from('business_hours')
       .select('*')
