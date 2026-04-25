@@ -38,12 +38,16 @@ export interface CustomersClientProps {
 
 function timeAgo(iso: string | null): string {
   if (!iso) return '—';
-  const days = Math.floor((Date.now() - new Date(iso).getTime()) / (24 * 60 * 60 * 1000));
-  if (days === 0) return 'today';
-  if (days === 1) return 'yesterday';
+  const ts = new Date(iso).getTime();
+  // last_booking_at can sit in the future when a customer has an upcoming
+  // appointment — abs the diff so the column never shows a minus sign.
+  const diffMs = Math.abs(Date.now() - ts);
+  const hours = Math.floor(diffMs / (60 * 60 * 1000));
+  if (hours < 1) return 'just now';
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(diffMs / (24 * 60 * 60 * 1000));
   if (days < 7) return `${days}d ago`;
-  if (days < 30) return `${Math.floor(days / 7)}w ago`;
-  return `${Math.floor(days / 30)}mo ago`;
+  return new Date(iso).toLocaleDateString('en-IE', { month: 'short', day: 'numeric' });
 }
 
 function cohortTone(c: CustomerRow['cohort']): 'success' | 'info' | 'warning' | 'danger' {
