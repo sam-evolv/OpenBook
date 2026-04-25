@@ -176,6 +176,11 @@ export function CatalogClient({
                 key={t.id}
                 type="button"
                 onClick={() => goToTab(t.id)}
+                title={
+                  t.live
+                    ? undefined
+                    : 'Coming with Phase 4.5 — your Pro plan will include this at no extra cost.'
+                }
                 className={cn(
                   'relative flex items-center gap-2 px-4 py-2.5 text-[13px] font-medium transition-colors',
                   active

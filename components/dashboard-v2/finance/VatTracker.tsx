@@ -40,7 +40,7 @@ export function VatTracker({ vat }: { vat: FinancePayload['vat'] }) {
             {formatPrice(vat.accruedCents)}
           </div>
           <div className="mt-1.5 text-[12px] text-paper-text-2 dark:text-ink-text-2">
-            of {formatPrice(vat.thresholdCents)} services threshold
+            Rolling 12 months of {formatPrice(vat.thresholdCents)} services threshold
           </div>
           <div className="mt-3 h-1.5 rounded-full bg-paper-surface3 dark:bg-ink-surface3 overflow-hidden">
             <div
@@ -52,7 +52,7 @@ export function VatTracker({ vat }: { vat: FinancePayload['vat'] }) {
             />
           </div>
           <div className="mt-2 text-[11.5px] text-paper-text-3 dark:text-ink-text-3">
-            Rolling 12 months · updated on every load
+            Updated on every load
           </div>
         </div>
         <div className="p-5">

@@ -134,8 +134,13 @@ export function HealthScoreHero({ health, category }: HealthScoreHeroProps) {
                 ) : (
                   <Minus size={12} />
                 )}
-                {delta > 0 ? '+' : ''}
-                {delta} point{Math.abs(delta) === 1 ? '' : 's'} this month
+                <span>
+                  {delta > 0 ? '+' : ''}
+                  {delta} point{Math.abs(delta) === 1 ? '' : 's'}
+                  <span className="font-normal text-paper-text-3 dark:text-ink-text-3">
+                    {' '}from {health.previousScore} last month
+                  </span>
+                </span>
               </div>
             )}
             <div className="mt-3 text-[12.5px] leading-relaxed text-paper-text-2 dark:text-ink-text-2">

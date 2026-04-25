@@ -179,7 +179,7 @@ export function Thread({ conversation, messages }: ThreadProps) {
             {isSending ? 'Sending…' : 'Send'}
           </Button>
         </div>
-        <p className="mt-2 text-[11px] text-paper-text-3 dark:text-ink-text-3">
+        <p className="mt-2 text-[11px] text-paper-text-3 dark:text-ink-text-3 hidden md:block">
           Press <kbd className="font-mono">⌘↵</kbd> to send
         </p>
       </form>

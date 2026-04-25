@@ -324,13 +324,11 @@ function BookingCell({
         color: 'inherit',
       }}
     >
-      <div className="flex items-center gap-1 mb-0.5">
-        <div className="text-[11.5px] font-semibold leading-tight text-paper-text-1 dark:text-ink-text-1 truncate">
-          {booking.customer.display_name.split(' ')[0]}
-        </div>
+      <div className="text-[11.5px] font-semibold leading-tight text-paper-text-1 dark:text-ink-text-1 truncate mb-0.5">
+        {booking.customer.display_name.split(' ')[0]}
       </div>
-      <div className="flex items-center justify-between gap-1 text-[10.5px] leading-tight text-paper-text-2 dark:text-ink-text-2">
-        <span className="truncate">
+      <div className="flex items-center justify-between gap-1 text-[10.5px] leading-tight text-paper-text-2 dark:text-ink-text-2 min-w-0">
+        <span className="truncate min-w-0">
           {booking.service.name ?? '—'} · {booking.price_cents === 0 ? 'Free' : formatPrice(booking.price_cents)}
         </span>
         {staff && staffFilter === 'all' && (
