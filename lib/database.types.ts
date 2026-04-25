@@ -21,6 +21,7 @@ export type Database = {
           data_snapshot: Json | null
           dismissed: boolean
           generated_at: string
+          generated_by: string | null
           headline: string
           id: string
           insight_type: string
@@ -32,6 +33,7 @@ export type Database = {
           data_snapshot?: Json | null
           dismissed?: boolean
           generated_at?: string
+          generated_by?: string | null
           headline: string
           id?: string
           insight_type: string
@@ -43,6 +45,7 @@ export type Database = {
           data_snapshot?: Json | null
           dismissed?: boolean
           generated_at?: string
+          generated_by?: string | null
           headline?: string
           id?: string
           insight_type?: string
