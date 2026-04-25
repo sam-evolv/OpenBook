@@ -23,7 +23,7 @@ async function getBusinesses(): Promise<Business[]> {
 export default async function ExplorePage() {
   const businesses = await getBusinesses();
   return (
-    <main className="min-h-[100dvh] bg-[#050505] text-white antialiased">
+    <main className="min-h-[100dvh] text-white antialiased">
       <ConsumerHeader />
       <Suspense fallback={null}>
         <ExploreClient businesses={businesses} />
