@@ -79,13 +79,52 @@ export function SlotPicker({
         throw new Error(data?.error ?? 'Could not create booking');
       }
 
-      const data = await res.json();
+      const data = (await res.json()) as {
+        bookingId: string;
+        requires_payment: boolean;
+      };
+
+      // Cash / free path — booking is already confirmed.
+      if (!data.requires_payment) {
+        router.push(`/booking/confirm?id=${data.bookingId}`);
+        return;
+      }
+
+      // Paid path — ask the server for a Stripe Checkout URL.
+      const checkoutRes = await fetch('/api/checkout/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ bookingId: data.bookingId }),
+      });
+
+      if (!checkoutRes.ok) {
+        const errBody = await checkoutRes.json().catch(() => ({}));
+        throw new Error(
+          errBody?.error ?? 'Could not start payment. Please try again.'
+        );
+      }
+
+      const checkoutData = (await checkoutRes.json()) as {
+        checkout_url: string | null;
+      };
+
+      if (checkoutData.checkout_url) {
+        // Full redirect — Stripe is a separate domain, not an SPA route.
+        window.location.href = checkoutData.checkout_url;
+        return;
+      }
+
+      // Race-edge: business state changed between booking creation and
+      // checkout-session creation, so checkout/create decided no payment
+      // was needed after all. Fall through to the confirm page.
       router.push(`/booking/confirm?id=${data.bookingId}`);
     } catch (err: any) {
       setError(err?.message ?? 'Something went wrong');
-    } finally {
       setSubmitting(false);
     }
+    // Note: on success paths we navigate away (router.push or window.location),
+    // so we deliberately don't reset `submitting` — the spinner keeps spinning
+    // until the page unloads.
   }
 
   return (
