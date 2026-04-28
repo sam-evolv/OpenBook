@@ -1024,6 +1024,38 @@ export type Database = {
           },
         ]
       }
+      stripe_events: {
+        Row: {
+          event_id: string
+          event_type: string
+          processed_at: string | null
+          received_at: string
+          related_booking: string | null
+        }
+        Insert: {
+          event_id: string
+          event_type: string
+          processed_at?: string | null
+          received_at?: string
+          related_booking?: string | null
+        }
+        Update: {
+          event_id?: string
+          event_type?: string
+          processed_at?: string | null
+          received_at?: string
+          related_booking?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "stripe_events_related_booking_fkey"
+            columns: ["related_booking"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       waitlist: {
         Row: {
           business_id: string
