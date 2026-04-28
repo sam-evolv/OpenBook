@@ -1,14 +1,9 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
+import { getStripe } from '@/lib/stripe';
 import { IRISH_SERVICES_VAT_THRESHOLD_CENTS } from './vat';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
-
-function getStripe(): Stripe {
-  const key = process.env.STRIPE_SECRET_KEY;
-  if (!key) throw new Error('STRIPE_SECRET_KEY is not configured');
-  return new Stripe(key, { apiVersion: '2026-03-25.dahlia' });
-}
 
 // ============================================================================
 // Types
