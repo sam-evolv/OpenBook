@@ -31,7 +31,7 @@ async function getBooking(id: string): Promise<BookingWithDetails | null> {
 export default async function ConfirmPage({
   searchParams,
 }: {
-  searchParams: { id?: string };
+  searchParams: { id?: string; cancelled?: string; session_id?: string };
 }) {
   if (!searchParams.id) notFound();
   const booking = await getBooking(searchParams.id);
@@ -69,6 +69,8 @@ export default async function ConfirmPage({
       <ConfirmClient
         booking={{
           id: booking.id,
+          status: booking.status ?? 'confirmed',
+          serviceId: booking.service_id,
           businessSlug: booking.businesses.slug,
           businessName: booking.businesses.name,
           businessCoverUrl: booking.businesses.cover_image_url ?? null,
@@ -81,6 +83,7 @@ export default async function ConfirmPage({
           timeLabel,
           tileColour: colour,
         }}
+        cancelled={searchParams.cancelled === '1'}
       />
 
       <BottomTabBar />

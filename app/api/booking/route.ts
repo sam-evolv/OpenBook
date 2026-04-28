@@ -13,6 +13,13 @@ export const dynamic = 'force-dynamic';
  * Creates a booking. If no customer session exists, generates a guest
  * customer row and sets ob_customer_id cookie. Validates the slot is
  * still free before inserting.
+ *
+ * Status decision:
+ *   - Connect-ready business + paid service → status='awaiting_payment'
+ *     and the client must complete Stripe Checkout. The webhook flips
+ *     it to 'confirmed' on payment success.
+ *   - Otherwise (no Connect, charges disabled, or free service) →
+ *     status='confirmed' immediately (the cash/free fallback).
  */
 export async function POST(req: NextRequest) {
   try {
@@ -39,15 +46,26 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Service not available' }, { status: 404 });
     }
 
+    const { data: business } = await sb
+      .from('businesses')
+      .select('id, stripe_account_id, stripe_charges_enabled')
+      .eq('id', businessId)
+      .maybeSingle();
+
+    if (!business) {
+      return NextResponse.json({ error: 'Business not found' }, { status: 404 });
+    }
+
     const start = new Date(startAt);
     const end = addMinutes(start, service.duration_minutes);
 
-    // Re-check conflicts — someone might have booked this slot since the client fetched it
+    // Re-check conflicts. 'awaiting_payment' is in the IN-list so an
+    // in-flight Checkout holds the slot for the 15-min Stripe expiry.
     const { data: overlaps } = await sb
       .from('bookings')
       .select('id')
       .eq('business_id', businessId)
-      .in('status', ['pending', 'confirmed'])
+      .in('status', ['pending', 'confirmed', 'awaiting_payment'])
       .lt('starts_at', end.toISOString())
       .gt('ends_at', start.toISOString())
       .limit(1);
@@ -89,6 +107,15 @@ export async function POST(req: NextRequest) {
       });
     }
 
+    const requiresPayment =
+      Boolean(business.stripe_account_id) &&
+      business.stripe_charges_enabled === true &&
+      service.price_cents > 0;
+
+    const status: 'awaiting_payment' | 'confirmed' = requiresPayment
+      ? 'awaiting_payment'
+      : 'confirmed';
+
     const { data: booking, error: bookErr } = await sb
       .from('bookings')
       .insert({
@@ -97,7 +124,7 @@ export async function POST(req: NextRequest) {
         customer_id: customerId,
         starts_at: start.toISOString(),
         ends_at: end.toISOString(),
-        status: 'confirmed',
+        status,
         price_cents: service.price_cents,
       })
       .select('id')
@@ -110,7 +137,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ bookingId: booking.id });
+    return NextResponse.json({
+      bookingId: booking.id,
+      requires_payment: requiresPayment,
+      status,
+    });
   } catch (err: any) {
     return NextResponse.json(
       { error: err?.message ?? 'Unknown error' },

@@ -2,10 +2,14 @@
 
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { BookingConfirmation } from '@/components/BookingConfirmation';
 
 interface BookingView {
   id: string;
+  status: string;
+  serviceId: string;
   businessSlug: string;
   businessName: string;
   businessCoverUrl: string | null;
@@ -19,8 +23,39 @@ interface BookingView {
   tileColour: string;
 }
 
-export function ConfirmClient({ booking }: { booking: BookingView }) {
+const POLL_INTERVAL_MS = 2000;
+const POLL_MAX_ATTEMPTS = 15;
+
+export function ConfirmClient({
+  booking,
+  cancelled,
+}: {
+  booking: BookingView;
+  cancelled: boolean;
+}) {
   const router = useRouter();
+  const [stuck, setStuck] = useState(false);
+
+  // Poll while the booking is awaiting payment so the success view
+  // appears as soon as the webhook flips status to 'confirmed'.
+  // Capped at POLL_MAX_ATTEMPTS to avoid spinning forever if the
+  // webhook never lands.
+  useEffect(() => {
+    if (booking.status !== 'awaiting_payment' || stuck) return;
+
+    let attempts = 0;
+    const interval = window.setInterval(() => {
+      attempts += 1;
+      if (attempts >= POLL_MAX_ATTEMPTS) {
+        window.clearInterval(interval);
+        setStuck(true);
+        return;
+      }
+      router.refresh();
+    }, POLL_INTERVAL_MS);
+
+    return () => window.clearInterval(interval);
+  }, [booking.status, stuck, router]);
 
   function addToCalendar() {
     const ics = buildIcs(booking);
@@ -35,6 +70,75 @@ export function ConfirmClient({ booking }: { booking: BookingView }) {
     URL.revokeObjectURL(url);
   }
 
+  // Customer hit "back" from Stripe Checkout. The booking row will
+  // remain in 'awaiting_payment' until the expired webhook fires —
+  // surface the cancellation now rather than show a spinner.
+  if (cancelled && booking.status === 'awaiting_payment') {
+    return (
+      <StatusPanel
+        title="Payment cancelled"
+        body="Your booking is no longer reserved. Pick another time and try again."
+        actionLabel="Try again"
+        onAction={() => router.push(`/booking/${booking.serviceId}`)}
+      />
+    );
+  }
+
+  if (booking.status === 'awaiting_payment') {
+    if (stuck) {
+      return (
+        <StatusPanel
+          title="Still confirming your payment..."
+          body="This is taking longer than expected. Refresh to check again or contact support if it persists."
+          actionLabel="Refresh"
+          onAction={() => {
+            setStuck(false);
+            router.refresh();
+          }}
+        />
+      );
+    }
+    return (
+      <StatusPanel
+        title="Confirming your payment..."
+        body="One moment — Stripe is letting us know your payment went through."
+        spinning
+      />
+    );
+  }
+
+  if (booking.status === 'payment_failed') {
+    return (
+      <StatusPanel
+        title="Your payment didn't go through"
+        body="Stripe declined the charge. You can try again or pick another time."
+        actionLabel="Try again"
+        onAction={() => router.push(`/booking/${booking.serviceId}`)}
+      />
+    );
+  }
+
+  if (booking.status === 'expired') {
+    return (
+      <StatusPanel
+        title="Your booking session expired"
+        body="The 15-minute payment window passed. Pick a new time and try again."
+        actionLabel="Try again"
+        onAction={() => router.push(`/booking/${booking.serviceId}`)}
+      />
+    );
+  }
+
+  if (booking.status === 'cancelled') {
+    return (
+      <StatusPanel
+        title="This booking was cancelled"
+        body="If this wasn't you, please contact the business directly."
+      />
+    );
+  }
+
+  // status === 'confirmed' or 'completed' — celebratory success view.
   return (
     <BookingConfirmation
       title="You're booked in"
@@ -122,6 +226,93 @@ export function ConfirmClient({ booking }: { booking: BookingView }) {
         <DetailRow label="Total" value={booking.priceLabel} valueColour={booking.tileColour} last />
       </div>
     </BookingConfirmation>
+  );
+}
+
+function StatusPanel({
+  title,
+  body,
+  spinning,
+  actionLabel,
+  onAction,
+}: {
+  title: string;
+  body: string;
+  spinning?: boolean;
+  actionLabel?: string;
+  onAction?: () => void;
+}) {
+  return (
+    <div
+      style={{
+        minHeight: '100dvh',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '40px 24px',
+        textAlign: 'center',
+      }}
+    >
+      {spinning && (
+        <div style={{ marginBottom: 32 }}>
+          <Loader2
+            className="animate-spin"
+            style={{
+              width: 48,
+              height: 48,
+              color: 'rgba(255,255,255,0.55)',
+              strokeWidth: 1.5,
+            }}
+          />
+        </div>
+      )}
+
+      <h1
+        style={{
+          margin: 0,
+          fontSize: 24,
+          fontWeight: 700,
+          letterSpacing: '-0.02em',
+          color: 'rgba(255,255,255,0.95)',
+          maxWidth: 320,
+        }}
+      >
+        {title}
+      </h1>
+
+      <p
+        style={{
+          margin: '12px 0 0 0',
+          fontSize: 14,
+          lineHeight: 1.5,
+          color: 'rgba(255,255,255,0.55)',
+          maxWidth: 320,
+        }}
+      >
+        {body}
+      </p>
+
+      {actionLabel && onAction && (
+        <button
+          onClick={onAction}
+          style={{
+            marginTop: 32,
+            padding: '14px 28px',
+            borderRadius: 999,
+            background: 'rgba(255,255,255,0.95)',
+            color: '#000',
+            fontSize: 15,
+            fontWeight: 600,
+            letterSpacing: '-0.01em',
+            border: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          {actionLabel}
+        </button>
+      )}
+    </div>
   );
 }
 
