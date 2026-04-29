@@ -23,13 +23,20 @@ export async function requireCurrentBusiness<T = Record<string, unknown>>(
   if (!owner) redirect('/onboard');
 
   const sb = createSupabaseServerClient();
-  const { data: business } = await sb
+  const { data: businesses, error } = await sb
     .from('businesses')
     .select(columns)
     .eq('owner_id', owner.id)
     .eq('is_live', true)
-    .maybeSingle();
+    .order('created_at', { ascending: false })
+    .limit(1);
 
+  if (error) {
+    console.error('requireCurrentBusiness:', error);
+    throw error;
+  }
+
+  const business = businesses?.[0] ?? null;
   if (!business) redirect('/onboard/flow');
 
   return { owner, business: business as unknown as T, sb };
