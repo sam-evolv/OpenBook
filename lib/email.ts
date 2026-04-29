@@ -120,10 +120,7 @@ interface BookingLookupRow {
     address: string | null;
     address_line: string | null;
     phone: string | null;
-    owners: {
-      email: string;
-      full_name: string | null;
-    } | null;
+    owner_id: string;
   } | null;
   services: {
     name: string;
@@ -135,6 +132,11 @@ interface BookingLookupRow {
     email: string | null;
     phone: string | null;
   } | null;
+}
+
+interface OwnerLookupRow {
+  email: string;
+  full_name: string | null;
 }
 
 /**
@@ -152,14 +154,18 @@ export async function sendBookingConfirmation({
   audience,
 }: SendBookingConfirmationArgs): Promise<{ id: string } | null> {
   const sb = supabaseAdmin();
+  // We fetch business → owners as a separate query rather than nesting
+  // the select. PostgREST can only nest along declared FKs, and there is
+  // no direct FK from businesses.owner_id → owners.id — both tables
+  // reference auth.users.id. A nested select here returns PGRST200
+  // ("Could not find a relationship").
   const { data: booking, error } = await sb
     .from('bookings')
     .select(
       `
       id, starts_at, ends_at, price_cents, status,
       businesses:business_id (
-        id, name, slug, address, address_line, phone,
-        owners:owner_id ( email, full_name )
+        id, name, slug, address, address_line, phone, owner_id
       ),
       services:service_id ( name, duration_minutes ),
       customers:customer_id ( full_name, name, email, phone )
@@ -186,9 +192,31 @@ export async function sendBookingConfirmation({
 
   const startsAt = new Date(booking.starts_at);
   const business = booking.businesses;
-  const owner = business.owners;
   const service = booking.services;
   const customer = booking.customers;
+
+  // Second roundtrip: resolve the owner via business.owner_id. Required
+  // for the business-audience email; harmless extra read on the
+  // customer-audience path (replyTo uses owner.email but is optional,
+  // and the helper exits early before this lookup matters if there's
+  // no customer.email).
+  const { data: owner, error: ownerErr } = await sb
+    .from('owners')
+    .select('email, full_name')
+    .eq('id', business.owner_id)
+    .maybeSingle<OwnerLookupRow>();
+
+  if (ownerErr) {
+    console.error('sendBookingConfirmation: owner lookup failed', {
+      bookingId,
+      audience,
+      businessId: business.id,
+      error: ownerErr,
+    });
+    // Don't throw — for customer audience we can still send without
+    // a replyTo. For business audience we'll bail in the audience
+    // check below.
+  }
 
   if (audience === 'customer') {
     if (!customer?.email) {
@@ -222,7 +250,10 @@ export async function sendBookingConfirmation({
 
   // audience === 'business'
   if (!owner?.email) {
-    console.error('sendBookingConfirmation: business has no owner email', {
+    // Defensive: owners.email is NOT NULL in the schema and the FK chain
+    // is established at signup, so this shouldn't fire. Skip the send
+    // rather than throw — customer email may have already gone out.
+    console.warn('sendBookingConfirmation: business has no owner email', {
       bookingId,
       businessId: business.id,
     });
