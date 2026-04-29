@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase';
 import { addMinutes } from '@/lib/time';
+import { sendBookingConfirmation } from '@/lib/email';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -135,6 +136,29 @@ export async function POST(req: NextRequest) {
         { error: bookErr?.message ?? 'Booking failed' },
         { status: 500 }
       );
+    }
+
+    // Cash/free path: booking is already confirmed, fire the customer +
+    // business emails. Paid path bookings (status='awaiting_payment') are
+    // owned by the Stripe webhook — it sends emails when the session
+    // completes and the customer record is enriched with Stripe details.
+    //
+    // Promise.allSettled so one failed email doesn't abort the other, and
+    // a Resend hiccup must NEVER fail the user's booking — the row is
+    // already in the DB.
+    if (status === 'confirmed') {
+      const results = await Promise.allSettled([
+        sendBookingConfirmation({ bookingId: booking.id, audience: 'customer' }),
+        sendBookingConfirmation({ bookingId: booking.id, audience: 'business' }),
+      ]);
+      for (const result of results) {
+        if (result.status === 'rejected') {
+          console.error('[booking] confirmation email failed:', {
+            bookingId: booking.id,
+            reason: result.reason,
+          });
+        }
+      }
     }
 
     return NextResponse.json({

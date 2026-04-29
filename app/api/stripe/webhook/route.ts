@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import type Stripe from 'stripe';
 import { getStripe } from '@/lib/stripe';
 import { supabaseAdmin } from '@/lib/supabase';
+import { sendBookingConfirmation } from '@/lib/email';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -142,6 +143,45 @@ export async function POST(req: NextRequest) {
               'stripe-webhook: customer update failed (non-fatal)',
               custErr,
             );
+          }
+        }
+
+        // Fire confirmation emails. Only when updatedBooking is non-null,
+        // i.e. the guarded UPDATE actually flipped a row — replays / late
+        // deliveries against an already-processed booking are silent
+        // no-ops here too. Promise.allSettled + try/catch so a Resend
+        // hiccup never causes a non-2xx response (which would make
+        // Stripe retry the webhook and risk duplicate sends).
+        if (updatedBooking?.id) {
+          try {
+            const results = await Promise.allSettled([
+              sendBookingConfirmation({
+                bookingId: updatedBooking.id,
+                audience: 'customer',
+              }),
+              sendBookingConfirmation({
+                bookingId: updatedBooking.id,
+                audience: 'business',
+              }),
+            ]);
+            for (const result of results) {
+              if (result.status === 'rejected') {
+                console.error('[webhook] confirmation email failed:', {
+                  bookingId: updatedBooking.id,
+                  eventId: event.id,
+                  reason: result.reason,
+                });
+              }
+            }
+          } catch (emailErr) {
+            // Belt-and-suspenders: allSettled shouldn't throw, but if
+            // anything in the wrapper does (e.g. import-time issue),
+            // swallow it so the webhook still returns 200.
+            console.error('[webhook] email wrapper threw:', {
+              bookingId: updatedBooking.id,
+              eventId: event.id,
+              error: emailErr,
+            });
           }
         }
 
