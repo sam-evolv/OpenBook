@@ -1,4 +1,4 @@
-# OpenBook v5a — Netlify Kill + 15-Minute Onboarding Flow
+# OpenBook v5a — Netlify Kill + 15-Minute Onboarding Flow 
 
 This is the biggest architectural shift in the project so far. It:
 
