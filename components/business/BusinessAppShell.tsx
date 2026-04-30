@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Home, Calendar, ImageIcon, Info, X, ChevronLeft } from 'lucide-react';
+import { Home, Calendar, ImageIcon, Info, X } from 'lucide-react';
 import { BusinessHome } from './BusinessHome';
 import { BusinessBook } from './BusinessBook';
 import { BusinessGallery } from './BusinessGallery';
@@ -42,11 +42,37 @@ export function BusinessAppShell({ business, services, hours, initialTab = 'home
   const visibleTabs = tabs.filter((t) => t.show);
 
   return (
-    <main
-      className="relative min-h-[100dvh] text-white overflow-hidden"
-      style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}
-    >
-      {/* Close button (top left) */}
+    <>
+      <main
+        className="relative min-h-[100dvh] text-white overflow-x-hidden"
+        style={{ paddingBottom: 'calc(88px + env(safe-area-inset-bottom))' }}
+      >
+        {/* Content */}
+        <div className="relative">
+          {tab === 'home' && (
+            <BusinessHome
+              business={business}
+              services={services}
+              onBookService={openBookingForService}
+              onOpenGallery={() => setTab('gallery')}
+              hasGallery={hasGallery}
+            />
+          )}
+          {tab === 'book' && (
+            <BusinessBook
+              business={business}
+              services={services}
+              selectedService={selectedService}
+              onSelectService={setSelectedService}
+            />
+          )}
+          {tab === 'gallery' && <BusinessGallery business={business} />}
+          {tab === 'about' && <BusinessAbout business={business} hours={hours} />}
+        </div>
+      </main>
+
+      {/* Close button (top left) — rendered as a top-level sibling so it
+          anchors to the viewport, not the <main> containing block. */}
       <button
         onClick={() => router.push('/home')}
         className="fixed top-[calc(16px+env(safe-area-inset-top))] left-4 z-50 h-10 w-10 rounded-full backdrop-blur-xl flex items-center justify-center active:scale-90 transition-transform"
@@ -59,32 +85,11 @@ export function BusinessAppShell({ business, services, hours, initialTab = 'home
         <X className="h-5 w-5 text-white" strokeWidth={2} />
       </button>
 
-      {/* Content */}
-      <div className="relative">
-        {tab === 'home' && (
-          <BusinessHome
-            business={business}
-            services={services}
-            onBookService={openBookingForService}
-            onOpenGallery={() => setTab('gallery')}
-            hasGallery={hasGallery}
-          />
-        )}
-        {tab === 'book' && (
-          <BusinessBook
-            business={business}
-            services={services}
-            selectedService={selectedService}
-            onSelectService={setSelectedService}
-          />
-        )}
-        {tab === 'gallery' && <BusinessGallery business={business} />}
-        {tab === 'about' && <BusinessAbout business={business} hours={hours} />}
-      </div>
-
-      {/* Bottom tab bar — specific to this business, replaces the home-screen dock */}
+      {/* Bottom tab bar — specific to this business, replaces the home-screen
+          dock. Rendered outside <main> so position: fixed always anchors to
+          the viewport regardless of any transform/overflow on page content. */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-40"
+        className="fixed bottom-0 left-0 right-0 z-50"
         style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
       >
         <div
@@ -125,6 +130,6 @@ export function BusinessAppShell({ business, services, hours, initialTab = 'home
           </div>
         </div>
       </nav>
-    </main>
+    </>
   );
 }
