@@ -121,6 +121,7 @@ const STATUS_LABEL: Record<DisplayStatus, string> = {
 function formatBookedOn(iso: string): string {
   const d = new Date(iso);
   return d.toLocaleDateString('en-IE', {
+    timeZone: 'Europe/Dublin',
     weekday: 'short',
     day: 'numeric',
     month: 'short',

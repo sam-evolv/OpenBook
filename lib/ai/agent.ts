@@ -23,6 +23,21 @@ const MAX_TOOL_CALLS_PER_TURN = 10;
 const MAX_OUTPUT_TOKENS = 800;
 const MAX_HISTORY_MESSAGES = 20;
 
+/**
+ * Validation failures that are recoverable on the next turn — the model
+ * has all the info it needs to self-correct (e.g. it wrote a placeholder
+ * string instead of a UUID it already saw). The agent loop suppresses
+ * the SSE 'error' event for these and feeds a hint back to the model
+ * via the tool result instead, so the user never sees a red error
+ * bubble for what is actually a recoverable in-loop hiccup.
+ */
+const SILENT_VALIDATION_CODES = new Set<string>([
+  'invalid_business_id',
+  'invalid_service_id',
+  'invalid_booking_id',
+  'invalid_slot_start',
+]);
+
 let _openai: OpenAI | null = null;
 function getOpenAI(): OpenAI {
   if (!_openai) _openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -242,13 +257,27 @@ export function runAgentSSE(
 
             const validationError = validateArgs(tc.name as ToolName, parsedArgs);
             if (validationError) {
-              const result = { error: validationError };
-              safeWrite(
-                sse('error', {
-                  code: validationError,
-                  message: `Bad arguments for ${tc.name}.`,
-                })
-              );
+              // UUID-shape failures are almost always the model writing
+              // a placeholder string ("free-consultation-service-id")
+              // instead of the real UUID it already saw in a prior tool
+              // result. The model self-corrects on retry. Don't show the
+              // user the red error in chat — feed a corrective hint back
+              // to the model and let the next iteration succeed silently.
+              const isSilent = SILENT_VALIDATION_CODES.has(validationError);
+              const result = isSilent
+                ? {
+                    error: 'invalid_uuid_format',
+                    hint: 'business_id and service_id must be the exact UUID values returned by search_businesses and list_services in this conversation. Do not invent placeholder strings — use the IDs from prior tool results verbatim.',
+                  }
+                : { error: validationError };
+              if (!isSilent) {
+                safeWrite(
+                  sse('error', {
+                    code: validationError,
+                    message: `Bad arguments for ${tc.name}.`,
+                  })
+                );
+              }
               messages.push({
                 role: 'tool',
                 tool_call_id: tc.id || 'invalid',
