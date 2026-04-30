@@ -28,7 +28,7 @@ export const TOOL_DEFS = [
     function: {
       name: 'search_businesses',
       description:
-        'Search live OpenBook businesses in Ireland. Returns at most 5 results, ranked by rating then name. Use this when the user expresses booking intent.',
+        'Search live OpenBook businesses in Ireland. Returns at most 5 results, ranked by rating then name. Use this when the user expresses booking intent. Call this once at the start of a booking conversation. Do not call it again after a business has been chosen.',
       parameters: {
         type: 'object',
         properties: {
@@ -44,7 +44,8 @@ export const TOOL_DEFS = [
           },
           location: {
             type: 'string',
-            description: "Optional location, e.g. 'cork', 'dublin'.",
+            description:
+              "Optional location filter. Should be a city name like 'Cork' or 'Dublin', not a country. Matches against the business address as a substring. Only include this if the user explicitly mentions a city; do not infer 'ireland' or default to a location.",
           },
         },
         required: ['query'],
