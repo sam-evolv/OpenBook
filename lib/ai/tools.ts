@@ -9,6 +9,7 @@
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+import { sendBookingConfirmation } from '@/lib/email';
 
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -378,6 +379,35 @@ export async function dispatchTool(
       // Free booking — already confirmed inside the RPC.
       if (!row.requires_payment) {
         events.push({ type: 'confirmed', data: { booking_id: row.booking_id } });
+
+        // Fire confirmation emails for free AI bookings. The Stripe webhook
+        // owns the paid path; /api/booking owns cash/free non-AI bookings.
+        // This branch is the only one that hits free AI bookings, so without
+        // this the customer never hears back.
+        //
+        // Fire-and-forget Promise.allSettled — one failed send must not
+        // abort the other, and a Resend hiccup must never fail the booking
+        // (the row is already 'confirmed' in the DB). Mirror the wrapping
+        // and logging in /api/booking.
+        try {
+          const bookingId = row.booking_id;
+          Promise.allSettled([
+            sendBookingConfirmation({ bookingId, audience: 'customer' }),
+            sendBookingConfirmation({ bookingId, audience: 'business' }),
+          ]).then((results) => {
+            for (const result of results) {
+              if (result.status === 'rejected') {
+                console.error('[ai] confirmation email failed:', {
+                  bookingId,
+                  reason: result.reason,
+                });
+              }
+            }
+          });
+        } catch (e) {
+          console.error('[ai] confirmation email dispatch threw:', e);
+        }
+
         return {
           modelResult: {
             booking_id: row.booking_id,
