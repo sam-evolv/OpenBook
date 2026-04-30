@@ -8,7 +8,7 @@
  * slot pickers, proposal cards, payment cards (with countdown +
  * polling), confirmation cards, and an auth-gate card for anonymous
  * users.  Conversation state persists to localStorage so a refresh or
- * a magic-link round-trip (anonymous → signed-in) doesn't drop
+ * an OAuth round-trip (anonymous → signed-in) doesn't drop
  * the user back to a blank chat.
  *
  * The bottom nav, global gold/black theme, hero empty state, and
@@ -448,7 +448,7 @@ export function AssistantChat() {
         appendMessage({
           id: uid(),
           kind: 'auth_gate',
-          gate: { pending_proposal: proposal, state: 'pending' },
+          gate: { pending_proposal: proposal },
         });
         return;
       }
@@ -574,17 +574,6 @@ export function AssistantChat() {
     void send('Let me try a different time');
   }, [send]);
 
-  const onAuthSent = useCallback(
-    (gateId: string) => {
-      updateMessage(gateId, (m) =>
-        m.kind === 'auth_gate'
-          ? { ...m, gate: { ...m.gate, state: 'sent' } }
-          : m
-      );
-    },
-    [updateMessage]
-  );
-
   const onNewChat = useCallback(() => {
     if (busy) return;
     clearActiveConversation();
@@ -688,7 +677,6 @@ export function AssistantChat() {
               onPaymentStatusChange={(next) => onPaymentStatus(m.id, next)}
               onPaymentExpired={() => onPaymentExpired(m.id)}
               onPaymentRetry={onPaymentRetry}
-              onAuthSent={() => onAuthSent(m.id)}
               cardsDisabled={busy}
             />
           ))}
@@ -745,7 +733,6 @@ function MessageRow({
   onPaymentStatusChange,
   onPaymentExpired,
   onPaymentRetry,
-  onAuthSent,
   cardsDisabled,
 }: {
   msg: Message;
@@ -756,7 +743,6 @@ function MessageRow({
   onPaymentStatusChange: (next: any) => void;
   onPaymentExpired: () => void;
   onPaymentRetry: () => void;
-  onAuthSent: () => void;
   cardsDisabled: boolean;
 }) {
   switch (msg.kind) {
@@ -822,11 +808,7 @@ function MessageRow({
 
     case 'auth_gate':
       return (
-        <AuthGateCard
-          gate={msg.gate}
-          conversationId={conversationId}
-          onSent={onAuthSent}
-        />
+        <AuthGateCard gate={msg.gate} conversationId={conversationId} />
       );
 
     case 'error':

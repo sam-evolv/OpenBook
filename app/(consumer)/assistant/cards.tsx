@@ -21,9 +21,7 @@ import {
   CheckCircle2,
   Loader2,
   Lock,
-  Mail,
   ArrowRight,
-  Sparkles,
   Star,
   XCircle,
   Clock,
@@ -466,43 +464,74 @@ export function ConfirmedCard({ booking }: { booking: ConfirmedBooking }) {
 // Auth gate
 // ----------------------------------------------------------------------------
 
+const GoogleIcon = () => (
+  <svg viewBox="0 0 48 48" width="20" height="20" aria-hidden="true">
+    <path
+      fill="#FFC107"
+      d="M43.611 20.083H42V20H24v8h11.303c-1.649 4.657-6.08 8-11.303 8-6.627 0-12-5.373-12-12s5.373-12 12-12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 12.955 4 4 12.955 4 24s8.955 20 20 20 20-8.955 20-20c0-1.341-.138-2.65-.389-3.917z"
+    />
+    <path
+      fill="#FF3D00"
+      d="M6.306 14.691l6.571 4.819C14.655 15.108 18.961 12 24 12c3.059 0 5.842 1.154 7.961 3.039l5.657-5.657C34.046 6.053 29.268 4 24 4 16.318 4 9.656 8.337 6.306 14.691z"
+    />
+    <path
+      fill="#4CAF50"
+      d="M24 44c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238A11.91 11.91 0 0 1 24 36c-5.202 0-9.619-3.317-11.283-7.946l-6.522 5.025C9.505 39.556 16.227 44 24 44z"
+    />
+    <path
+      fill="#1976D2"
+      d="M43.611 20.083H42V20H24v8h11.303a12.04 12.04 0 0 1-4.087 5.571l.003-.002 6.19 5.238C36.971 39.205 44 34 44 24c0-1.341-.138-2.65-.389-3.917z"
+    />
+  </svg>
+);
+
+const AppleIcon = () => (
+  <svg
+    viewBox="0 0 24 24"
+    width="20"
+    height="20"
+    fill="currentColor"
+    aria-hidden="true"
+  >
+    <path d="M17.05 20.28c-.98.95-2.05.8-3.08.35-1.09-.46-2.09-.48-3.24 0-1.44.62-2.2.44-3.06-.35C2.79 15.25 3.51 7.59 9.05 7.31c1.35.07 2.29.74 3.08.8 1.18-.24 2.31-.93 3.57-.84 1.51.12 2.65.72 3.4 1.8-3.12 1.87-2.38 5.98.48 7.13-.57 1.5-1.31 2.99-2.54 4.09zM12.03 7.25c-.15-2.23 1.66-4.07 3.74-4.25.29 2.58-2.34 4.5-3.74 4.25z" />
+  </svg>
+);
+
 export function AuthGateCard({
   gate,
   conversationId,
-  onSent,
 }: {
   gate: AuthGate;
   conversationId: string;
-  onSent: () => void;
 }) {
   const accent = getTileColour(undefined).mid;
-  const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!email.trim() || submitting) return;
+  async function continueWithGoogle() {
+    if (submitting) return;
     setSubmitting(true);
     setError(null);
     try {
       const supabase = createSupabaseBrowserClient();
-      const origin = window.location.origin;
-      const next = `/assistant?resume=${encodeURIComponent(conversationId)}`;
-      const { error: otpError } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
+      // CRITICAL: encode the entire `next` value — it contains a `?`
+      // (`/assistant?resume=<id>`) which would otherwise be parsed as a
+      // top-level query separator on the callback URL and produce a 404.
+      const next = encodeURIComponent(`/assistant?resume=${conversationId}`);
+      const { error: oauthError } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
         options: {
-          emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}`,
+          redirectTo: `${window.location.origin}/auth/callback?next=${next}`,
         },
       });
-      if (otpError) {
-        setError(otpError.message);
-      } else {
-        onSent();
+      if (oauthError) {
+        setError(oauthError.message);
+        setSubmitting(false);
       }
+      // On success the browser is already redirecting to Google — do
+      // not clear submitting; the page is leaving.
     } catch (err: any) {
-      setError(err?.message ?? 'Could not send sign-in link.');
-    } finally {
+      setError(err?.message ?? 'Could not start Google sign-in.');
       setSubmitting(false);
     }
   }
@@ -537,45 +566,37 @@ export function AuthGateCard({
         <p className="text-white/55">{formatPrice(proposal.price_cents)}</p>
       </div>
 
-      {gate.state === 'pending' ? (
-        <form onSubmit={submit} className="mt-4 flex flex-col gap-2">
-          <label className="flex items-center gap-2 h-11 px-4 rounded-full bg-white/[0.05] border border-white/[0.10] focus-within:border-white/30 transition">
-            <Mail className="w-4 h-4 text-white/55" />
-            <input
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@email.com"
-              className="flex-1 bg-transparent outline-none text-[14px] text-white placeholder:text-white/35"
-              disabled={submitting}
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={!email.trim() || submitting}
-            className="h-11 rounded-full text-[14px] font-semibold text-black active:scale-95 transition disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-1.5"
-            style={{ background: accent }}
-          >
-            {submitting ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <>
-                <span>Send sign-in link</span>
-                <ArrowRight className="w-4 h-4" />
-              </>
-            )}
-          </button>
-          {error && (
-            <p className="text-[12px] text-red-300 px-1">{error}</p>
+      <div className="mt-4 flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={continueWithGoogle}
+          disabled={submitting}
+          className="h-11 rounded-full text-[14px] font-semibold text-black active:scale-95 transition disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-2"
+          style={{ background: accent }}
+        >
+          {submitting ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <>
+              <GoogleIcon />
+              <span>Continue with Google</span>
+            </>
           )}
-        </form>
-      ) : (
-        <p className="mt-4 text-[13px] text-white/75 flex items-center gap-2">
-          <Sparkles className="w-3.5 h-3.5" style={{ color: accent }} />
-          Check your email — we sent a link.
-        </p>
-      )}
+        </button>
+
+        <button
+          type="button"
+          disabled
+          aria-disabled="true"
+          className="h-11 rounded-full text-[14px] font-medium text-white/70 border border-white/15 bg-white/[0.03] flex items-center justify-center gap-2 opacity-50 cursor-not-allowed"
+        >
+          <AppleIcon />
+          <span>Continue with Apple</span>
+          <span className="text-[11px] text-white/55 ml-1">— coming soon</span>
+        </button>
+
+        {error && <p className="text-[12px] text-red-300 px-1">{error}</p>}
+      </div>
     </div>
   );
 }
