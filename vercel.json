@@ -26,5 +26,8 @@
       "destination": "/onboard",
       "permanent": false
     }
+  ],
+  "crons": [
+    { "path": "/api/cron/expire-holds", "schedule": "* * * * *" }
   ]
 }
