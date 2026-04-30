@@ -7,20 +7,19 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 /**
- * POST /api/booking/confirm-from-proposal
+ * POST /api/booking/confirm
  *
- * Direct, deterministic confirmation path used by the consumer AI tab
- * after an OAuth round-trip resumes a proposal from localStorage.
- *
- * The agent loop is bypassed entirely here — the proposal already
- * carries the three IDs we need (business_id, service_id, slot_start),
- * and after sign-in the agent's `messages` array is empty, so asking
- * the model to call hold_and_book just makes it hallucinate UUIDs.
+ * The single, deterministic confirmation path for the consumer AI tab.
+ * The agent loop never calls hold_and_book — that tool was removed from
+ * the model's surface after repeated UUID hallucinations. Instead, the
+ * UI POSTs (business_id, service_id, slot_start) here directly from the
+ * proposal card, and this endpoint runs the hold + free/paid branch.
  *
  * Body: { business_id, service_id, slot_start }
  * Returns:
  *   { kind: 'confirmed', booking_id }                   — free path
  *   { kind: 'checkout',  booking_id, url, expires_at }  — paid path
+ *   401 { error: 'unauthenticated' }                    — UI shows AuthGate
  */
 export async function POST(req: NextRequest) {
   let body: any;
@@ -50,7 +49,7 @@ export async function POST(req: NextRequest) {
       if (typeof data === 'string') customerId = data;
     }
   } catch (err) {
-    console.error('[confirm-from-proposal] auth resolve failed:', err);
+    console.error('[ai/confirm] auth resolve failed:', err);
   }
   if (!customerId) {
     return NextResponse.json({ error: 'unauthenticated' }, { status: 401 });
@@ -68,7 +67,7 @@ export async function POST(req: NextRequest) {
     .eq('id', serviceId)
     .maybeSingle();
   if (svcError) {
-    console.error('[confirm-from-proposal] service lookup failed:', svcError);
+    console.error('[ai/confirm] service lookup failed:', svcError);
     return NextResponse.json({ error: 'service_lookup_failed' }, { status: 500 });
   }
   if (!svc || svc.is_active === false) {
@@ -91,7 +90,7 @@ export async function POST(req: NextRequest) {
     if (msg.includes('slot_unavailable')) code = 'slot_unavailable';
     else if (msg.includes('insufficient_privilege')) code = 'unauthenticated';
     else if (msg.includes('service_not_available')) code = 'service_not_available';
-    console.error('[confirm-from-proposal] hold failed:', holdError);
+    console.error('[ai/confirm] hold failed:', holdError);
     return NextResponse.json(
       { error: code, message: msg },
       { status: code === 'unauthenticated' ? 401 : 409 }
@@ -115,7 +114,7 @@ export async function POST(req: NextRequest) {
       ]).then((results) => {
         for (const result of results) {
           if (result.status === 'rejected') {
-            console.error('[confirm-from-proposal] email failed:', {
+            console.error('[ai/confirm] email failed:', {
               bookingId,
               reason: result.reason,
             });
@@ -123,7 +122,7 @@ export async function POST(req: NextRequest) {
         }
       });
     } catch (e) {
-      console.error('[confirm-from-proposal] email dispatch threw:', e);
+      console.error('[ai/confirm] email dispatch threw:', e);
     }
 
     return NextResponse.json({ kind: 'confirmed', booking_id: row.booking_id });
@@ -148,7 +147,7 @@ export async function POST(req: NextRequest) {
     };
     if (!res.ok || !payload.checkout_url) {
       console.error(
-        '[confirm-from-proposal] checkout/create failed:',
+        '[ai/confirm] checkout/create failed:',
         res.status,
         payload
       );
@@ -164,7 +163,7 @@ export async function POST(req: NextRequest) {
       expires_at: row.expires_at ?? null,
     });
   } catch (err: any) {
-    console.error('[confirm-from-proposal] checkout fetch threw:', err);
+    console.error('[ai/confirm] checkout fetch threw:', err);
     return NextResponse.json(
       { error: 'checkout_unavailable', message: err?.message ?? 'unknown' },
       { status: 502 }

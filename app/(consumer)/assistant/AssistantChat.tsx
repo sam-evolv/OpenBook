@@ -110,7 +110,6 @@ export function AssistantChat() {
               proposal: {
                 ...(m.gate.pending_proposal as Proposal),
                 status: 'open' as const,
-                isResumed: true,
               },
             } as Message;
           }
@@ -492,11 +491,10 @@ export function AssistantChat() {
 
   const onConfirmProposal = useCallback(
     (proposalId: string) => {
-      // Snapshot the proposal so we can branch on isResumed without a
-      // stale-closure problem.
       const target = messages.find((m) => m.id === proposalId);
       const proposal =
         target && target.kind === 'proposal' ? target.proposal : null;
+      if (!proposal) return;
 
       updateMessage(proposalId, (m) =>
         m.kind === 'proposal'
@@ -504,29 +502,23 @@ export function AssistantChat() {
           : m
       );
 
-      if (proposal?.isResumed) {
-        void confirmFromProposalDirect(proposal);
-        return;
-      }
-
-      void send('Yes, book it');
+      void confirmProposal(proposal);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [messages, send, updateMessage]
+    [messages, updateMessage]
   );
 
-  // Direct confirmation path used after an OAuth round-trip. The agent's
-  // `messages` array is empty post-redirect, so the model has no IDs to
-  // pass to hold_and_book and would hallucinate placeholder UUIDs. The
-  // localStorage proposal already has every ID we need — call the
-  // dedicated endpoint and surface the result as if the agent had emitted
-  // a `confirmed` or `payment_required` SSE event itself.
-  const confirmFromProposalDirect = useCallback(
+  // The single confirmation path. POSTs the proposal IDs to
+  // /api/booking/confirm and surfaces the response as a Confirmed,
+  // Payment, or AuthGate card. The agent has no booking tool any more —
+  // see PR #69 — so this is now the only way a booking gets created from
+  // the AI tab.
+  const confirmProposal = useCallback(
     async (proposal: Proposal) => {
       if (busy) return;
       setBusy(true);
       try {
-        const res = await fetch('/api/booking/confirm-from-proposal', {
+        const res = await fetch('/api/booking/confirm', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -543,6 +535,19 @@ export function AssistantChat() {
           error?: string;
           message?: string;
         };
+
+        // 401 → render the AuthGate card. localStorage already has the
+        // proposal (the persistence useEffect runs on every messages
+        // change), so after Google OAuth the resume flow rehydrates the
+        // proposal and the same Confirm path retries with a session.
+        if (res.status === 401) {
+          appendMessage({
+            id: uid(),
+            kind: 'auth_gate',
+            gate: { pending_proposal: proposal },
+          });
+          return;
+        }
 
         if (!res.ok) {
           const code = payload.error ?? 'hold_failed';
@@ -583,6 +588,15 @@ export function AssistantChat() {
               status: 'awaiting_payment',
             },
           });
+          // Open Stripe in a new tab from the same user-gesture chain.
+          // Popup blockers may still drop it after the await — the
+          // PaymentCard's "Pay with Stripe" button is the reliable
+          // fallback, so we don't depend on this succeeding.
+          try {
+            window.open(payload.url, '_blank', 'noopener,noreferrer');
+          } catch {
+            /* popup blocked — user can tap the card button */
+          }
           return;
         }
 
@@ -592,7 +606,7 @@ export function AssistantChat() {
           code: 'unexpected_response',
           message: 'Unexpected response from booking service.',
         });
-      } catch (err: any) {
+      } catch {
         appendMessage({
           id: uid(),
           kind: 'error',
