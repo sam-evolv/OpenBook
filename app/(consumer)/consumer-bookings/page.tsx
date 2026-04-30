@@ -1,5 +1,6 @@
 import { cookies } from 'next/headers';
 import { supabaseAdmin, type BookingWithDetails } from '@/lib/supabase';
+import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { ConsumerHeader } from '@/components/consumer/ConsumerHeader';
 import { BottomTabBar } from '@/components/consumer/BottomTabBar';
 import { BookingsList } from './BookingsList';
@@ -7,12 +8,37 @@ import { BookingsList } from './BookingsList';
 export const dynamic = 'force-dynamic';
 
 async function getMyBookings(): Promise<BookingWithDetails[]> {
-  // In a real app you'd pull the customer_id from your auth session.
-  // For now we try a cookie-based customer id and fall back to none.
-  const customerId = cookies().get('ob_customer_id')?.value;
-  if (!customerId) return [];
-
+  // A user can identify two ways here (see [bookingId]/page.tsx for the
+  // long version): an auth-linked customer record (AI flow) and/or the
+  // legacy ob_customer_id cookie (pre-auth guest flow). Show both so a
+  // freshly-authed AI booking lands here alongside any earlier guest
+  // bookings from the same browser.
   const sb = supabaseAdmin();
+  const cookieCustomerId = cookies().get('ob_customer_id')?.value ?? null;
+
+  let authCustomerId: string | null = null;
+  try {
+    const userClient = createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await userClient.auth.getUser();
+    if (user) {
+      const { data } = await userClient
+        .from('customers')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      authCustomerId = (data?.id as string | undefined) ?? null;
+    }
+  } catch {
+    /* fall through to cookie-only */
+  }
+
+  const allowedCustomerIds = [authCustomerId, cookieCustomerId].filter(
+    (v): v is string => typeof v === 'string' && v.length > 0
+  );
+  if (allowedCustomerIds.length === 0) return [];
+
   const { data } = await sb
     .from('bookings')
     .select(
@@ -22,7 +48,7 @@ async function getMyBookings(): Promise<BookingWithDetails[]> {
       services (name, duration_minutes, price_cents)
     `
     )
-    .eq('customer_id', customerId)
+    .in('customer_id', allowedCustomerIds)
     .in('status', ['confirmed', 'pending', 'completed'])
     .order('starts_at', { ascending: false });
 

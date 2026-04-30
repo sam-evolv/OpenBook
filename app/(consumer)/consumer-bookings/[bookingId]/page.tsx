@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronLeft, Calendar, Clock, MapPin, User, Receipt, CheckCircle2, XCircle } from 'lucide-react';
 import { supabaseAdmin, formatPrice, formatDuration } from '@/lib/supabase';
+import { createSupabaseServerClient } from '@/lib/supabase-server';
 import { friendlyDate, timeLabel } from '@/lib/time';
 import { getTileColour } from '@/lib/tile-palette';
 import { BookingDetailActions } from './BookingDetailActions';
@@ -46,10 +47,39 @@ type BookingDetail = {
 };
 
 async function getBooking(bookingId: string): Promise<BookingDetail | null> {
-  const customerId = cookies().get('ob_customer_id')?.value;
-  if (!customerId) return null;
-
+  // A user can reach this page two ways:
+  //   - Auth-linked: bookings made via the AI tab carry customer_id =
+  //     customers.id where customers.user_id = auth.uid().
+  //   - Legacy guest: pre-auth bookings carry customer_id = the value
+  //     in the ob_customer_id cookie set by /api/booking.
+  // We accept either identity so AI-flow bookings are visible alongside
+  // any prior anonymous ones from the same browser.
   const sb = supabaseAdmin();
+  const cookieCustomerId = cookies().get('ob_customer_id')?.value ?? null;
+
+  let authCustomerId: string | null = null;
+  try {
+    const userClient = createSupabaseServerClient();
+    const {
+      data: { user },
+    } = await userClient.auth.getUser();
+    if (user) {
+      const { data } = await userClient
+        .from('customers')
+        .select('id')
+        .eq('user_id', user.id)
+        .maybeSingle();
+      authCustomerId = (data?.id as string | undefined) ?? null;
+    }
+  } catch {
+    /* fall through to cookie-only */
+  }
+
+  const allowedCustomerIds = [authCustomerId, cookieCustomerId].filter(
+    (v): v is string => typeof v === 'string' && v.length > 0
+  );
+  if (allowedCustomerIds.length === 0) return null;
+
   const { data } = await sb
     .from('bookings')
     .select(
@@ -62,7 +92,7 @@ async function getBooking(bookingId: string): Promise<BookingDetail | null> {
     `
     )
     .eq('id', bookingId)
-    .eq('customer_id', customerId)
+    .in('customer_id', allowedCustomerIds)
     .maybeSingle();
 
   return (data as BookingDetail | null) ?? null;
