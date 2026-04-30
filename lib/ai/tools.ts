@@ -81,7 +81,7 @@ export const TOOL_DEFS = [
     function: {
       name: 'propose_slot',
       description:
-        'Propose a specific slot to the user for confirmation. Does NOT book yet. Call this when you have narrowed to one slot and want the user to confirm.',
+        'Propose a specific slot to the user. The slot_start MUST be one of the slot_start values returned by a previous get_availability call — pass it through verbatim. Never construct your own ISO timestamp from a user-stated time; that will produce wrong-timezone bookings. Does NOT book yet — the UI confirms deterministically.',
       parameters: {
         type: 'object',
         properties: {
