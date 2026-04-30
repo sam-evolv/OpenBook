@@ -28,7 +28,7 @@ export const TOOL_DEFS = [
     function: {
       name: 'search_businesses',
       description:
-        'Search live OpenBook businesses in Ireland. Returns at most 5 results, ranked by rating then name. Use this when the user expresses booking intent. Call this once at the start of a booking conversation. Do not call it again after a business has been chosen.',
+        "Search live OpenBook businesses in Ireland. Returns at most 5 results, ranked by rating then name. Pass the user's free-text query exactly — business name, service type, or both. Examples: 'Evolv', 'physio Cork', 'haircut', 'Yoga Flow Cork'. Use this once at the start of a booking conversation. Do not call it again after a business has been chosen.",
       parameters: {
         type: 'object',
         properties: {
@@ -36,16 +36,6 @@ export const TOOL_DEFS = [
             type: 'string',
             description:
               "What the user is looking for, e.g. 'physio', 'haircut', 'sauna'.",
-          },
-          category: {
-            type: 'string',
-            description:
-              "Optional category filter, e.g. 'Health & Therapy', 'Hair & Beauty'.",
-          },
-          location: {
-            type: 'string',
-            description:
-              "Optional location filter. Should be a city name like 'Cork' or 'Dublin', not a country. Matches against the business address as a substring. Only include this if the user explicitly mentions a city; do not infer 'ireland' or default to a location.",
           },
         },
         required: ['query'],
@@ -239,8 +229,8 @@ export async function dispatchTool(
         'search_businesses_for_ai',
         {
           query_text: args.query,
-          category: args.category ?? null,
-          location: args.location ?? null,
+          category: null,
+          location: null,
         }
       );
       if (error) {
