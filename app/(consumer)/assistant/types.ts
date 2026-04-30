@@ -30,6 +30,13 @@ export interface Proposal {
   requires_payment: boolean;
   /** Filled in by the UI once the proposal is confirmed/cancelled. */
   status?: 'open' | 'confirmed' | 'cancelled';
+  /**
+   * UI-only flag. Set to true when this proposal was rehydrated from
+   * localStorage after an OAuth round-trip. The Confirm handler uses
+   * this to bypass the agent (which has no conversation history
+   * post-redirect) and POST directly to /api/booking/confirm-from-proposal.
+   */
+  isResumed?: boolean;
 }
 
 export interface PaymentRequest {
