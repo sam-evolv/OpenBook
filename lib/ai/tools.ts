@@ -2,14 +2,14 @@
  * Tool definitions + server-side dispatcher for the consumer
  * AI booking assistant. Read by app/api/ai/chat/route.ts only.
  *
- * Read-side tools (search/list/availability) are anon-callable
- * via RPC. Write-side tools (hold/cancel) require an authenticated
- * Supabase user; the agent loop intercepts hold_and_book when no
- * customer_id is present and surfaces a `requires_auth` SSE event.
+ * The model's job ends at propose_slot. Confirmation is deterministic:
+ * the UI POSTs the proposal IDs to /api/booking/confirm, which runs
+ * hold_slot_for_ai and either confirms (free) or returns a Stripe
+ * Checkout URL (paid). hold_and_book was removed from the model's tool
+ * surface after repeated UUID hallucinations — see PR #69.
  */
 
 import type { SupabaseClient } from '@supabase/supabase-js';
-import { sendBookingConfirmation } from '@/lib/email';
 
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -19,7 +19,6 @@ export type ToolName =
   | 'list_services'
   | 'get_availability'
   | 'propose_slot'
-  | 'hold_and_book'
   | 'cancel_hold';
 
 export const TOOL_DEFS = [
@@ -100,25 +99,9 @@ export const TOOL_DEFS = [
   {
     type: 'function' as const,
     function: {
-      name: 'hold_and_book',
-      description:
-        "Hold the slot and book it. For paid services this returns a Stripe Checkout URL the user must visit; the booking is held in 'awaiting_payment' for 10 minutes. For free services this confirms immediately. Only call after the user has confirmed the proposal in the UI (e.g. they sent 'yes, book it' or similar).",
-      parameters: {
-        type: 'object',
-        properties: {
-          business_id: { type: 'string' },
-          service_id: { type: 'string' },
-          slot_start: { type: 'string' },
-        },
-        required: ['business_id', 'service_id', 'slot_start'],
-      },
-    },
-  },
-  {
-    type: 'function' as const,
-    function: {
       name: 'cancel_hold',
-      description: 'Release a slot the user backed out of after hold_and_book.',
+      description:
+        'Release a slot the user explicitly backed out of after a booking was created.',
       parameters: {
         type: 'object',
         properties: { booking_id: { type: 'string' } },
@@ -148,7 +131,6 @@ export function validateArgs(name: ToolName, args: any): string | null {
       if (!DATE_RE.test(args.date ?? '')) return 'invalid_date';
       return null;
     case 'propose_slot':
-    case 'hold_and_book':
       if (!UUID_RE.test(args.business_id ?? '')) return 'invalid_business_id';
       if (!UUID_RE.test(args.service_id ?? '')) return 'invalid_service_id';
       if (typeof args.slot_start !== 'string' || isNaN(Date.parse(args.slot_start)))
@@ -312,162 +294,10 @@ export async function dispatchTool(
         modelResult: {
           proposed: proposal,
           note:
-            'Proposal shown to user. Wait for explicit confirmation before calling hold_and_book.',
+            'Proposal shown to user. Your work is done for this booking — the UI handles confirmation deterministically. If the user wants a different time, propose another slot. Do not announce the booking as confirmed yourself.',
         },
         events,
       };
-    }
-
-    case 'hold_and_book': {
-      if (!ctx.customerId) {
-        const pending = {
-          business_id: args.business_id,
-          service_id: args.service_id,
-          slot_start: args.slot_start,
-        };
-        events.push({ type: 'requires_auth', data: { pending_proposal: pending } });
-        return {
-          modelResult: {
-            requires_auth: true,
-            note:
-              'User is not signed in. Tell them they need to sign in to confirm; the slot will be remembered.',
-          },
-          events,
-        };
-      }
-
-      const { data, error } = await ctx.userClient.rpc('hold_slot_for_ai', {
-        p_service_id: args.service_id,
-        p_slot_start: args.slot_start,
-      });
-
-      if (error) {
-        const code =
-          error.message?.includes('slot_unavailable')
-            ? 'slot_unavailable'
-            : error.message?.includes('insufficient_privilege')
-              ? 'requires_auth'
-              : 'hold_failed';
-        const userMsg =
-          code === 'slot_unavailable'
-            ? 'That slot was just taken — let me find another.'
-            : code === 'requires_auth'
-              ? 'You need to sign in to confirm this booking.'
-              : 'Could not hold the slot. Please try again.';
-        events.push({ type: 'error', data: { code, message: userMsg } });
-        return { modelResult: { error: code, message: userMsg }, events };
-      }
-
-      const row = Array.isArray(data) ? data[0] : data;
-      if (!row) {
-        events.push({
-          type: 'error',
-          data: { code: 'hold_failed', message: 'No row returned from hold' },
-        });
-        return { modelResult: { error: 'hold_failed' }, events };
-      }
-
-      // Free booking — already confirmed inside the RPC.
-      if (!row.requires_payment) {
-        events.push({ type: 'confirmed', data: { booking_id: row.booking_id } });
-
-        // Fire confirmation emails for free AI bookings. The Stripe webhook
-        // owns the paid path; /api/booking owns cash/free non-AI bookings.
-        // This branch is the only one that hits free AI bookings, so without
-        // this the customer never hears back.
-        //
-        // Fire-and-forget Promise.allSettled — one failed send must not
-        // abort the other, and a Resend hiccup must never fail the booking
-        // (the row is already 'confirmed' in the DB). Mirror the wrapping
-        // and logging in /api/booking.
-        try {
-          const bookingId = row.booking_id;
-          Promise.allSettled([
-            sendBookingConfirmation({ bookingId, audience: 'customer' }),
-            sendBookingConfirmation({ bookingId, audience: 'business' }),
-          ]).then((results) => {
-            for (const result of results) {
-              if (result.status === 'rejected') {
-                console.error('[ai] confirmation email failed:', {
-                  bookingId,
-                  reason: result.reason,
-                });
-              }
-            }
-          });
-        } catch (e) {
-          console.error('[ai] confirmation email dispatch threw:', e);
-        }
-
-        return {
-          modelResult: {
-            booking_id: row.booking_id,
-            status: 'confirmed',
-            note:
-              'Free booking confirmed immediately. Tell the user it is in their Bookings tab.',
-          },
-          events,
-        };
-      }
-
-      // Paid — call the existing /api/checkout/create endpoint server-to-server.
-      try {
-        const res = await fetch(`${ctx.origin}/api/checkout/create`, {
-          method: 'POST',
-          headers: {
-            'content-type': 'application/json',
-            cookie: ctx.cookieHeader,
-          },
-          body: JSON.stringify({ bookingId: row.booking_id }),
-        });
-        const payload = (await res.json().catch(() => ({}))) as {
-          requires_payment?: boolean;
-          checkout_url?: string | null;
-          error?: string;
-        };
-        if (!res.ok || !payload.checkout_url) {
-          events.push({
-            type: 'error',
-            data: {
-              code: 'checkout_unavailable',
-              message:
-                payload.error ?? 'Could not create payment session. Try again.',
-            },
-          });
-          return {
-            modelResult: { error: 'checkout_unavailable', detail: payload.error },
-            events,
-          };
-        }
-        events.push({
-          type: 'payment_required',
-          data: {
-            booking_id: row.booking_id,
-            payment_url: payload.checkout_url,
-            expires_at: row.expires_at ?? null,
-          },
-        });
-        return {
-          modelResult: {
-            booking_id: row.booking_id,
-            status: 'awaiting_payment',
-            payment_url: payload.checkout_url,
-            expires_at: row.expires_at,
-            note:
-              'Payment required to confirm. Tell the user the slot is held for 10 minutes and they need to complete payment.',
-          },
-          events,
-        };
-      } catch (e: any) {
-        events.push({
-          type: 'error',
-          data: {
-            code: 'checkout_unavailable',
-            message: 'Could not create payment session. Try again.',
-          },
-        });
-        return { modelResult: { error: e?.message ?? 'checkout_failed' }, events };
-      }
     }
 
     case 'cancel_hold': {
