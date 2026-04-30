@@ -110,6 +110,7 @@ export function AssistantChat() {
               proposal: {
                 ...(m.gate.pending_proposal as Proposal),
                 status: 'open' as const,
+                isResumed: true,
               },
             } as Message;
           }
@@ -491,14 +492,118 @@ export function AssistantChat() {
 
   const onConfirmProposal = useCallback(
     (proposalId: string) => {
+      // Snapshot the proposal so we can branch on isResumed without a
+      // stale-closure problem.
+      const target = messages.find((m) => m.id === proposalId);
+      const proposal =
+        target && target.kind === 'proposal' ? target.proposal : null;
+
       updateMessage(proposalId, (m) =>
         m.kind === 'proposal'
           ? { ...m, proposal: { ...m.proposal, status: 'confirmed' } }
           : m
       );
+
+      if (proposal?.isResumed) {
+        void confirmFromProposalDirect(proposal);
+        return;
+      }
+
       void send('Yes, book it');
     },
-    [send, updateMessage]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [messages, send, updateMessage]
+  );
+
+  // Direct confirmation path used after an OAuth round-trip. The agent's
+  // `messages` array is empty post-redirect, so the model has no IDs to
+  // pass to hold_and_book and would hallucinate placeholder UUIDs. The
+  // localStorage proposal already has every ID we need — call the
+  // dedicated endpoint and surface the result as if the agent had emitted
+  // a `confirmed` or `payment_required` SSE event itself.
+  const confirmFromProposalDirect = useCallback(
+    async (proposal: Proposal) => {
+      if (busy) return;
+      setBusy(true);
+      try {
+        const res = await fetch('/api/booking/confirm-from-proposal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            business_id: proposal.business_id,
+            service_id: proposal.service_id,
+            slot_start: proposal.slot_start,
+          }),
+        });
+        const payload = (await res.json().catch(() => ({}))) as {
+          kind?: 'confirmed' | 'checkout';
+          booking_id?: string;
+          url?: string;
+          expires_at?: string | null;
+          error?: string;
+          message?: string;
+        };
+
+        if (!res.ok) {
+          const code = payload.error ?? 'hold_failed';
+          const message =
+            ERROR_COPY[code] ??
+            (payload.message
+              ? `Could not confirm: ${payload.message}`
+              : 'Could not confirm the booking. Please try again.');
+          appendMessage({ id: uid(), kind: 'error', code, message });
+          return;
+        }
+
+        if (payload.kind === 'confirmed' && payload.booking_id) {
+          appendMessage({
+            id: uid(),
+            kind: 'confirmed',
+            booking: {
+              booking_id: payload.booking_id,
+              business_name: proposal.business_name,
+              service_name: proposal.service_name,
+              slot_start: proposal.slot_start,
+              slot_end: proposal.slot_end,
+              price_cents: proposal.price_cents,
+            },
+          });
+          return;
+        }
+
+        if (payload.kind === 'checkout' && payload.booking_id && payload.url) {
+          appendMessage({
+            id: uid(),
+            kind: 'payment',
+            payment: {
+              booking_id: payload.booking_id,
+              payment_url: payload.url,
+              expires_at: payload.expires_at ?? null,
+              proposal,
+              status: 'awaiting_payment',
+            },
+          });
+          return;
+        }
+
+        appendMessage({
+          id: uid(),
+          kind: 'error',
+          code: 'unexpected_response',
+          message: 'Unexpected response from booking service.',
+        });
+      } catch (err: any) {
+        appendMessage({
+          id: uid(),
+          kind: 'error',
+          code: 'network',
+          message: 'Lost connection while confirming. Please try again.',
+        });
+      } finally {
+        setBusy(false);
+      }
+    },
+    [busy, appendMessage]
   );
 
   const onCancelProposal = useCallback(
