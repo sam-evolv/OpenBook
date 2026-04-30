@@ -53,8 +53,6 @@ export interface ConfirmedBooking {
 
 export interface AuthGate {
   pending_proposal: Proposal;
-  /** UI-only: 'pending' shows the form, 'sent' shows the confirmation note. */
-  state: 'pending' | 'sent';
 }
 
 export type Message =
