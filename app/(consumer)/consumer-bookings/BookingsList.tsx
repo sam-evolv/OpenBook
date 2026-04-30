@@ -100,7 +100,7 @@ function BookingCard({ booking }: { booking: BookingWithDetails }) {
 
   return (
     <Link
-      href={`/business/${booking.businesses.slug}`}
+      href={`/consumer-bookings/${booking.id}`}
       className="
         flex items-center gap-3 p-3 rounded-2xl
         bg-white/[0.03] border border-white/[0.06]
