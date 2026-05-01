@@ -67,7 +67,7 @@ export async function middleware(req: NextRequest) {
      Supabase cookies we just wrote, otherwise the refreshed token is lost. */
   let routed: NextResponse | null = null;
 
-  if (host.startsWith('dash.')) {
+  if (false && host.startsWith('dash.')) {
     if (pathname === '/') {
       url.pathname = '/dashboard';
       routed = NextResponse.redirect(url);
