@@ -258,9 +258,11 @@ export function ProposalCard({
         </div>
       ) : (
         <p className="mt-3 text-[12px] text-white/50">
-          {status === 'confirmed'
-            ? 'Confirmed — see below.'
-            : 'Cancelled — let me know if you want to try another time.'}
+          {status === 'cancelled'
+            ? 'Cancelled — let me know if you want to try another time.'
+            : proposal.requires_payment
+              ? 'Payment required — see below.'
+              : 'Confirmed — see below.'}
         </p>
       )}
     </div>
