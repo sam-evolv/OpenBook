@@ -517,6 +517,12 @@ export function AssistantChat() {
     async (proposal: Proposal) => {
       if (busy) return;
       setBusy(true);
+      console.log('[ai/confirm] →', {
+        business_id: proposal.business_id,
+        service_id: proposal.service_id,
+        slot_start: proposal.slot_start,
+        requires_payment: proposal.requires_payment,
+      });
       try {
         const res = await fetch('/api/booking/confirm', {
           method: 'POST',
@@ -535,6 +541,7 @@ export function AssistantChat() {
           error?: string;
           message?: string;
         };
+        console.log('[ai/confirm] ←', { status: res.status, payload });
 
         // 401 → render the AuthGate card. localStorage already has the
         // proposal (the persistence useEffect runs on every messages
@@ -577,6 +584,11 @@ export function AssistantChat() {
         }
 
         if (payload.kind === 'checkout' && payload.booking_id && payload.url) {
+          console.log('[ai/confirm] rendering PaymentCard', {
+            booking_id: payload.booking_id,
+            url: payload.url,
+            expires_at: payload.expires_at,
+          });
           appendMessage({
             id: uid(),
             kind: 'payment',
@@ -588,18 +600,16 @@ export function AssistantChat() {
               status: 'awaiting_payment',
             },
           });
-          // Open Stripe in a new tab from the same user-gesture chain.
-          // Popup blockers may still drop it after the await — the
-          // PaymentCard's "Pay with Stripe" button is the reliable
-          // fallback, so we don't depend on this succeeding.
-          try {
-            window.open(payload.url, '_blank', 'noopener,noreferrer');
-          } catch {
-            /* popup blocked — user can tap the card button */
-          }
+          // Don't auto-open Stripe here. The await above already escaped
+          // the user-gesture chain, so window.open is unreliable AND
+          // disorienting — the user gets yanked to Stripe before the
+          // PaymentCard renders, then comes back wondering what happened.
+          // The "Pay with Stripe" button on PaymentCard is a real user
+          // gesture and never blocked.
           return;
         }
 
+        console.error('[ai/confirm] unexpected response shape', payload);
         appendMessage({
           id: uid(),
           kind: 'error',

@@ -14,6 +14,27 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+const DUBLIN_TIME_FMT = new Intl.DateTimeFormat('en-IE', {
+  timeZone: 'Europe/Dublin',
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+});
+
+// "Tuesday 6 May at 3:00 PM" — matches the consumer ProposalCard
+// (app/(consumer)/assistant/format.ts:formatProposalTime) so the model's
+// acknowledgement and the rendered card always agree.
+function formatDublinTime(d: Date): string {
+  const parts = DUBLIN_TIME_FMT.formatToParts(d);
+  const get = (type: string) =>
+    parts.find((p) => p.type === type)?.value ?? '';
+  const dayPeriod = (get('dayPeriod') || '').toUpperCase();
+  return `${get('weekday')} ${get('day')} ${get('month')} at ${get('hour')}:${get('minute')} ${dayPeriod}`.trim();
+}
+
 export type ToolName =
   | 'search_businesses'
   | 'list_services'
@@ -290,11 +311,17 @@ export async function dispatchTool(
         requires_payment: svc.price_cents > 0,
       };
       events.push({ type: 'proposal', data: proposal });
+      // Pre-format the slot in Europe/Dublin and hand it to the model.
+      // The model has been observed converting the +00:00 ISO string to
+      // UTC text instead of BST, producing a 1-hour mismatch with the
+      // ProposalCard (which uses Europe/Dublin via formatProposalTime).
+      // The fix is to tell the model exactly what string to use.
+      const displayTime = formatDublinTime(start);
       return {
         modelResult: {
-          proposed: proposal,
+          proposed: { ...proposal, display_time: displayTime },
           note:
-            'Proposal shown to user. Your work is done for this booking — the UI handles confirmation deterministically. If the user wants a different time, propose another slot. Do not announce the booking as confirmed yourself.',
+            `Proposal shown to user for ${displayTime}. When you acknowledge, use that exact time string verbatim — do not re-format the ISO timestamp yourself. Your work is done for this booking; the UI handles confirmation deterministically. If the user wants a different time, propose another slot. Do not announce the booking as confirmed yourself.`,
         },
         events,
       };

@@ -102,6 +102,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'hold_failed' }, { status: 500 });
   }
 
+  console.log('[ai/confirm] hold ok:', {
+    booking_id: row.booking_id,
+    requires_payment: row.requires_payment,
+    expires_at: row.expires_at,
+    price_cents: row.price_cents,
+  });
+
   // Free path — already confirmed inside the RPC. Mirror lib/ai/tools.ts:
   // fire confirmation emails Promise.allSettled fire-and-forget so a Resend
   // hiccup never fails the booking.
@@ -156,6 +163,10 @@ export async function POST(req: NextRequest) {
         { status: 502 }
       );
     }
+    console.log('[ai/confirm] checkout ok:', {
+      booking_id: row.booking_id,
+      has_url: Boolean(payload.checkout_url),
+    });
     return NextResponse.json({
       kind: 'checkout',
       booking_id: row.booking_id,
