@@ -2,14 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import {
-  Briefcase,
-  Package,
-  BookOpen,
-  ShoppingBag,
-  Plus,
-  type LucideIcon,
-} from 'lucide-react';
+import { Briefcase, Plus, type LucideIcon } from 'lucide-react';
 import { Card } from './Card';
 import { Button } from './Button';
 import { TopBar } from './TopBar';
@@ -81,39 +74,6 @@ export function CatalogClient({
       icon: Briefcase,
       live: true,
       count: services.length,
-    },
-    {
-      id: 'packages',
-      label: 'Packages',
-      icon: Package,
-      live: false,
-      comingSoon: {
-        title: 'Packages — coming soon',
-        description:
-          'Sell session bundles and memberships. Credits with expiry, auto-renewal via Stripe, customer-visible balances.',
-      },
-    },
-    {
-      id: 'classes',
-      label: 'Classes',
-      icon: BookOpen,
-      live: false,
-      comingSoon: {
-        title: 'Classes — coming soon',
-        description:
-          'Multi-attendee bookings with waitlists. Set capacity, charge per seat, auto-fill from favourites when spots open.',
-      },
-    },
-    {
-      id: 'inventory',
-      label: 'Retail',
-      icon: ShoppingBag,
-      live: false,
-      comingSoon: {
-        title: 'Retail — coming soon',
-        description:
-          'Stock items sold at checkout or standalone. Low-stock alerts, variants, and payout reconciliation.',
-      },
     },
   ];
 

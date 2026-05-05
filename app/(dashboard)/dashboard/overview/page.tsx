@@ -11,6 +11,7 @@ import { GoalSection } from './_sections/GoalSection';
 import { MetricsSection } from './_sections/MetricsSection';
 import { IntelligenceSection } from './_sections/IntelligenceSection';
 import { WaitlistSection } from './_sections/WaitlistSection';
+import { FlashSalesShortcut } from '@/components/dashboard-v2/overview/FlashSalesShortcut';
 
 export const dynamic = 'force-dynamic';
 
@@ -40,6 +41,7 @@ export default async function OverviewV2Page() {
         <Suspense fallback={<MetricsGridSkeleton />}>
           <MetricsSection businessId={business.id} businessSlug={business.slug} />
         </Suspense>
+        <FlashSalesShortcut />
         <Suspense fallback={<IntelligenceGridSkeleton />}>
           <IntelligenceSection businessId={business.id} />
         </Suspense>

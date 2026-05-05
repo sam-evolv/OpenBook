@@ -6,9 +6,6 @@ import {
   LayoutGrid,
   CalendarDays,
   MessageCircle,
-  Brain,
-  Zap,
-  Megaphone,
   Calendar,
   Users,
   Layers,
@@ -22,7 +19,6 @@ import {
   Sun,
   Moon,
   ChevronDown,
-  UserCog,
   type LucideIcon,
 } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
@@ -36,34 +32,36 @@ interface NavItem {
   badge?: string;
   count?: number;
   unread?: boolean;
-  dot?: boolean;
 }
 
 const navItems: NavItem[] = [
   { id: 'overview', label: 'Overview', href: '/dashboard/overview', icon: LayoutGrid },
   { id: 'calendar', label: 'Calendar', href: '/dashboard/calendar', icon: CalendarDays },
-  { id: 'messages', label: 'Messages', href: '/dashboard/messages', icon: MessageCircle },
-  { id: 'intelligence', label: 'Intelligence', href: '/dashboard/intelligence', icon: Brain, badge: 'AI' },
-  { id: 'flash', label: 'Flash sales', href: '/dashboard/flash-sales', icon: Zap },
-  { id: 'marketing', label: 'Marketing', href: '/dashboard/marketing', icon: Megaphone },
   { id: 'bookings', label: 'Bookings', href: '/dashboard/bookings', icon: Calendar },
   { id: 'customers', label: 'Customers', href: '/dashboard/customers', icon: Users },
   { id: 'catalog', label: 'Catalog', href: '/dashboard/catalog', icon: Layers },
-  { id: 'team', label: 'Team', href: '/dashboard/team', icon: UserCog },
+  { id: 'messages', label: 'Messages', href: '/dashboard/messages', icon: MessageCircle },
   { id: 'finance', label: 'Finance', href: '/dashboard/finance', icon: Wallet },
   { id: 'hours', label: 'Hours', href: '/dashboard/hours', icon: Clock },
   { id: 'settings', label: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
+
+export type SidebarPlan = 'free' | 'pro' | 'complete';
+
+const PLAN_LABEL: Record<SidebarPlan, string> = {
+  free: 'Free plan',
+  pro: 'Pro plan',
+  complete: 'Complete plan',
+};
 
 interface SidebarProps {
   businessName?: string;
   businessSlug?: string;
   userName?: string;
   userInitials?: string;
-  plan?: string;
+  plan?: SidebarPlan;
   unreadMessagesCount?: number;
   upcomingBookingsCount?: number;
-  hasLiveFlashSale?: boolean;
 }
 
 export function Sidebar({
@@ -71,10 +69,9 @@ export function Sidebar({
   businessSlug = 'your-business',
   userName = 'You',
   userInitials = 'YO',
-  plan = 'Free',
+  plan = 'free',
   unreadMessagesCount = 0,
   upcomingBookingsCount = 0,
-  hasLiveFlashSale = false,
 }: SidebarProps) {
   const pathname = usePathname();
   const { mode, toggle } = useTheme();
@@ -92,8 +89,10 @@ export function Sidebar({
             : undefined
           : undefined,
     unread: item.id === 'messages' && unreadMessagesCount > 0,
-    dot: item.id === 'flash' && hasLiveFlashSale,
   }));
+
+  const planLabel = PLAN_LABEL[plan] ?? PLAN_LABEL.free;
+  const isFreePlan = plan === 'free';
 
   return (
     <aside className="sticky top-0 flex h-screen w-[244px] flex-col border-r bg-paper-bg dark:bg-ink-bg border-paper-border dark:border-ink-border px-3 pt-4 pb-3.5 text-[13.5px]">
@@ -140,9 +139,6 @@ export function Sidebar({
               )}
               <Icon size={15} strokeWidth={isActive ? 2 : 1.75} />
               <span className="flex-1">{item.label}</span>
-              {item.dot && (
-                <span className="h-1.5 w-1.5 rounded-full bg-gold shadow-[0_0_0_3px_rgba(212,175,55,0.12)]" />
-              )}
               {item.badge && (
                 <span className="text-[9.5px] font-semibold uppercase tracking-wide text-gold bg-gold-soft border border-gold-border rounded-[3px] px-1.5 py-0.5">
                   {item.badge}
@@ -189,8 +185,18 @@ export function Sidebar({
           <div className="text-[12px] font-medium text-paper-text-1 dark:text-ink-text-1 truncate">
             {userName}
           </div>
-          <div className="text-[10.5px] text-paper-text-3 dark:text-ink-text-3">{plan}</div>
+          <div className="text-[10.5px] text-paper-text-3 dark:text-ink-text-3 truncate">
+            {planLabel}
+          </div>
         </div>
+        {isFreePlan && (
+          <Link
+            href="/dashboard/settings/billing"
+            className="text-[10.5px] font-semibold uppercase tracking-[0.4px] text-black bg-gold hover:bg-gold-muted rounded px-2 py-1 transition-colors"
+          >
+            Upgrade
+          </Link>
+        )}
         <button
           onClick={toggle}
           className="flex items-center justify-center p-1.5 rounded border border-paper-border dark:border-ink-border bg-paper-surface dark:bg-ink-surface hover:bg-paper-surface2 dark:hover:bg-ink-surface2 transition-colors"

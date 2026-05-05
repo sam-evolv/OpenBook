@@ -3,7 +3,7 @@ import { GeistSans } from 'geist/font/sans';
 import { GeistMono } from 'geist/font/mono';
 import { requireCurrentBusiness } from '@/lib/queries/business';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
-import { Sidebar } from '@/components/dashboard-v2/Sidebar';
+import { Sidebar, type SidebarPlan } from '@/components/dashboard-v2/Sidebar';
 import { ThemeProvider } from '@/components/dashboard-v2/ThemeProvider';
 
 export const dynamic = 'force-dynamic';
@@ -12,6 +12,12 @@ interface BusinessContext {
   id: string;
   name: string;
   slug: string;
+  plan: string | null;
+}
+
+function normalisePlan(raw: string | null | undefined): SidebarPlan {
+  if (raw === 'pro' || raw === 'complete') return raw;
+  return 'free';
 }
 
 /**
@@ -57,7 +63,7 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { owner, business } = await requireCurrentBusiness<BusinessContext>(
-    'id, name, slug',
+    'id, name, slug, plan',
   );
 
   const themeCookie = cookies().get('theme')?.value;
@@ -79,10 +85,9 @@ export default async function DashboardLayout({
           businessSlug={business.slug}
           userName={ownerName}
           userInitials={initials}
-          plan="Free"
+          plan={normalisePlan(business.plan)}
           unreadMessagesCount={unreadMessagesCount}
           upcomingBookingsCount={0}
-          hasLiveFlashSale={false}
         />
         <main className="flex-1 min-w-0 overflow-y-auto">{children}</main>
       </div>
