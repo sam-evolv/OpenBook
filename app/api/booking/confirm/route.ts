@@ -77,6 +77,43 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'business_service_mismatch' }, { status: 400 });
   }
 
+  // Stripe readiness pre-check for paid services. Without this, the RPC
+  // happily creates an `awaiting_payment` booking and /api/checkout/create
+  // then refuses (no checkout_url) — leaving an orphaned hold that blocks
+  // the slot for 10 minutes and a 502 with no actionable detail.
+  const isPaidService = (svc.price_cents ?? 0) > 0;
+  if (isPaidService) {
+    const { data: business, error: businessError } = await admin
+      .from('businesses')
+      .select('id, stripe_account_id, stripe_charges_enabled')
+      .eq('id', businessId)
+      .maybeSingle();
+    if (businessError) {
+      console.error('[ai/confirm] business lookup failed:', businessError);
+      return NextResponse.json({ error: 'business_lookup_failed' }, { status: 500 });
+    }
+    const businessReady =
+      Boolean(business?.stripe_account_id) &&
+      business?.stripe_charges_enabled === true;
+    if (!businessReady) {
+      console.warn('[ai/confirm] payments not enabled for business:', {
+        business_id: businessId,
+        service_id: serviceId,
+        has_stripe_account: Boolean(business?.stripe_account_id),
+        charges_enabled: business?.stripe_charges_enabled ?? null,
+        service_price_cents: svc.price_cents,
+      });
+      return NextResponse.json(
+        {
+          error: 'payments_not_enabled',
+          message:
+            "This business hasn't finished setting up online payments yet — please contact them directly.",
+        },
+        { status: 503 },
+      );
+    }
+  }
+
   // Hold the slot. The RPC enforces auth via auth.uid() under the user client,
   // confirms free bookings inline, and parks paid bookings in awaiting_payment.
   console.log('[ai/confirm] hold_slot_for_ai inputs', {
@@ -96,7 +133,20 @@ export async function POST(req: NextRequest) {
     if (msg.includes('slot_unavailable')) code = 'slot_unavailable';
     else if (msg.includes('insufficient_privilege')) code = 'unauthenticated';
     else if (msg.includes('service_not_available')) code = 'service_not_available';
-    console.error('[ai/confirm] hold failed:', holdError);
+    // PostgrestError fields aren't always JSON-serialised by default — pull
+    // every diagnostic the Postgres driver gives us so the actual cause
+    // shows up in Vercel logs instead of "[object Object]".
+    console.error('[ai/confirm] hold failed:', {
+      classified_code: code,
+      pg_code: holdError.code ?? null,
+      message: holdError.message ?? null,
+      details: holdError.details ?? null,
+      hint: holdError.hint ?? null,
+      business_id: businessId,
+      service_id: serviceId,
+      slot_start: slotStart,
+      customer_id: customerId,
+    });
     return NextResponse.json(
       { error: code, message: msg },
       { status: code === 'unauthenticated' ? 401 : 409 }
@@ -156,14 +206,18 @@ export async function POST(req: NextRequest) {
     });
     const payload = (await res.json().catch(() => ({}))) as {
       checkout_url?: string;
+      requires_payment?: boolean;
       error?: string;
     };
     if (!res.ok || !payload.checkout_url) {
-      console.error(
-        '[ai/confirm] checkout/create failed:',
-        res.status,
-        payload
-      );
+      console.error('[ai/confirm] checkout/create returned no url:', {
+        status: res.status,
+        payload,
+        booking_id: row.booking_id,
+        business_id: businessId,
+        service_id: serviceId,
+      });
+      await rollbackOrphanedHold(row.booking_id);
       return NextResponse.json(
         { error: 'checkout_unavailable', detail: payload.error ?? null },
         { status: 502 }
@@ -180,11 +234,52 @@ export async function POST(req: NextRequest) {
       expires_at: row.expires_at ?? null,
     });
   } catch (err: any) {
-    console.error('[ai/confirm] checkout fetch threw:', err);
+    console.error('[ai/confirm] checkout fetch threw:', {
+      booking_id: row.booking_id,
+      business_id: businessId,
+      service_id: serviceId,
+      message: err?.message ?? 'unknown',
+      stack: err?.stack ?? null,
+    });
+    await rollbackOrphanedHold(row.booking_id);
     return NextResponse.json(
       { error: 'checkout_unavailable', message: err?.message ?? 'unknown' },
       { status: 502 }
     );
+  }
+}
+
+/**
+ * If checkout creation fails after the hold succeeded, the booking row is
+ * stuck in `awaiting_payment` until the 10-minute sweeper picks it up,
+ * blocking the slot for everyone else. Cancel it eagerly so the slot is
+ * freed immediately.
+ */
+async function rollbackOrphanedHold(bookingId: string) {
+  try {
+    const { error } = await supabaseAdmin()
+      .from('bookings')
+      .update({
+        status: 'cancelled',
+        cancelled_at: new Date().toISOString(),
+        cancelled_by: 'system',
+      })
+      .eq('id', bookingId)
+      .eq('status', 'awaiting_payment');
+    if (error) {
+      console.error('[ai/confirm] orphan-hold rollback failed:', {
+        booking_id: bookingId,
+        message: error.message,
+        code: error.code ?? null,
+      });
+    } else {
+      console.log('[ai/confirm] orphan hold cancelled:', { booking_id: bookingId });
+    }
+  } catch (err: any) {
+    console.error('[ai/confirm] orphan-hold rollback threw:', {
+      booking_id: bookingId,
+      message: err?.message ?? 'unknown',
+    });
   }
 }
 
