@@ -63,12 +63,23 @@ export async function POST(req: NextRequest) {
       .eq('id', business.id);
   }
 
-  const origin = req.headers.get('origin') ?? `https://${req.headers.get('host') ?? 'app.openbook.ie'}`;
+  /* Onboarding lives only on the dashboard host (dash.openbook.ie) — the
+     consumer host (app.*) doesn't serve /onboard/flow, so a return_url
+     pointing there would 404. Derive from the request origin/host but
+     force the dash subdomain for openbook.ie. */
+  const rawOrigin =
+    req.headers.get('origin') ??
+    `https://${req.headers.get('host') ?? 'dash.openbook.ie'}`;
+  const origin = rawOrigin.replace('://app.openbook.ie', '://dash.openbook.ie');
+
+  const returnUrl = `${origin}/onboard/flow?stripe=ok`;
+  const refreshUrl = `${origin}/onboard/flow?stripe=retry`;
+  console.log('[stripe-link] account-link urls', { accountId, returnUrl, refreshUrl });
 
   const link = await stripe.accountLinks.create({
     account: accountId,
-    return_url: `${origin}/onboard/flow?stripe=ok`,
-    refresh_url: `${origin}/onboard/flow?stripe=retry`,
+    return_url: returnUrl,
+    refresh_url: refreshUrl,
     type: 'account_onboarding',
   });
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Step1Basics } from './steps/Step1Basics';
 import { Step2Colours } from './steps/Step2Colours';
@@ -122,6 +122,28 @@ export function OnboardingFlow({ owner, initialBusiness, startAt = 0 }: Props) {
 
   const update = (patch: Partial<OnboardingState>) =>
     setState((prev) => ({ ...prev, ...patch }));
+
+  /* Stripe Connect round-trip:
+       success → ?stripe=ok    → land on Step 8 with the green "connected" card
+       cancel  → ?stripe=retry → land on Step 8 so the user can try again
+     The actual `stripe_charges_enabled` flag is set by the Stripe webhook,
+     but we optimistically flip stripe_connected here so the UI confirms the
+     return immediately. */
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const params = new URLSearchParams(window.location.search);
+    const stripe = params.get('stripe');
+    if (stripe !== 'ok' && stripe !== 'retry') return;
+
+    setStep(7); // Step 8 (zero-indexed)
+    if (stripe === 'ok') {
+      setState((prev) => ({ ...prev, stripe_connected: true }));
+    }
+
+    const url = new URL(window.location.href);
+    url.searchParams.delete('stripe');
+    window.history.replaceState({}, '', url.toString());
+  }, []);
 
   const next = async () => {
     if (step < TOTAL_STEPS - 1) {
