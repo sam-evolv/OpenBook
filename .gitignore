@@ -12,3 +12,11 @@ yarn-error.log*
 *.tsbuildinfo
 .netlify
 supabase/.temp/
+
+# Capacitor
+out
+ios/App/Pods
+ios/App/build
+ios/App/output
+ios/DerivedData
+ios/App/App/public
