@@ -281,6 +281,11 @@ export async function dispatchTool(
 
     case 'propose_slot': {
       // Look up names + duration + price for the proposal event.
+      // Pull services.business_id too so we can cross-check the service
+      // belongs to the claimed business — without that guard the model
+      // can pair a service_id from one business with a business_id from
+      // another, and the mismatch only surfaces later as a confusing
+      // business_service_mismatch on /api/booking/confirm.
       const [{ data: biz }, { data: svc }] = await Promise.all([
         ctx.adminClient
           .from('businesses')
@@ -289,16 +294,83 @@ export async function dispatchTool(
           .maybeSingle(),
         ctx.adminClient
           .from('services')
-          .select('id, name, duration_minutes, price_cents')
+          .select('id, name, duration_minutes, price_cents, business_id')
           .eq('id', args.service_id)
           .maybeSingle(),
       ]);
       if (!biz || !svc) {
         const msg = !biz ? 'business_not_found' : 'service_not_found';
+        console.error('[propose_slot] lookup failed', {
+          business_id: args.business_id,
+          service_id: args.service_id,
+          biz_found: Boolean(biz),
+          svc_found: Boolean(svc),
+        });
         events.push({ type: 'error', data: { code: msg, message: msg } });
         return { modelResult: { error: msg }, events };
       }
+      if (svc.business_id !== biz.id) {
+        const msg = 'business_service_mismatch';
+        console.error('[propose_slot] business/service mismatch', {
+          business_id: args.business_id,
+          service_id: args.service_id,
+          service_business_id: svc.business_id,
+        });
+        events.push({ type: 'error', data: { code: msg, message: msg } });
+        return {
+          modelResult: {
+            error: msg,
+            hint: 'That service does not belong to that business. Re-run list_services for the chosen business and propose a service that returns from there.',
+          },
+          events,
+        };
+      }
       const start = new Date(args.slot_start);
+      // Validate slot_start is actually one of the slots get_availability
+      // returned for that Dublin date. Catches the model fabricating an
+      // ISO string from a user-stated time (e.g. "3:15" → "15:15+00:00",
+      // which is 4:15 PM Dublin during BST) rather than passing through
+      // the verbatim slot from a prior get_availability result. Both the
+      // ProposalCard and the agent's text are derived from this same
+      // instant, so a fabricated slot_start would otherwise make both
+      // surfaces show the wrong (off-by-one-hour) time consistently.
+      const dublinDate = new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Dublin',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(start);
+      const { data: availData } = await ctx.userClient.rpc(
+        'get_availability_for_ai',
+        {
+          p_business_id: biz.id,
+          p_service_id: svc.id,
+          p_date: dublinDate,
+        }
+      );
+      const slots = (availData ?? []) as Array<{ slot_start: string }>;
+      const proposedInstant = start.getTime();
+      const matched = slots.some(
+        (s) => new Date(s.slot_start).getTime() === proposedInstant
+      );
+      if (!matched) {
+        const msg = 'slot_not_in_availability';
+        console.error('[propose_slot] slot not in availability', {
+          proposed: start.toISOString(),
+          dublin_date: dublinDate,
+          available_count: slots.length,
+          first_few: slots.slice(0, 6).map((s) => s.slot_start),
+        });
+        events.push({ type: 'error', data: { code: msg, message: msg } });
+        return {
+          modelResult: {
+            error: msg,
+            hint: 'Pick a slot_start verbatim from your most recent get_availability result. Do not construct your own ISO timestamp from a user-stated time — that produces wrong-timezone bookings during BST.',
+            available_today: slots.slice(0, 6).map((s) => s.slot_start),
+          },
+          events,
+        };
+      }
       const end = new Date(start.getTime() + svc.duration_minutes * 60_000);
       const proposal = {
         business_id: biz.id,
