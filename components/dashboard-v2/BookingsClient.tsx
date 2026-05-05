@@ -17,8 +17,8 @@ export type BookingRow = {
   id: string;
   starts_at: string;
   ends_at: string;
-  status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
-  price_cents: number;
+  status: string | null;
+  price_cents: number | null;
   notes: string | null;
   services: { name: string | null; duration_minutes: number | null } | null;
   customers: {
@@ -33,12 +33,23 @@ export type TabId = 'upcoming' | 'past' | 'cancelled' | 'all';
 export type StatusFilter = 'all' | 'pending' | 'confirmed' | 'completed';
 
 type Status = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'gold';
-const STATUS_MAP: Record<BookingRow['status'], { status: Status; label: string }> = {
+const STATUS_MAP: Record<string, { status: Status; label: string }> = {
   confirmed: { status: 'success', label: 'Confirmed' },
   pending: { status: 'warning', label: 'Pending' },
   completed: { status: 'info', label: 'Completed' },
   cancelled: { status: 'danger', label: 'Cancelled' },
+  awaiting_payment: { status: 'warning', label: 'Awaiting payment' },
 };
+
+function getStatusConfig(raw: string | null | undefined): { status: Status; label: string } {
+  if (raw && STATUS_MAP[raw]) return STATUS_MAP[raw];
+  if (!raw) return { status: 'neutral', label: 'Unknown' };
+  const label = raw
+    .split('_')
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(' ');
+  return { status: 'neutral', label };
+}
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'upcoming', label: 'Upcoming' },
@@ -54,8 +65,10 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string }[] = [
   { value: 'completed', label: 'Completed' },
 ];
 
-function formatWhen(iso: string): string {
+function formatWhen(iso: string | null | undefined): string {
+  if (!iso) return '—';
   const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return '—';
   return d.toLocaleString('en-IE', {
     weekday: 'short',
     day: 'numeric',
@@ -224,7 +237,7 @@ export function BookingsClient({ bookings, filters, previewMode = false }: Booki
             >
               {displayed.map((b) => {
                 const customerName = displayCustomerName(b.customers);
-                const statusConfig = STATUS_MAP[b.status];
+                const statusConfig = getStatusConfig(b.status);
                 return (
                   <li key={b.id}>
                     <button
@@ -252,7 +265,9 @@ export function BookingsClient({ bookings, filters, previewMode = false }: Booki
                         {formatWhen(b.starts_at)}
                       </div>
                       <div className="text-[13px] font-semibold text-paper-text-1 dark:text-ink-text-1 tabular-nums text-right">
-                        {b.price_cents === 0 ? (
+                        {b.price_cents == null ? (
+                          <span className="text-paper-text-3 dark:text-ink-text-3 font-normal">—</span>
+                        ) : b.price_cents === 0 ? (
                           <span className="text-paper-text-3 dark:text-ink-text-3 font-normal">Free</span>
                         ) : (
                           formatPrice(b.price_cents)

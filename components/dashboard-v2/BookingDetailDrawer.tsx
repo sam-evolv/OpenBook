@@ -9,15 +9,26 @@ import { Avatar } from './Avatar';
 import { Button } from './Button';
 import { formatPrice, formatDuration } from '@/lib/supabase';
 
-type BookingStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed';
+type BookingStatus = string;
 
 type Status = 'success' | 'warning' | 'danger' | 'info' | 'neutral' | 'gold';
-const STATUS_MAP: Record<BookingStatus, { status: Status; label: string }> = {
+const STATUS_MAP: Record<string, { status: Status; label: string }> = {
   confirmed: { status: 'success', label: 'Confirmed' },
   pending: { status: 'warning', label: 'Pending' },
   completed: { status: 'info', label: 'Completed' },
   cancelled: { status: 'danger', label: 'Cancelled' },
+  awaiting_payment: { status: 'warning', label: 'Awaiting payment' },
 };
+
+function getStatusConfig(raw: string | null | undefined): { status: Status; label: string } {
+  if (raw && STATUS_MAP[raw]) return STATUS_MAP[raw];
+  if (!raw) return { status: 'neutral', label: 'Unknown' };
+  const label = raw
+    .split('_')
+    .map((w) => (w ? w[0].toUpperCase() + w.slice(1) : w))
+    .join(' ');
+  return { status: 'neutral', label };
+}
 
 /**
  * Neutral shape the drawer renders. Both BookingsClient and the Calendar
@@ -27,8 +38,8 @@ export interface BookingDetailData {
   id: string;
   starts_at: string;
   ends_at: string;
-  status: BookingStatus;
-  price_cents: number;
+  status: BookingStatus | null;
+  price_cents: number | null;
   notes: string | null;
   service_name: string | null;
   service_duration_minutes: number | null;
@@ -124,7 +135,7 @@ function BookingBody({
   booking: BookingDetailData;
   editable: boolean;
 }) {
-  const statusConfig = STATUS_MAP[booking.status];
+  const statusConfig = getStatusConfig(booking.status);
   const duration = booking.service_duration_minutes
     ? formatDuration(booking.service_duration_minutes)
     : null;
@@ -175,7 +186,11 @@ function BookingBody({
           <ContextRow label="Starts" value={formatWhen(booking.starts_at)} />
           <ContextRow label="Ends" value={formatWhen(booking.ends_at)} />
           {duration && <ContextRow label="Duration" value={duration} />}
-          <ContextRow label="Price" value={formatPrice(booking.price_cents)} accent />
+          <ContextRow
+            label="Price"
+            value={booking.price_cents == null ? '—' : formatPrice(booking.price_cents)}
+            accent
+          />
           <ContextRow
             label="Payment"
             value={
