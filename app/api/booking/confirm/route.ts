@@ -79,6 +79,12 @@ export async function POST(req: NextRequest) {
 
   // Hold the slot. The RPC enforces auth via auth.uid() under the user client,
   // confirms free bookings inline, and parks paid bookings in awaiting_payment.
+  console.log('[ai/confirm] hold_slot_for_ai inputs', {
+    business_id: businessId,
+    service_id: serviceId,
+    slot_start: slotStart,
+    customer_id: customerId,
+  });
   const { data: holdData, error: holdError } = await userClient.rpc(
     'hold_slot_for_ai',
     { p_service_id: serviceId, p_slot_start: slotStart }
