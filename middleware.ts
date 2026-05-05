@@ -6,8 +6,14 @@ import { createServerClient } from '@supabase/ssr';
  * 1. Refresh the Supabase session cookie on every request. Cookies are
  *    scoped to .openbook.ie so the session is shared between
  *    app.openbook.ie and dash.openbook.ie.
- * 2. Host-based routing — app.openbook.ie serves consumer app,
- *    dash.openbook.ie serves dashboard.
+ * 2. Host-based routing for app.openbook.ie (consumer) — / rewrites to
+ *    /home, and any /dashboard hit redirects to dash.openbook.ie.
+ *
+ * Dashboard host routing (dash.openbook.ie/ → /dashboard) is handled
+ * at the page level in app/page.tsx, not here. An earlier middleware
+ * version did this redirect itself and produced a production redirect
+ * loop (see PR #72) — keeping the dash. routing in plain page handlers
+ * keeps the control flow easier to reason about.
  *
  * Why the cookie handling is this careful: @supabase/ssr can call the
  * cookie setter multiple times per request (the auth token is chunked
@@ -64,23 +70,11 @@ export async function middleware(req: NextRequest) {
   await supabase.auth.getUser();
 
   /* Host-based routing. Any redirect/rewrite response must carry over the
-     Supabase cookies we just wrote, otherwise the refreshed token is lost. */
+     Supabase cookies we just wrote, otherwise the refreshed token is lost.
+     dash.* routing is handled at the page level — see app/page.tsx. */
   let routed: NextResponse | null = null;
 
-  if (false && host.startsWith('dash.')) {
-    if (pathname === '/') {
-      url.pathname = '/dashboard';
-      routed = NextResponse.redirect(url);
-    } else if (
-      !pathname.startsWith('/dashboard') &&
-      !pathname.startsWith('/onboard') &&
-      !pathname.startsWith('/auth') &&
-      !pathname.startsWith('/api')
-    ) {
-      url.pathname = `/dashboard${pathname}`;
-      routed = NextResponse.rewrite(url);
-    }
-  } else if (host.startsWith('app.') || host.includes('localhost')) {
+  if (host.startsWith('app.') || host.includes('localhost')) {
     if (pathname === '/') {
       url.pathname = '/home';
       routed = NextResponse.rewrite(url);

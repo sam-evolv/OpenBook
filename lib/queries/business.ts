@@ -37,7 +37,12 @@ export async function requireCurrentBusiness<T = Record<string, unknown>>(
   }
 
   const business = businesses?.[0] ?? null;
-  if (!business) redirect('/onboard/flow');
+  if (!business) {
+    // Half-onboarded owners go finish the flow; fully-onboarded owners
+    // whose live business has gone missing land on a clear no-business
+    // screen instead of being looped back through onboarding.
+    redirect(owner.onboarding_completed ? '/dashboard/no-business' : '/onboard/flow');
+  }
 
   return { owner, business: business as unknown as T, sb };
 }
