@@ -106,7 +106,7 @@ const AUTOMATIONS: AutomationDef[] = [
   },
 ];
 
-const DESCRIPTION_MAX = 300;
+const DESCRIPTION_MAX = 500;
 
 export interface SettingsInitial {
   id: string;
