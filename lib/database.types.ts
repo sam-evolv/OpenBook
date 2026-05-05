@@ -302,6 +302,7 @@ export type Database = {
           offers: Json | null
           owner_id: string
           phone: string | null
+          plan: string
           price_tier: number | null
           primary_colour: string | null
           processed_icon_url: string | null
@@ -348,6 +349,7 @@ export type Database = {
           offers?: Json | null
           owner_id: string
           phone?: string | null
+          plan?: string
           price_tier?: number | null
           primary_colour?: string | null
           processed_icon_url?: string | null
@@ -394,6 +396,7 @@ export type Database = {
           offers?: Json | null
           owner_id?: string
           phone?: string | null
+          plan?: string
           price_tier?: number | null
           primary_colour?: string | null
           processed_icon_url?: string | null

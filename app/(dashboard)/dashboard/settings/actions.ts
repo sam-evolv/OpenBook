@@ -2,6 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { createSupabaseServerClient, getCurrentOwner } from '@/lib/supabase-server';
+import { isValidTileColour } from '@/lib/tile-palette';
 
 export type Automations = {
   auto_reviews?: boolean;
@@ -23,6 +24,9 @@ export interface SettingsPayload {
   website: string | null;
   address_line: string | null;
   city: string | null;
+  primary_colour: string | null;
+  logo_url: string | null;
+  processed_icon_url: string | null;
   socials: {
     instagram?: string | null;
     tiktok?: string | null;
@@ -45,6 +49,11 @@ export async function saveSettings(payload: SettingsPayload) {
 
   if (!business) return { ok: false as const, error: 'No live business' };
 
+  const primary_colour =
+    payload.primary_colour && isValidTileColour(payload.primary_colour)
+      ? payload.primary_colour
+      : null;
+
   const { error } = await sb
     .from('businesses')
     .update({
@@ -56,6 +65,9 @@ export async function saveSettings(payload: SettingsPayload) {
       website: payload.website,
       address_line: payload.address_line,
       city: payload.city,
+      primary_colour,
+      logo_url: payload.logo_url,
+      processed_icon_url: payload.processed_icon_url,
       socials: payload.socials,
       automations: payload.automations,
     })

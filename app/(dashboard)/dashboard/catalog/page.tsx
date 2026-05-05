@@ -4,7 +4,7 @@ import type { ServiceRow } from '@/components/dashboard-v2/ServiceDrawer';
 
 export const dynamic = 'force-dynamic';
 
-const VALID_TABS: CatalogTabId[] = ['services', 'packages', 'classes', 'inventory'];
+const VALID_TABS: CatalogTabId[] = ['services'];
 
 export default async function CatalogV2Page({
   searchParams,

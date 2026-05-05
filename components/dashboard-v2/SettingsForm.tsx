@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useRef, useState, useTransition } from 'react';
 import {
   Bell,
   Box,
@@ -8,8 +8,10 @@ import {
   Check,
   CreditCard,
   Heart,
+  ImagePlus,
   RotateCcw,
   Star,
+  Upload,
   UserCheck,
   Users,
   type LucideIcon,
@@ -23,6 +25,12 @@ import {
   type Automations,
   type SettingsPayload,
 } from '@/app/(dashboard)/dashboard/settings/actions';
+import {
+  TILE_PALETTE,
+  type TileColourSlug,
+  DEFAULT_TILE_COLOUR,
+  isValidTileColour,
+} from '@/lib/tile-palette';
 import { cn } from '@/lib/utils';
 
 type AutomationKey = keyof Automations;
@@ -98,7 +106,10 @@ const AUTOMATIONS: AutomationDef[] = [
   },
 ];
 
+const DESCRIPTION_MAX = 300;
+
 export interface SettingsInitial {
+  id: string;
   name: string;
   tagline: string | null;
   about_long: string | null;
@@ -107,6 +118,9 @@ export interface SettingsInitial {
   website: string | null;
   address_line: string | null;
   city: string | null;
+  primary_colour: string | null;
+  logo_url: string | null;
+  processed_icon_url: string | null;
   socials: { instagram?: string | null; tiktok?: string | null; facebook?: string | null } | null;
   automations: Automations | null;
 }
@@ -133,6 +147,9 @@ export function SettingsForm({ initial }: SettingsFormProps) {
   const [isPending, startTransition] = useTransition();
   const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoError, setLogoError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const update = <K extends keyof SettingsInitial>(key: K, value: SettingsInitial[K]) => {
     setForm((f) => ({ ...f, [key]: value }));
@@ -155,6 +172,11 @@ export function SettingsForm({ initial }: SettingsFormProps) {
     setStatus('idle');
   };
 
+  const updateDescription = (value: string) => {
+    const trimmed = value.slice(0, DESCRIPTION_MAX);
+    update('about_long', trimmed);
+  };
+
   const reset = () => {
     setForm({
       ...initial,
@@ -163,6 +185,7 @@ export function SettingsForm({ initial }: SettingsFormProps) {
     });
     setDirty(false);
     setStatus('idle');
+    setLogoError(null);
   };
 
   const onSave = () => {
@@ -178,6 +201,9 @@ export function SettingsForm({ initial }: SettingsFormProps) {
         website: form.website,
         address_line: form.address_line,
         city: form.city,
+        primary_colour: form.primary_colour,
+        logo_url: form.logo_url,
+        processed_icon_url: form.processed_icon_url,
         socials: {
           instagram: form.socials.instagram ?? null,
           tiktok: form.socials.tiktok ?? null,
@@ -195,6 +221,52 @@ export function SettingsForm({ initial }: SettingsFormProps) {
       }
     });
   };
+
+  const onPickLogo = () => fileInputRef.current?.click();
+
+  const onLogoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      setLogoError('Please choose an image file.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setLogoError('File too large. Max 5MB.');
+      return;
+    }
+
+    setLogoUploading(true);
+    setLogoError(null);
+    try {
+      const fd = new FormData();
+      fd.append('businessId', form.id);
+      fd.append('file', file);
+      fd.append('background', 'auto');
+      const res = await fetch('/api/upload-logo', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? 'Upload failed');
+      setForm((f) => ({
+        ...f,
+        logo_url: data.logoUrl,
+        processed_icon_url: data.iconUrl,
+      }));
+      setDirty(true);
+      setStatus('idle');
+    } catch (err: any) {
+      setLogoError(err?.message ?? 'Upload failed. Try a different file.');
+    } finally {
+      setLogoUploading(false);
+    }
+  };
+
+  const description = form.about_long ?? '';
+  const descriptionRemaining = DESCRIPTION_MAX - description.length;
+  const previewLogo = form.processed_icon_url ?? form.logo_url;
+  const selectedColour: TileColourSlug = isValidTileColour(form.primary_colour)
+    ? form.primary_colour
+    : DEFAULT_TILE_COLOUR;
 
   return (
     <>
@@ -228,6 +300,145 @@ export function SettingsForm({ initial }: SettingsFormProps) {
       />
 
       <div className="mx-auto max-w-3xl px-8 py-8 space-y-10">
+        <Section title="Business profile">
+          <Card>
+            <div className="flex flex-col gap-4">
+              <FieldRow
+                label="Business name"
+                value={form.name ?? ''}
+                onChange={(v) => update('name', v)}
+              />
+
+              <div>
+                <div className="flex items-baseline justify-between mb-1.5">
+                  <label className="block text-[11.5px] font-medium text-paper-text-2 dark:text-ink-text-2">
+                    Description
+                  </label>
+                  <span
+                    className={cn(
+                      'text-[11px] tabular-nums',
+                      descriptionRemaining < 0
+                        ? 'text-red-500 dark:text-red-400'
+                        : 'text-paper-text-3 dark:text-ink-text-3',
+                    )}
+                  >
+                    {description.length}/{DESCRIPTION_MAX}
+                  </span>
+                </div>
+                <div
+                  className={cn(
+                    'flex items-start gap-2 px-3 py-2.5 rounded-md border',
+                    'bg-paper-surface dark:bg-ink-surface',
+                    'border-paper-border dark:border-ink-border',
+                    'focus-within:ring-2 focus-within:ring-gold focus-within:border-gold',
+                  )}
+                >
+                  <textarea
+                    rows={4}
+                    value={description}
+                    onChange={(e) => updateDescription(e.target.value)}
+                    maxLength={DESCRIPTION_MAX}
+                    placeholder="Tell customers what makes you different…"
+                    className="flex-1 bg-transparent text-[13px] leading-relaxed outline-none resize-none text-paper-text-1 dark:text-ink-text-1 placeholder:text-paper-text-3 dark:placeholder:text-ink-text-3"
+                  />
+                </div>
+              </div>
+
+              <FieldRow
+                label="Address"
+                value={form.address_line ?? ''}
+                onChange={(v) => update('address_line', v)}
+                placeholder="123 High Street, Dublin 2"
+              />
+              <FieldRow
+                label="Phone"
+                value={form.phone ?? ''}
+                onChange={(v) => update('phone', v)}
+                placeholder="+353 87 123 4567"
+              />
+              <FieldRow
+                label="Website"
+                value={form.website ?? ''}
+                onChange={(v) => update('website', v)}
+                placeholder="example.com"
+                help="Optional. Customers will see this on your business page."
+              />
+
+              <div>
+                <label className="block text-[11.5px] font-medium text-paper-text-2 dark:text-ink-text-2 mb-1.5">
+                  Primary colour
+                </label>
+                <ColourPicker
+                  value={selectedColour}
+                  onChange={(slug) => update('primary_colour', slug)}
+                />
+                <p className="mt-1.5 text-[11.5px] text-paper-text-3 dark:text-ink-text-3">
+                  Drives the icon colour shown to customers in the app.
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-[11.5px] font-medium text-paper-text-2 dark:text-ink-text-2 mb-1.5">
+                  Business logo
+                </label>
+                <div className="flex items-center gap-4">
+                  <div
+                    className={cn(
+                      'flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border overflow-hidden',
+                      'bg-paper-surface2 dark:bg-ink-surface2 border-paper-border dark:border-ink-border',
+                    )}
+                  >
+                    {previewLogo ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={previewLogo}
+                        alt="Logo preview"
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <ImagePlus
+                        size={20}
+                        strokeWidth={1.5}
+                        className="text-paper-text-3 dark:text-ink-text-3"
+                      />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <Button
+                      variant="ghost"
+                      size="md"
+                      icon={<Upload size={13} strokeWidth={2} />}
+                      onClick={onPickLogo}
+                      disabled={logoUploading}
+                    >
+                      {logoUploading
+                        ? 'Uploading…'
+                        : previewLogo
+                          ? 'Replace logo'
+                          : 'Upload logo'}
+                    </Button>
+                    <p className="mt-1.5 text-[11.5px] text-paper-text-3 dark:text-ink-text-3">
+                      PNG or JPG, square works best. Max 5MB.
+                    </p>
+                    {logoError && (
+                      <p className="mt-1 text-[11.5px] text-red-500 dark:text-red-400">
+                        {logoError}
+                      </p>
+                    )}
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={onLogoChange}
+                    className="hidden"
+                  />
+                </div>
+              </div>
+            </div>
+          </Card>
+        </Section>
+
         <Section title="Automations">
           <Card padding="none">
             {AUTOMATIONS.map((a, i) => {
@@ -271,56 +482,19 @@ export function SettingsForm({ initial }: SettingsFormProps) {
           </Card>
         </Section>
 
-        <Section title="Business info">
+        <Section title="Additional details">
           <Card>
-            <div className="flex flex-col gap-4">
-              <FieldRow
-                label="Business name"
-                value={form.name ?? ''}
-                onChange={(v) => update('name', v)}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <FieldRow
                 label="Tagline"
                 value={form.tagline ?? ''}
                 onChange={(v) => update('tagline', v)}
-                help="One line under your business name. Keep it specific."
-              />
-              <FieldRow
-                label="About"
-                value={form.about_long ?? ''}
-                onChange={(v) => update('about_long', v)}
-                multi
-                rows={4}
-                placeholder="Tell customers what makes you different…"
+                help="One line under your business name."
               />
               <FieldRow
                 label="Founder"
                 value={form.founder_name ?? ''}
                 onChange={(v) => update('founder_name', v)}
-              />
-            </div>
-          </Card>
-        </Section>
-
-        <Section title="Contact">
-          <Card>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <FieldRow
-                label="Phone"
-                value={form.phone ?? ''}
-                onChange={(v) => update('phone', v)}
-                placeholder="+353 87 123 4567"
-              />
-              <FieldRow
-                label="Website"
-                value={form.website ?? ''}
-                onChange={(v) => update('website', v)}
-                placeholder="example.com"
-              />
-              <FieldRow
-                label="Address"
-                value={form.address_line ?? ''}
-                onChange={(v) => update('address_line', v)}
               />
               <FieldRow
                 label="City"
@@ -374,6 +548,43 @@ function Section({ title, children }: { title: string; children: React.ReactNode
       </div>
       {children}
     </section>
+  );
+}
+
+function ColourPicker({
+  value,
+  onChange,
+}: {
+  value: TileColourSlug;
+  onChange: (slug: TileColourSlug) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {TILE_PALETTE.map((c) => {
+        const selected = c.slug === value;
+        return (
+          <button
+            key={c.slug}
+            type="button"
+            onClick={() => onChange(c.slug)}
+            aria-label={c.name}
+            aria-pressed={selected}
+            title={c.name}
+            className={cn(
+              'h-8 w-8 rounded-md transition-all',
+              'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold focus-visible:ring-offset-2',
+              'focus-visible:ring-offset-paper-bg dark:focus-visible:ring-offset-ink-bg',
+              selected
+                ? 'ring-2 ring-offset-2 ring-gold ring-offset-paper-bg dark:ring-offset-ink-bg scale-105'
+                : 'hover:scale-105',
+            )}
+            style={{
+              background: `linear-gradient(135deg, ${c.light} 0%, ${c.mid} 45%, ${c.dark} 100%)`,
+            }}
+          />
+        );
+      })}
+    </div>
   );
 }
 
