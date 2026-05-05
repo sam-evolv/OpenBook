@@ -285,7 +285,7 @@ export function PaymentCard({
   const accent = getTileColour(undefined).mid;
   const expiresAt = payment.expires_at
     ? new Date(payment.expires_at).getTime()
-    : Date.now() + 10 * 60 * 1000;
+    : Date.now() + 30 * 60 * 1000;
   const [now, setNow] = useState(() => Date.now());
   const status = payment.status ?? 'awaiting_payment';
 

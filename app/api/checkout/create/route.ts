@@ -126,7 +126,10 @@ export async function POST(req: NextRequest) {
         booking_id: booking.id,
         business_id: business.id,
       },
-      expires_at: Math.floor(Date.now() / 1000) + 15 * 60,
+      // Stripe enforces a 30-minute minimum on Checkout Session expires_at.
+      // We align it with the booking's 30-minute hold so the two windows
+      // close together and the user can't pay against an already-expired hold.
+      expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
       success_url: `${appUrl}/booking/confirm?id=${booking.id}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/booking/confirm?id=${booking.id}&cancelled=1`,
     });
