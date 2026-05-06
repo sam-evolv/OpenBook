@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
   /* Verify ownership */
   const { data: business } = await sb
     .from('businesses')
-    .select('id, owner_id, slug')
+    .select('id, owner_id, slug, name')
     .eq('id', state.businessId)
     .maybeSingle();
   if (!business || business.owner_id !== user.id) {
@@ -66,6 +66,43 @@ export async function POST(req: NextRequest) {
     }));
     await sb.from('business_hours').delete().eq('business_id', business.id);
     await sb.from('business_hours').insert(hourRows);
+  }
+
+  /* Seed a default staff row from the owner. Availability generation
+     depends on at least one staff member existing for the business —
+     without this the AI assistant says "no slots available" for every
+     time and date. Idempotent: skipped if any active staff already
+     exists for this business, so re-running /complete (or a future
+     trigger) won't produce duplicates. */
+  const { count: existingStaff } = await sb
+    .from('staff')
+    .select('id', { count: 'exact', head: true })
+    .eq('business_id', business.id);
+
+  if (!existingStaff) {
+    const { data: owner } = await sb
+      .from('owners')
+      .select('full_name, email')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const ownerName =
+      owner?.full_name?.trim() ||
+      user.user_metadata?.full_name?.trim() ||
+      user.user_metadata?.name?.trim() ||
+      business.name?.trim() ||
+      'Owner';
+    const ownerEmail = owner?.email ?? user.email ?? null;
+
+    const { error: staffErr } = await sb.from('staff').insert({
+      business_id: business.id,
+      name: ownerName,
+      email: ownerEmail,
+      is_active: true,
+    });
+    if (staffErr) {
+      console.error('[complete] default staff insert failed', staffErr);
+    }
   }
 
   /* Flip is_live */
