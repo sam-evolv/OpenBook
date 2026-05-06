@@ -52,18 +52,19 @@ export function HomeTileGrid({ businesses }: { businesses: HomeBusiness[] }) {
 
   return (
     <PullToRefresh onRefresh={refresh}>
-      {/* iOS-style 4-column icon grid at every viewport. The grid
-          declaration is intentionally inline so it cannot be overridden
-          by Tailwind cascade or breakpoint classes — see PRs #95/#96
-          for the breakage that responsive utilities caused here.
-          Tile sizing is vw-based with a max cap (see Tile.tsx) so four
-          icons always fit, scaling down on iPhone and capping at 96 px
-          on tablet/desktop. */}
+      {/* iPhone Springboard layout. The grid container is inline-styled
+          so the 4-column declaration cannot be overridden by Tailwind
+          cascade or breakpoints (see PRs #95–#97 for the breakage that
+          utility-class responsive grids produced). Tiles are a fixed
+          72 px — iPhone home-screen icon size — and the grid is
+          centred inside the iPhone-shaped page frame in
+          `app/(consumer)/home/page.tsx`. */}
       <div
         style={{
           display: 'grid',
           gridTemplateColumns: 'repeat(4, 1fr)',
-          gap: '24px 16px',
+          columnGap: 16,
+          rowGap: 24,
           padding: '0 16px',
           width: '100%',
         }}
@@ -83,6 +84,7 @@ export function HomeTileGrid({ businesses }: { businesses: HomeBusiness[] }) {
                 name={b.name}
                 colour={b.primary_colour}
                 logoUrl={b.processed_icon_url ?? b.logo_url ?? null}
+                size={72}
                 status={openness.status}
                 animationDelay={i * 30}
                 viewTransitionName={`tile-${b.slug}`}
