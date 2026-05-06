@@ -42,33 +42,42 @@ export function HomeTileGrid({ businesses }: { businesses: HomeBusiness[] }) {
   }
 
   // Sort businesses alphabetically by name so the grid is predictable.
-  // The DB query already orders by name, but resort defensively in case
-  // upstream changes break that ordering.
+  // The DB query already orders by name, but resort defensively (and guard
+  // against null names) in case upstream changes break that ordering.
   const sortedBusinesses = [...businesses].sort((a, b) =>
-    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+    (a.name ?? '').localeCompare(b.name ?? '', undefined, {
+      sensitivity: 'base',
+    })
   );
 
   return (
     <PullToRefresh onRefresh={refresh}>
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-7">
+      {/* iOS-style 4-column grid. We deliberately keep 4 cols at every
+          width: the system + business tiles flow Discover → businesses →
+          wallet → me with no empty cells in between. justify-items: center
+          on each cell so the 72px tile sits centred without a wrapper div
+          (a wrapper div was previously inserted only around <Tile>, making
+          it the sole grid child with stretch alignment, while
+          <SystemAppIcon> placed itself directly — that mismatch is what
+          shifted Discover into a row of its own on some viewports). */}
+      <div className="grid grid-cols-4 gap-x-4 gap-y-7 justify-items-center">
         <SystemAppIcon kind="discover" />
         {sortedBusinesses.map((b, i) => {
           const hours = b.business_hours ?? [];
           const openness = getBusinessOpenness(hours, b.business_closures ?? []);
           return (
-            <div key={b.id} className="flex justify-center">
-              <Tile
-                name={b.name}
-                colour={b.primary_colour}
-                logoUrl={b.processed_icon_url ?? b.logo_url ?? null}
-                size={72}
-                status={openness.status}
-                animationDelay={i * 30}
-                viewTransitionName={`tile-${b.slug}`}
-                onTap={(rect) => navigate(`/business/${b.slug}`, rect)}
-                onLongPress={(rect) => setPeekState({ business: b, rect })}
-              />
-            </div>
+            <Tile
+              key={b.id}
+              name={b.name}
+              colour={b.primary_colour}
+              logoUrl={b.processed_icon_url ?? b.logo_url ?? null}
+              size={72}
+              status={openness.status}
+              animationDelay={i * 30}
+              viewTransitionName={`tile-${b.slug}`}
+              onTap={(rect) => navigate(`/business/${b.slug}`, rect)}
+              onLongPress={(rect) => setPeekState({ business: b, rect })}
+            />
           );
         })}
         <SystemAppIcon kind="wallet" />
