@@ -1,18 +1,16 @@
 'use client';
 
-import { X, LayoutList } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface ConsumerHeaderProps {
   showClose?: boolean;
-  showLayout?: boolean;
   domain?: string;
   onClose?: () => void;
 }
 
 export function ConsumerHeader({
   showClose = true,
-  showLayout = true,
   domain = 'openbook.ie',
   onClose,
 }: ConsumerHeaderProps) {
@@ -48,16 +46,8 @@ export function ConsumerHeader({
           <div className="mt-1 h-[3px] w-8 rounded-full bg-white/25" />
         </div>
 
-        {showLayout ? (
-          <button
-            className="w-9 h-9 rounded-full flex items-center justify-center mat-glass-thin active:scale-90 transition-transform"
-            aria-label="Layout"
-          >
-            <LayoutList className="w-[15px] h-[15px] text-white/95" strokeWidth={2.2} />
-          </button>
-        ) : (
-          <div className="w-9 h-9" />
-        )}
+        {/* Right-side spacer keeps the centered domain pill visually centred. */}
+        <div className="w-9 h-9" />
       </div>
     </div>
   );

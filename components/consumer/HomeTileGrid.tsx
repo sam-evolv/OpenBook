@@ -41,11 +41,18 @@ export function HomeTileGrid({ businesses }: { businesses: HomeBusiness[] }) {
     }
   }
 
+  // Sort businesses alphabetically by name so the grid is predictable.
+  // The DB query already orders by name, but resort defensively in case
+  // upstream changes break that ordering.
+  const sortedBusinesses = [...businesses].sort((a, b) =>
+    a.name.localeCompare(b.name, undefined, { sensitivity: 'base' })
+  );
+
   return (
     <PullToRefresh onRefresh={refresh}>
-      <div className="grid grid-cols-4 gap-x-4 gap-y-7">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-7">
         <SystemAppIcon kind="discover" />
-        {businesses.map((b, i) => {
+        {sortedBusinesses.map((b, i) => {
           const hours = b.business_hours ?? [];
           const openness = getBusinessOpenness(hours, b.business_closures ?? []);
           return (

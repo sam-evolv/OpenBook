@@ -18,7 +18,7 @@ export default function AssistantPage() {
         }}
       />
 
-      <ConsumerHeader domain="openbook.ie" showLayout={false} />
+      <ConsumerHeader domain="openbook.ie" />
       <AssistantChat />
       <BottomTabBar />
     </main>
