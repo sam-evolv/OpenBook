@@ -12,6 +12,8 @@ export interface BusinessSummary {
   primary_colour: string;
   address: string | null;
   rating: number | null;
+  processed_icon_url?: string | null;
+  logo_url?: string | null;
 }
 
 export interface AvailabilitySlot {

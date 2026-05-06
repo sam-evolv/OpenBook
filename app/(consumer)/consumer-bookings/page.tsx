@@ -44,7 +44,7 @@ async function getMyBookings(): Promise<BookingWithDetails[]> {
     .select(
       `
       *,
-      businesses (slug, name, primary_colour, cover_image_url, city),
+      businesses (slug, name, primary_colour, cover_image_url, processed_icon_url, logo_url, city),
       services (name, duration_minutes, price_cents)
     `
     )

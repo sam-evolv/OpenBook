@@ -63,7 +63,13 @@ export type Booking = {
 export type BookingWithDetails = Booking & {
   businesses: Pick<
     Business,
-    'slug' | 'name' | 'primary_colour' | 'cover_image_url' | 'city' | 'processed_icon_url'
+    | 'slug'
+    | 'name'
+    | 'primary_colour'
+    | 'cover_image_url'
+    | 'city'
+    | 'processed_icon_url'
+    | 'logo_url'
   >;
   services: Pick<Service, 'name' | 'duration_minutes' | 'price_cents'>;
 };
