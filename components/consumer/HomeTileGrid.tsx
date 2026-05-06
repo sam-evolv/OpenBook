@@ -52,21 +52,27 @@ export function HomeTileGrid({ businesses }: { businesses: HomeBusiness[] }) {
 
   return (
     <PullToRefresh onRefresh={refresh}>
-      {/* iOS-style 4-column grid. Every grid child is wrapped in an
-          identical <div className="grid-cell"> so the items have a
-          uniform shape — auto-placement then walks left-to-right, top-to-
-          bottom with no orphans (a previous structure that left
-          <SystemAppIcon> as a bare flex Link while wrapping <Tile> in an
-          extra div produced inconsistent intrinsic sizes that, on wide
-          desktop viewports, pushed Discover onto its own row).
-          `display: grid` + `grid-template-columns` are also set inline
-          so the layout is robust against any class-processing edge case. */}
+      {/* iOS-style icon grid. Each track is sized to the tile width
+          (`max-content`) and `justify-content: start` packs them on the
+          left of the container, so on a wide desktop viewport the icons
+          do NOT spread out across the full width with whitespace
+          between them — they sit tight together starting from the left
+          edge, exactly like iPhone Springboard. We deliberately avoid
+          `repeat(4, 1fr)` (which stretched each cell to ~25% of viewport
+          on desktop and visually orphaned Discover) and any `mx-auto`
+          centring. The container itself is capped at `max-w-screen-sm`
+          so the row never grows past four icons; it's left-aligned
+          inside the parent section. Every grid child is wrapped in an
+          identical flex cell so auto-placement walks uniformly. */}
       <div
-        className="gap-x-4 gap-y-7"
+        className="max-w-screen-sm"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+          gridTemplateColumns: 'repeat(4, max-content)',
           gridAutoFlow: 'row',
+          justifyContent: 'start',
+          columnGap: 28,
+          rowGap: 28,
         }}
       >
         <div className="flex justify-center">
