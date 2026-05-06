@@ -32,8 +32,6 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  const ctaVisible = scrollY > 200 && services.length > 0;
-
   return (
     <div className="flex flex-col">
       {/* Hero — `isolate` so the parallax-transformed image stays under the
@@ -147,7 +145,7 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
       <AtAGlance business={business} services={services} primary={primary} />
 
       {/* Services list */}
-      <div className="px-5 pt-8 pb-6">
+      <div className="px-5 pt-9 pb-7">
         <div className="flex items-center justify-between mb-4">
           <p className="text-[11px] font-semibold tracking-[0.14em] uppercase text-white/50">
             Services
@@ -175,12 +173,12 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
             </p>
           </div>
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-3">
             {services.map((svc, i) => (
               <button
                 key={svc.id}
                 onClick={() => onBookService(svc)}
-                className="flex items-center gap-3 p-4 rounded-2xl text-left transition-transform duration-100 active:scale-[0.985] animate-reveal-up"
+                className="flex items-center gap-3 rounded-[22px] p-4 text-left transition-transform duration-100 active:scale-[0.985] animate-reveal-up"
                 style={{
                   background:
                     'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.03) 100%)',
@@ -240,7 +238,7 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
 
       {/* Gallery preview (first 4 only) */}
       {hasGallery && (
-        <div className="px-5 pb-6">
+        <div className="px-5 pb-7">
           <div className="flex items-center justify-between mb-4">
             <p className="text-[11px] font-semibold tracking-[0.14em] uppercase text-white/50">
               Gallery
@@ -271,7 +269,7 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
       {/* About snippet */}
       {business.about_long && (
         <div
-          className="px-5 pb-6 animate-reveal-up"
+          className="px-5 pb-14 animate-reveal-up"
           style={{ animationDelay: '800ms', animationDuration: '500ms', animationFillMode: 'both' }}
         >
           <p className="text-[11px] font-semibold tracking-[0.14em] uppercase mb-3 text-white/50">
@@ -281,29 +279,6 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
             {business.about_long}
           </p>
         </div>
-      )}
-
-      {/* Sticky Book CTA — appears once the hero has scrolled mostly out of
-          frame. Sits above the BusinessAppShell tab bar (~80px + safe-area).
-          Uses .mat-glass-thick to match the BottomTabBar glass treatment. */}
-      {cheapest && (
-        <button
-          onClick={() => onBookService(cheapest)}
-          className="mat-glass-thick fixed left-4 right-4 z-40 mx-auto max-w-md rounded-full px-6 py-3.5 flex items-center justify-center gap-2 text-[15px] font-semibold text-white transition-all duration-[250ms] active:scale-[0.98]"
-          style={{
-            bottom: 'calc(80px + env(safe-area-inset-bottom) + 12px)',
-            opacity: ctaVisible ? 1 : 0,
-            transform: ctaVisible ? 'translateY(0)' : 'translateY(20px)',
-            pointerEvents: ctaVisible ? 'auto' : 'none',
-          }}
-          aria-label={`Book ${cheapest.name}`}
-        >
-          <span>Book</span>
-          <span className="text-white/50">·</span>
-          <span style={{ color: primary }}>
-            {cheapest.price_cents === 0 ? 'Free' : `€${(cheapest.price_cents / 100).toFixed(0)}`}
-          </span>
-        </button>
       )}
     </div>
   );

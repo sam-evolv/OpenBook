@@ -48,9 +48,9 @@ export default async function HomePage() {
       <div className="relative mx-auto flex h-full w-full max-w-md flex-col">
         <div className="pt-safe" />
 
-        {/* Greeting — `mb-8` gives the OpenBook wordmark proper
-            breathing room before the first row of icons. */}
-        <header className="px-6 pt-7 pb-1 mb-8 animate-reveal-up">
+        {/* Greeting — match the 4-icon grid width so the wordmark, tiles,
+            and glass dock all sit on the same visual rails. */}
+        <header className="mx-auto w-[336px] max-w-[calc(100%-40px)] px-0 pt-7 pb-1 mb-8 animate-reveal-up">
           <p
             className="text-caption-eyebrow"
             style={{ color: 'var(--label-3)' }}
@@ -71,10 +71,10 @@ export default async function HomePage() {
             dock is anchored bottom and apps sit centred above it.
             `items-center` belt-and-braces the horizontal centring
             (some iPhone PWA contexts shift content right because of
-            asymmetric safe-area-insets). `pb-28` reserves room for
+            asymmetric safe-area-insets). `pb-36` reserves room for
             the floating BottomTabBar. */}
         <section
-          className="flex flex-1 flex-col items-center justify-center px-5 pb-28 animate-reveal-up"
+          className="flex flex-1 flex-col items-center justify-center px-5 pb-36 animate-reveal-up"
           style={{ animationDelay: '60ms' }}
         >
           <HomeTileGrid businesses={businesses} />

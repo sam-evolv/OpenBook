@@ -25,9 +25,9 @@ export function BottomTabBar() {
       className="fixed bottom-0 left-0 right-0 z-50 pb-safe pointer-events-none"
       aria-label="Dock"
     >
-      <div className="mx-auto max-w-md px-5 pb-3 pointer-events-auto">
+      <div className="mx-auto max-w-md px-4 pb-3 pointer-events-auto">
         <div
-          className="relative rounded-[34px] px-3 py-3 mat-glass-thick"
+          className="relative rounded-[38px] px-3 py-3 mat-glass-thick"
           style={{
             boxShadow: `
               0 1px 0 rgba(255, 255, 255, 0.10) inset,
@@ -47,7 +47,7 @@ export function BottomTabBar() {
             }}
           />
 
-          <div className="flex items-center justify-around gap-1">
+          <div className="flex items-start justify-between gap-2">
             {DOCK_APPS.map(({ href, label, Icon }) => {
               const active =
                 pathname === href ||
@@ -80,7 +80,7 @@ function DockIcon({
   Icon: IconComponent;
   active: boolean;
 }) {
-  const size = 54;
+  const size = 72;
   const radius = Math.round(size * 0.235);
 
   // Gradients differ for active (gold) vs idle (gunmetal)
@@ -99,7 +99,7 @@ function DockIcon({
   return (
     <Link
       href={href}
-      className="group flex flex-col items-center transition-transform duration-300 active:scale-[0.88]"
+      className="group flex w-[72px] flex-col items-center transition-transform duration-300 active:scale-[0.88]"
       style={{ transitionTimingFunction: 'cubic-bezier(0.32, 0.72, 0, 1)' }}
       aria-label={label}
     >
@@ -180,6 +180,8 @@ function DockIcon({
         style={{
           color: active ? '#D4AF37' : 'rgba(255,255,255,0.55)',
           letterSpacing: '-0.005em',
+          maxWidth: 74,
+          textAlign: 'center',
         }}
       >
         {label}
