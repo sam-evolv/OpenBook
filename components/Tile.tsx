@@ -271,20 +271,27 @@ export function Tile({
       {!hideLabel && (
         <span
           style={{
-            // 11px keeps things compact; the wider maxWidth and CSS-only
-            // ellipsis let names like "Evolv Performance" land on
-            // "Evolv Perform…" instead of the cramped "Evolv Perfo…".
+            // Keep labels inside their icon column. The screenshot-level
+            // issue was long business names borrowing space from neighbours,
+            // so labels can wrap to two compact lines but never grow wider
+            // than the tile itself.
             fontSize: 11,
+            lineHeight: 1.12,
             color: 'var(--ob-text-1, rgba(255,255,255,0.9))',
             fontWeight: 500,
             maxWidth:
               typeof size === 'number'
-                ? size + 28
-                : `calc(${sizeBase} + 28px)`,
+                ? size + 4
+                : `calc(${sizeBase} + 4px)`,
+            minHeight: 25,
             textAlign: 'center',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            wordBreak: 'normal',
+            overflowWrap: 'normal',
             letterSpacing: '-0.01em',
           }}
         >

@@ -102,7 +102,7 @@ export function HomeTileGrid({ businesses }: { businesses: HomeBusiness[] }) {
           display: 'grid',
           gridTemplateColumns: 'repeat(4, 72px)',
           columnGap: 16,
-          rowGap: 24,
+          rowGap: 28,
           width: 'max-content',
           maxWidth: '100%',
           justifyContent: 'center',

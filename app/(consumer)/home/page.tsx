@@ -1,5 +1,4 @@
 import { supabaseAdmin } from '@/lib/supabase';
-import { ConsumerHeader } from '@/components/consumer/ConsumerHeader';
 import { BottomTabBar } from '@/components/consumer/BottomTabBar';
 import { HomeWallpaper } from '@/components/consumer/HomeWallpaper';
 import { HomeTileGrid, type HomeBusiness } from '@/components/consumer/HomeTileGrid';
@@ -39,19 +38,19 @@ export default async function HomePage() {
       <HomeWallpaper />
 
       {/* iPhone-shaped frame on every viewport. The whole consumer
-          surface is capped at `max-w-md` (28 rem ≈ 448 px, just wider
+          surface is capped at `max-w-md` (28 rem ~= 448 px, just wider
           than an iPhone Pro Max) and centred with `mx-auto`, so on a
           desktop monitor the page reads as an iPhone home screen
           floating in the centre. The inner column is a flex layout
-          that fills 100dvh: header → greeting → grid (vertically
+          that fills 100dvh: safe-area → greeting → grid (vertically
           centred) → page dots, with the BottomTabBar fixed-positioned
           outside this frame. */}
       <div className="relative mx-auto flex h-full w-full max-w-md flex-col">
-        <ConsumerHeader showClose={false} />
+        <div className="pt-safe" />
 
-        {/* Greeting — `mb-10` gives the OpenBook wordmark proper
+        {/* Greeting — `mb-8` gives the OpenBook wordmark proper
             breathing room before the first row of icons. */}
-        <header className="px-6 pt-3 pb-1 mb-10 animate-reveal-up">
+        <header className="px-6 pt-7 pb-1 mb-8 animate-reveal-up">
           <p
             className="text-caption-eyebrow"
             style={{ color: 'var(--label-3)' }}

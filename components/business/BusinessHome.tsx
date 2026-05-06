@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Clock, ChevronRight, Sparkles, Star } from 'lucide-react';
+import { Clock, ChevronRight, Sparkles, Star, MapPin, ImageIcon } from 'lucide-react';
 import { getTileColour } from '@/lib/tile-palette';
 
 interface Props {
@@ -41,7 +41,7 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
           otherwise paint over siblings on iOS Safari). max-h caps the hero
           on tall desktop viewports so the name + CTA stay above the fold. */}
       <div
-        className="relative w-full aspect-[16/10] max-h-[68svh] overflow-hidden isolate ob-hero-enter"
+        className="relative w-full min-h-[68svh] max-h-[760px] overflow-hidden isolate ob-hero-enter"
       >
         {heroSrc ? (
           /* eslint-disable-next-line @next/next/no-img-element */
@@ -58,11 +58,20 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
           <div
             className="absolute inset-0"
             style={{
-              background: `radial-gradient(ellipse at 30% 20%, ${primary}40 0%, #000 70%), linear-gradient(180deg, #111 0%, #000 100%)`,
+              background: `radial-gradient(ellipse at 18% 8%, ${primary}70 0%, transparent 42%), radial-gradient(ellipse at 82% 18%, ${primary}38 0%, transparent 44%), linear-gradient(165deg, #171717 0%, #050505 48%, #000 100%)`,
               zIndex: 0,
             }}
           />
         )}
+
+        <div
+          aria-hidden
+          className="absolute inset-0 z-10 pointer-events-none opacity-[0.18] mix-blend-soft-light"
+          style={{
+            backgroundImage:
+              "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='220' height='220'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.7' numOctaves='3' seed='12'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
+          }}
+        />
 
         {/* Stronger, longer bottom fade so the name + CTA are legible above
             the fold regardless of which photo lands behind them. */}
@@ -70,15 +79,29 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
           className="absolute inset-0 z-10 pointer-events-none"
           style={{
             background:
-              'linear-gradient(180deg, rgba(0,0,0,0.0) 0%, rgba(0,0,0,0.15) 35%, rgba(0,0,0,0.65) 70%, rgba(0,0,0,0.92) 100%)',
+              'linear-gradient(180deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.08) 30%, rgba(0,0,0,0.72) 72%, rgba(0,0,0,0.96) 100%)',
           }}
         />
 
         {/* Name + meta + Book CTA — overlaid on the hero so the customer
             can see what the business is and act on it without scrolling. */}
-        <div className="absolute inset-x-0 bottom-0 z-20 p-6 pt-20">
+        <div className="absolute inset-x-0 bottom-0 z-20 p-5 pt-24">
+          <div className="mb-4 flex items-end gap-3">
+            <BusinessAvatar business={business} primary={primary} />
+            <div className="min-w-0 flex-1 pb-1">
+              <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-white/55">
+                Book direct
+              </p>
+              {business.city && (
+                <p className="mt-1 inline-flex items-center gap-1 text-[12px] text-white/68">
+                  <MapPin className="h-3 w-3" strokeWidth={2} />
+                  {business.city}
+                </p>
+              )}
+            </div>
+          </div>
           <h1
-            className="font-serif text-[38px] font-semibold leading-[1.02] tracking-[-0.02em] text-white"
+            className="font-serif text-[44px] font-semibold leading-[0.95] tracking-[-0.035em] text-white"
             style={{ textShadow: '0 2px 12px rgba(0,0,0,0.55)' }}
           >
             {business.name}
@@ -93,10 +116,10 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
             </p>
           )}
           {cheapest && (
-            <div className="mt-4 flex justify-end">
+            <div className="mt-5 flex items-center gap-3">
               <button
                 onClick={() => onBookService(cheapest)}
-                className="rounded-full px-6 py-3 text-[14px] font-semibold tracking-tight text-black transition-transform active:scale-[0.97]"
+                className="flex h-12 flex-1 items-center justify-center rounded-full px-6 text-[14px] font-semibold tracking-tight text-black transition-transform active:scale-[0.97]"
                 style={{
                   background:
                     'linear-gradient(180deg, #F6D77C 0%, #D4AF37 100%)',
@@ -105,12 +128,23 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
                 }}
                 aria-label={`Book ${cheapest.name}`}
               >
-                Book now
+                Book from {cheapest.price_cents === 0 ? 'Free' : `€${(cheapest.price_cents / 100).toFixed(0)}`}
               </button>
+              {hasGallery && (
+                <button
+                  onClick={onOpenGallery}
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full mat-glass-thin text-white active:scale-[0.97]"
+                  aria-label="Open gallery"
+                >
+                  <ImageIcon className="h-5 w-5" strokeWidth={2} />
+                </button>
+              )}
             </div>
           )}
         </div>
       </div>
+
+      <AtAGlance business={business} services={services} primary={primary} />
 
       {/* Services list */}
       <div className="px-5 pt-8 pb-6">
@@ -159,7 +193,7 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
                 }}
               >
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-serif text-[17px] font-medium leading-tight text-white">
+                  <h3 className="font-serif text-[18px] font-medium leading-tight text-white">
                     {svc.name}
                   </h3>
                   <div className="flex items-center gap-3 mt-1.5">
@@ -180,7 +214,7 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
                   </div>
                 </div>
 
-                <div className="flex flex-col items-end">
+                <div className="flex flex-col items-end shrink-0">
                   <span
                     className="text-[16px] font-semibold tabular-nums"
                     style={{ color: primary }}
@@ -219,12 +253,12 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
               See all
             </button>
           </div>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-4 grid-rows-2 gap-2">
             {gallery.slice(0, 4).map((url) => (
               <button
                 key={url}
                 onClick={onOpenGallery}
-                className="relative aspect-square rounded-xl overflow-hidden"
+                className="relative aspect-square overflow-hidden rounded-xl first:col-span-2 first:row-span-2 first:aspect-auto"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={url} alt="" className="w-full h-full object-cover" />
@@ -304,6 +338,80 @@ function HeroMeta({ business }: { business: any }) {
         </span>
       )}
     </div>
+  );
+}
+
+function BusinessAvatar({ business, primary }: { business: any; primary: string }) {
+  const logo = business.processed_icon_url ?? business.logo_url ?? null;
+  const initial = business.name?.trim()?.[0]?.toUpperCase() ?? 'O';
+  return (
+    <div
+      className="relative flex h-[74px] w-[74px] shrink-0 items-center justify-center overflow-hidden rounded-[22px]"
+      style={{
+        background: `radial-gradient(circle at 30% 18%, #fff8 0%, transparent 24%), linear-gradient(145deg, ${primary} 0%, #111 100%)`,
+        boxShadow:
+          '0 1px 0 rgba(255,255,255,0.28) inset, 0 18px 40px rgba(0,0,0,0.48)',
+      }}
+    >
+      {logo ? (
+        /* eslint-disable-next-line @next/next/no-img-element */
+        <img src={logo} alt="" className="h-[58%] w-[58%] object-contain drop-shadow" />
+      ) : (
+        <span className="font-serif text-[36px] font-semibold leading-none text-white drop-shadow">
+          {initial}
+        </span>
+      )}
+      <div className="pointer-events-none absolute inset-0 rounded-[22px] border border-white/15" />
+    </div>
+  );
+}
+
+function AtAGlance({
+  business,
+  services,
+  primary,
+}: {
+  business: any;
+  services: any[];
+  primary: string;
+}) {
+  const cheapest = services.length
+    ? services.reduce((min, s) => (s.price_cents < min.price_cents ? s : min), services[0])
+    : null;
+  const firstDuration = services[0]?.duration_minutes ?? null;
+  const items = [
+    business.category
+      ? { label: 'Style', value: String(business.category).replace(/_/g, ' ') }
+      : null,
+    cheapest
+      ? {
+          label: 'From',
+          value: cheapest.price_cents === 0 ? 'Free' : `€${(cheapest.price_cents / 100).toFixed(0)}`,
+        }
+      : null,
+    firstDuration ? { label: 'Time', value: formatDuration(firstDuration) } : null,
+  ].filter(Boolean) as Array<{ label: string; value: string }>;
+
+  if (items.length === 0) return null;
+
+  return (
+    <section className="-mt-5 px-5 relative z-20">
+      <div className="grid grid-cols-3 gap-2 rounded-[24px] p-2 mat-glass-thick">
+        {items.map((item) => (
+          <div key={item.label} className="rounded-[18px] bg-white/[0.035] px-3 py-3 text-center">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/35">
+              {item.label}
+            </p>
+            <p
+              className="mt-1 truncate text-[13px] font-semibold capitalize"
+              style={{ color: primary }}
+            >
+              {item.value}
+            </p>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
