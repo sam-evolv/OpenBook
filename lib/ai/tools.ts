@@ -167,6 +167,49 @@ function parseSlotStartFlexible(input: unknown): Date | null {
   return isNaN(fallback.getTime()) ? null : fallback;
 }
 
+// ---------------------------------------------------------------------------
+// Search helpers — used by search_businesses
+// ---------------------------------------------------------------------------
+
+const STOP_WORDS = new Set([
+  'the', 'and', 'for', 'with', 'near', 'any', 'some', 'this', 'that',
+  'into', 'onto', 'from', 'find', 'book', 'show', 'show', 'get', 'one',
+  'have', 'has', 'had', 'are', 'can', 'you', 'your', 'mine',
+]);
+
+/**
+ * Strip PostgREST `.or()`-hostile characters from an ILIKE value.
+ * Commas are clause separators, parens are grouping, percent expands the
+ * wildcard, double-quotes break the parser. We keep letters, digits,
+ * spaces and a small punctuation set the wire format tolerates.
+ */
+function sanitizeIlikeValue(s: string): string {
+  return s.replace(/[%(),"`]/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Split a free-text query into ILIKE-friendly tokens. Drops short and
+ * stop words so "personal trainer at Evolv Performance" tokenises as
+ * ['personal', 'trainer', 'evolv', 'performance'] — every meaningful
+ * word can then OR-match against name, category, and description, so
+ * "personal trainer" hits a business with category "Personal Training"
+ * via the "personal" token.
+ */
+function tokenizeForIlike(q: string): string[] {
+  if (!q) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of q.toLowerCase().split(/[^a-z0-9]+/i)) {
+    if (raw.length < 3) continue;
+    if (STOP_WORDS.has(raw)) continue;
+    const safe = sanitizeIlikeValue(raw);
+    if (!safe || seen.has(safe)) continue;
+    seen.add(safe);
+    out.push(safe);
+  }
+  return out;
+}
+
 export type ToolName =
   | 'search_businesses'
   | 'list_services'
@@ -180,14 +223,19 @@ export const TOOL_DEFS = [
     function: {
       name: 'search_businesses',
       description:
-        "Search live OpenBook businesses in Ireland. Returns at most 5 results, ranked by rating then name, INCLUDING each business's bookable services with service_id, name, duration_minutes, price_cents and description. Pass the user's free-text query exactly — business name, service type, or both. Examples: 'Evolv', 'physio Cork', 'haircut', 'Yoga Flow Cork'. Use this once at the start of a booking conversation. Because services are returned alongside the business, you usually do NOT need to call list_services unless the search results are stale. Do not call search_businesses again after a business has been chosen.",
+        "Search live OpenBook businesses in Ireland. Returns at most 5 results, ranked by rating then name, INCLUDING each business's bookable services with service_id, name, duration_minutes, price_cents and description.\n\nWhen the user names a specific business (\"book me at Evolv Performance\", \"Yoga Flow Cork\", \"Refresh Barber\"), pass that name as `business_name` — the tool then does a direct name/slug ILIKE lookup and ignores `query`. Otherwise pass the user's free-text intent in `query` (\"personal trainer\", \"haircut Cork\", \"sauna tonight\") and the tool tokenises it for partial matching across name, category and description, so \"personal trainer\" matches a business with category \"Personal Training\".\n\nUse this once at the start of a booking conversation. Because services are returned alongside the business, you usually do NOT need to call list_services. Do not call search_businesses again after a business has been chosen unless the user explicitly asks to look at a different business.",
       parameters: {
         type: 'object',
         properties: {
           query: {
             type: 'string',
             description:
-              "What the user is looking for, e.g. 'physio', 'haircut', 'sauna'.",
+              "Free-text intent — service type, category, or location. Examples: 'personal trainer', 'physio', 'haircut Cork'. Tokenised for partial matching against name, category, and description. Required (pass an empty string only when business_name is set).",
+          },
+          business_name: {
+            type: 'string',
+            description:
+              "Optional. Pass when the user names a specific business (\"Evolv Performance\", \"Refresh Barber\"). Does a direct ILIKE lookup against businesses.name and businesses.slug and skips the keyword search.",
           },
         },
         required: ['query'],
@@ -271,10 +319,15 @@ export const TOOL_DEFS = [
 export function validateArgs(name: ToolName, args: any): string | null {
   if (!args || typeof args !== 'object') return 'invalid_args';
   switch (name) {
-    case 'search_businesses':
-      if (typeof args.query !== 'string' || args.query.trim() === '')
-        return 'query_required';
+    case 'search_businesses': {
+      const hasQuery =
+        typeof args.query === 'string' && args.query.trim() !== '';
+      const hasName =
+        typeof args.business_name === 'string' &&
+        args.business_name.trim() !== '';
+      if (!hasQuery && !hasName) return 'query_required';
       return null;
+    }
     case 'list_services':
       if (!UUID_RE.test(args.business_id ?? '')) return 'invalid_business_id';
       return null;
@@ -360,25 +413,108 @@ export async function dispatchTool(
 
   switch (name) {
     case 'search_businesses': {
-      const { data, error } = await ctx.userClient.rpc(
-        'search_businesses_for_ai',
-        {
-          query_text: args.query,
-          category: null,
-          location: null,
-        }
-      );
-      if (error) {
-        events.push({
-          type: 'error',
-          data: { code: 'tool_error', message: error.message },
-        });
-        return { modelResult: { error: error.message }, events };
-      }
-      const rawBusinesses = (data ?? []) as Array<{
+      const businessNameArg =
+        typeof args.business_name === 'string' ? args.business_name.trim() : '';
+      const queryArg =
+        typeof args.query === 'string' ? args.query.trim() : '';
+
+      let rawBusinesses: Array<{
         business_id: string;
-        [k: string]: any;
-      }>;
+        name: string;
+        slug: string;
+        category: string;
+        primary_colour: string | null;
+        address: string | null;
+        rating: number | null;
+        is_live: boolean;
+      }> = [];
+
+      // Path A — direct name/slug lookup. Used when the user named a
+      // specific business ("book me at Evolv Performance"). The previous
+      // RPC-only implementation went through a category+location filter
+      // and missed exact-name asks like that entirely.
+      if (businessNameArg) {
+        const safe = sanitizeIlikeValue(businessNameArg);
+        if (!safe) {
+          return {
+            modelResult: { businesses: [] },
+            events,
+          };
+        }
+        const { data, error } = await ctx.adminClient
+          .from('businesses')
+          .select(
+            'id, name, slug, category, primary_colour, address, rating, is_live'
+          )
+          .eq('is_live', true)
+          .or(`name.ilike.%${safe}%,slug.ilike.%${safe}%`)
+          .order('rating', { ascending: false, nullsFirst: false })
+          .order('name', { ascending: true })
+          .limit(5);
+        if (error) {
+          events.push({
+            type: 'error',
+            data: { code: 'tool_error', message: error.message },
+          });
+          return { modelResult: { error: error.message }, events };
+        }
+        rawBusinesses = (data ?? []).map((b: any) => ({
+          business_id: b.id,
+          name: b.name,
+          slug: b.slug,
+          category: b.category,
+          primary_colour: b.primary_colour,
+          address: b.address,
+          rating: b.rating,
+          is_live: b.is_live,
+        }));
+      } else {
+        // Path B — keyword search with token-level partial matching.
+        // The previous RPC did `category ILIKE '%' || qcat || '%'` against
+        // the whole query string, so "personal trainer" never matched a
+        // business with category "Personal Training". Tokenise instead so
+        // every meaningful word OR-matches against name, category and
+        // description independently.
+        const tokens = tokenizeForIlike(queryArg);
+        let q = ctx.adminClient
+          .from('businesses')
+          .select(
+            'id, name, slug, category, primary_colour, address, rating, is_live'
+          )
+          .eq('is_live', true);
+
+        if (tokens.length > 0) {
+          const clauses: string[] = [];
+          for (const t of tokens) {
+            clauses.push(`name.ilike.%${t}%`);
+            clauses.push(`category.ilike.%${t}%`);
+            clauses.push(`description.ilike.%${t}%`);
+          }
+          q = q.or(clauses.join(','));
+        }
+
+        const { data, error } = await q
+          .order('rating', { ascending: false, nullsFirst: false })
+          .order('name', { ascending: true })
+          .limit(5);
+        if (error) {
+          events.push({
+            type: 'error',
+            data: { code: 'tool_error', message: error.message },
+          });
+          return { modelResult: { error: error.message }, events };
+        }
+        rawBusinesses = (data ?? []).map((b: any) => ({
+          business_id: b.id,
+          name: b.name,
+          slug: b.slug,
+          category: b.category,
+          primary_colour: b.primary_colour,
+          address: b.address,
+          rating: b.rating,
+          is_live: b.is_live,
+        }));
+      }
 
       // Pull active services for every returned business in a single
       // round-trip. Without this the model says "no specific services
