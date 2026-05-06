@@ -2,13 +2,13 @@
 
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { Calendar, ArrowRight } from 'lucide-react';
 import { type BookingWithDetails, formatPrice } from '@/lib/supabase';
 import { friendlyDate, timeLabel } from '@/lib/time';
 import { getTileColour } from '@/lib/tile-palette';
 import { EmptyState, CalendarEmptyIcon } from '@/components/EmptyState';
+import { BusinessIcon } from '@/components/consumer/BusinessIcon';
 
 export function BookingsList({
   bookings,
@@ -108,22 +108,13 @@ function BookingCard({ booking }: { booking: BookingWithDetails }) {
         transition-all
       "
     >
-      <div
-        className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0"
-        style={{
-          background: `linear-gradient(145deg, ${colour} 0%, ${colour}55 100%)`,
-        }}
-      >
-        {booking.businesses.cover_image_url && (
-          <Image
-            src={booking.businesses.cover_image_url}
-            alt={booking.businesses.name}
-            fill
-            sizes="56px"
-            className="object-cover"
-          />
-        )}
-      </div>
+      <BusinessIcon
+        name={booking.businesses.name}
+        primary_colour={booking.businesses.primary_colour}
+        processed_icon_url={booking.businesses.processed_icon_url}
+        logo_url={booking.businesses.logo_url}
+        size={56}
+      />
 
       <div className="flex-1 min-w-0">
         <p className="text-[13px] text-white/55 truncate">

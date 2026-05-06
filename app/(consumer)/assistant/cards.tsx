@@ -28,6 +28,7 @@ import {
   ExternalLink,
 } from 'lucide-react';
 import { OpenBookMark } from '@/components/consumer/OpenBookMark';
+import { BusinessIcon } from '@/components/consumer/BusinessIcon';
 import { getTileColour } from '@/lib/tile-palette';
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser';
 import {
@@ -163,11 +164,12 @@ export function BusinessChips({ businesses }: { businesses: BusinessSummary[] })
             href={`/business/${b.slug}`}
             className="flex items-center gap-3 p-2.5 rounded-2xl bg-white/[0.04] border border-white/[0.08] hover:border-white/20 active:scale-[0.99] transition"
           >
-            <div
-              className="w-12 h-12 rounded-xl shrink-0"
-              style={{
-                background: `linear-gradient(140deg, ${colour} 0%, ${colour}55 100%)`,
-              }}
+            <BusinessIcon
+              name={b.name}
+              primary_colour={b.primary_colour}
+              processed_icon_url={b.processed_icon_url}
+              logo_url={b.logo_url}
+              size={48}
             />
             <div className="flex-1 min-w-0">
               <p className="text-[14px] font-semibold text-white truncate font-serif">

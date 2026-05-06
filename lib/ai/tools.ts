@@ -427,6 +427,8 @@ export async function dispatchTool(
         address: string | null;
         rating: number | null;
         is_live: boolean;
+        processed_icon_url: string | null;
+        logo_url: string | null;
       }> = [];
 
       // Path A — direct name/slug lookup. Used when the user named a
@@ -444,7 +446,7 @@ export async function dispatchTool(
         const { data, error } = await ctx.adminClient
           .from('businesses')
           .select(
-            'id, name, slug, category, primary_colour, address, rating, is_live'
+            'id, name, slug, category, primary_colour, address, rating, is_live, processed_icon_url, logo_url'
           )
           .eq('is_live', true)
           .or(`name.ilike.%${safe}%,slug.ilike.%${safe}%`)
@@ -467,6 +469,8 @@ export async function dispatchTool(
           address: b.address,
           rating: b.rating,
           is_live: b.is_live,
+          processed_icon_url: b.processed_icon_url ?? null,
+          logo_url: b.logo_url ?? null,
         }));
       } else {
         // Path B — keyword search with token-level partial matching.
@@ -479,7 +483,7 @@ export async function dispatchTool(
         let q = ctx.adminClient
           .from('businesses')
           .select(
-            'id, name, slug, category, primary_colour, address, rating, is_live'
+            'id, name, slug, category, primary_colour, address, rating, is_live, processed_icon_url, logo_url'
           )
           .eq('is_live', true);
 
@@ -513,6 +517,8 @@ export async function dispatchTool(
           address: b.address,
           rating: b.rating,
           is_live: b.is_live,
+          processed_icon_url: b.processed_icon_url ?? null,
+          logo_url: b.logo_url ?? null,
         }));
       }
 
