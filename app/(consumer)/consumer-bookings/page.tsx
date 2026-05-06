@@ -70,7 +70,7 @@ export default async function MyBookingsPage() {
         }}
       />
 
-      <ConsumerHeader showClose={false} domain="openbook.ie" />
+      <ConsumerHeader showClose={false} />
 
       <div className="px-5 pt-4 pb-36">
         <h1 className="text-[28px] font-bold tracking-tight leading-none">

@@ -59,7 +59,7 @@ export default async function BookingPage({
         }}
       />
 
-      <ConsumerHeader domain="openbook.ie" />
+      <ConsumerHeader />
 
       <div className="pb-36">
         {/* Summary header */}

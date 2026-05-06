@@ -910,14 +910,14 @@ export function AssistantChat() {
 
       {/* Input bar — pinned just above tab bar */}
       <div
-        className="pointer-events-none fixed left-0 right-0 z-40 px-4 pt-10"
+        className="pointer-events-none fixed left-0 right-0 z-40 px-2 pt-10"
         style={{
           bottom: 'calc(138px + env(safe-area-inset-bottom))',
           background:
             'linear-gradient(180deg, transparent 0%, rgba(5,5,5,0.82) 38%, rgba(5,5,5,0.96) 100%)',
         }}
       >
-        <div className="pointer-events-auto mx-auto max-w-md">
+        <div className="pointer-events-auto mx-auto max-w-[432px]">
           <p className="mb-2 text-center text-[11px] text-white/35">
             Powered by AI · Information for reference only
           </p>

@@ -64,7 +64,7 @@ export default async function ConfirmPage({
         }}
       />
 
-      <ConsumerHeader showClose={false} domain="openbook.ie" />
+      <ConsumerHeader showClose={false} />
 
       <ConfirmClient
         booking={{
