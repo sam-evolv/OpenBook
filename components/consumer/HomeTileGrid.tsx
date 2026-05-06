@@ -52,29 +52,19 @@ export function HomeTileGrid({ businesses }: { businesses: HomeBusiness[] }) {
 
   return (
     <PullToRefresh onRefresh={refresh}>
-      {/* iOS-style icon grid. Each track is sized to the tile width
-          (`max-content`) and `justify-content: start` packs them on the
-          left of the container, so on a wide desktop viewport the icons
-          do NOT spread out across the full width with whitespace
-          between them — they sit tight together starting from the left
-          edge, exactly like iPhone Springboard. We deliberately avoid
-          `repeat(4, 1fr)` (which stretched each cell to ~25% of viewport
-          on desktop and visually orphaned Discover) and any `mx-auto`
-          centring. The container itself is capped at `max-w-screen-sm`
-          so the row never grows past four icons; it's left-aligned
-          inside the parent section. Every grid child is wrapped in an
-          identical flex cell so auto-placement walks uniformly. */}
-      <div
-        className="max-w-screen-sm"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(4, max-content)',
-          gridAutoFlow: 'row',
-          justifyContent: 'start',
-          columnGap: 28,
-          rowGap: 28,
-        }}
-      >
+      {/* iOS-style icon grid. Responsive column count via Tailwind:
+          - default (mobile, < 640 px): 2 columns
+          - sm and up (tablet/desktop, ≥ 640 px): 4 columns
+          The container is capped at `max-w-screen-sm` and is NOT
+          centred (no `mx-auto`), so on wide desktop viewports the rows
+          sit on the left edge of the section. Horizontal padding keeps
+          the tiles off the screen edges on any viewport. We avoid an
+          inline `gridTemplateColumns` here — that would override the
+          responsive Tailwind classes at every breakpoint and re-create
+          the mobile overflow that prompted this fix. Each grid child
+          is wrapped in an identical flex cell so auto-placement walks
+          uniformly. */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-7 max-w-screen-sm px-4">
         <div className="flex justify-center">
           <SystemAppIcon kind="discover" />
         </div>
