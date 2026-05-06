@@ -99,6 +99,15 @@ export function AssistantChat() {
   const pendingTextRef = useRef<Record<string, string>>({});
   const drainTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const streamFinishedRef = useRef(false);
+  // Sticky reference to the most recently emitted propose_slot result.
+  // Updated ONLY by the SSE 'proposal' handler — every other tool call,
+  // text delta, and error event leaves this untouched. Acts as a safety
+  // net for confirmProposal in case the per-message proposal somehow
+  // arrives with empty / mismatched IDs (the model has been observed
+  // hallucinating UUIDs on multi-turn conversations because tool results
+  // are stripped from the API history). All updates are logged so the
+  // exact moment a proposal materialises is traceable in the console.
+  const lastProposalRef = useRef<Proposal | null>(null);
 
   // ----- Init / resume -----
   useEffect(() => {
@@ -125,6 +134,7 @@ export function AssistantChat() {
         });
         setMessages(reopened);
         setShowResumeNote(true);
+        rehydrateLastProposal(reopened);
       } else {
         // Resume id pointed to nothing — start fresh.
         conversationIdRef.current = getOrCreateConversationId();
@@ -137,11 +147,36 @@ export function AssistantChat() {
     if (active) {
       conversationIdRef.current = active.conversation_id;
       setMessages(active.messages);
+      rehydrateLastProposal(active.messages);
     } else {
       conversationIdRef.current = getOrCreateConversationId();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  function rehydrateLastProposal(msgs: Message[]) {
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      const m = msgs[i]!;
+      if (m.kind === 'proposal') {
+        lastProposalRef.current = m.proposal;
+        console.log('[ai/proposal] rehydrated from storage', {
+          business_id: m.proposal.business_id,
+          service_id: m.proposal.service_id,
+          slot_start: m.proposal.slot_start,
+        });
+        return;
+      }
+      if (m.kind === 'auth_gate') {
+        lastProposalRef.current = m.gate.pending_proposal;
+        console.log('[ai/proposal] rehydrated from auth_gate', {
+          business_id: m.gate.pending_proposal.business_id,
+          service_id: m.gate.pending_proposal.service_id,
+          slot_start: m.gate.pending_proposal.slot_start,
+        });
+        return;
+      }
+    }
+  }
 
   // Persist on every meaningful change.
   useEffect(() => {
@@ -417,6 +452,31 @@ export function AssistantChat() {
         // its own proposal event in addition to tool_call_result we don't get.
         dropPillsForTool('propose_slot');
         const proposal: Proposal = { ...(data as Proposal), status: 'open' };
+        // Defensive sanity check on the IDs the dispatcher just resolved.
+        // propose_slot's server-side validation already gates these, but
+        // we log if anything looks off so a regression surfaces in the
+        // console rather than silently as a server-side business_not_found.
+        const idsLook =
+          typeof proposal.business_id === 'string' &&
+          proposal.business_id.length > 0 &&
+          typeof proposal.service_id === 'string' &&
+          proposal.service_id.length > 0;
+        if (!idsLook) {
+          console.warn('[ai/proposal] received with empty IDs', proposal);
+        }
+        // Sticky-update the last-known good proposal. NOTHING else in
+        // this switch — text deltas, other tool calls, errors — touches
+        // lastProposalRef, so a follow-up turn where the model loses its
+        // tool memory cannot clobber the IDs the user is about to confirm.
+        lastProposalRef.current = proposal;
+        console.log('[ai/proposal] state updated', {
+          business_id: proposal.business_id,
+          service_id: proposal.service_id,
+          business_name: proposal.business_name,
+          service_name: proposal.service_name,
+          slot_start: proposal.slot_start,
+          requires_payment: proposal.requires_payment,
+        });
         appendMessage({ id: uid(), kind: 'proposal', proposal });
         return;
       }
@@ -586,13 +646,42 @@ export function AssistantChat() {
         target && target.kind === 'proposal' ? target.proposal : null;
       if (!proposal) return;
 
+      // Cross-check against the sticky last-known-good proposal. If the
+      // message-level IDs look empty but the ref has a complete proposal
+      // (or the IDs disagree), prefer the ref — that's the canonical
+      // value the agent emitted last. Any divergence is logged so the
+      // failure mode is observable without a debugger.
+      const messageIdsLook =
+        typeof proposal.business_id === 'string' &&
+        proposal.business_id.length > 0 &&
+        typeof proposal.service_id === 'string' &&
+        proposal.service_id.length > 0;
+      const fallback = lastProposalRef.current;
+      let toConfirm: Proposal = proposal;
+      if (!messageIdsLook && fallback) {
+        console.warn(
+          '[ai/proposal] message IDs missing, falling back to lastProposalRef',
+          { message: proposal, fallback }
+        );
+        toConfirm = { ...fallback, status: 'open' };
+      } else if (
+        fallback &&
+        (fallback.business_id !== proposal.business_id ||
+          fallback.service_id !== proposal.service_id)
+      ) {
+        console.warn(
+          '[ai/proposal] message vs lastProposalRef disagree — using message',
+          { message: proposal, lastRef: fallback }
+        );
+      }
+
       updateMessage(proposalId, (m) =>
         m.kind === 'proposal'
           ? { ...m, proposal: { ...m.proposal, status: 'confirmed' } }
           : m
       );
 
-      void confirmProposal(proposal);
+      void confirmProposal(toConfirm);
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [messages, updateMessage]
@@ -800,6 +889,8 @@ export function AssistantChat() {
     setMessages([]);
     setInput('');
     setShowResumeNote(false);
+    lastProposalRef.current = null;
+    console.log('[ai/proposal] state reset (new chat)');
   }, [busy]);
 
   const hasMessages = messages.length > 0;
