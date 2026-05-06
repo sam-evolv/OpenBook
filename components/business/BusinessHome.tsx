@@ -60,27 +60,46 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
           />
         )}
 
-        {/* Softer, longer fade tuned for white-Fraunces-on-photo legibility */}
+        {/* Stronger, longer bottom fade so the name + CTA are legible above
+            the fold regardless of which photo lands behind them. */}
         <div
           className="absolute inset-0"
           style={{
             background:
-              'linear-gradient(180deg, rgba(0,0,0,0.0) 0%, rgba(0,0,0,0.0) 30%, rgba(0,0,0,0.4) 60%, rgba(0,0,0,0.85) 100%)',
+              'linear-gradient(180deg, rgba(0,0,0,0.0) 0%, rgba(0,0,0,0.15) 35%, rgba(0,0,0,0.65) 70%, rgba(0,0,0,0.92) 100%)',
           }}
         />
 
-        {/* Name + tagline */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 pt-16">
-          <BadgeStrip business={business} primary={primary} />
+        {/* Name + meta + Book CTA — overlaid on the hero so the customer
+            can see what the business is and act on it without scrolling. */}
+        <div className="absolute bottom-0 left-0 right-0 p-6 pt-20">
           <h1
             className="font-serif text-[38px] font-semibold leading-[1.02] tracking-[-0.02em] text-white"
           >
             {business.name}
           </h1>
+          <HeroMeta business={business} />
           {business.tagline && (
-            <p className="mt-2 text-[15px] text-white/80">
+            <p className="mt-2 text-[14px] text-white/75">
               {business.tagline}
             </p>
+          )}
+          {cheapest && (
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => onBookService(cheapest)}
+                className="rounded-full px-6 py-3 text-[14px] font-semibold tracking-tight text-black transition-transform active:scale-[0.97]"
+                style={{
+                  background:
+                    'linear-gradient(180deg, #F6D77C 0%, #D4AF37 100%)',
+                  boxShadow:
+                    '0 1px 0 rgba(255,255,255,0.4) inset, 0 6px 16px rgba(212,175,55,0.35), 0 2px 6px rgba(0,0,0,0.35)',
+                }}
+                aria-label={`Book ${cheapest.name}`}
+              >
+                Book now
+              </button>
+            </div>
           )}
         </div>
       </div>
@@ -248,40 +267,34 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
   );
 }
 
-function BadgeStrip({ business, primary }: { business: any; primary: string }) {
-  const parts: Array<{ key: string; node: React.ReactNode }> = [];
-  if (business.city) {
-    parts.push({ key: 'city', node: business.city });
-  }
-  if (business.category) {
-    parts.push({
-      key: 'category',
-      node: business.category.replace(/_/g, ' '),
-    });
-  }
-  if (typeof business.rating === 'number' && business.rating > 0) {
-    parts.push({
-      key: 'rating',
-      node: (
-        <span className="inline-flex items-center gap-1">
-          <Star className="h-2.5 w-2.5 fill-current" strokeWidth={0} />
+function HeroMeta({ business }: { business: any }) {
+  const hasCategory = Boolean(business.category);
+  const hasCity = Boolean(business.city);
+  const hasRating =
+    typeof business.rating === 'number' && business.rating > 0;
+  if (!hasCategory && !hasCity && !hasRating) return null;
+  return (
+    <div className="mt-2 flex items-center gap-2 text-[13px] text-white/80">
+      {hasCategory && (
+        <span className="capitalize">
+          {String(business.category).replace(/_/g, ' ')}
+        </span>
+      )}
+      {hasCategory && hasCity && <span className="text-white/35">·</span>}
+      {hasCity && <span>{business.city}</span>}
+      {(hasCategory || hasCity) && hasRating && (
+        <span className="text-white/35">·</span>
+      )}
+      {hasRating && (
+        <span className="inline-flex items-center gap-1 font-semibold">
+          <Star
+            className="h-3 w-3 fill-current"
+            strokeWidth={0}
+            style={{ color: '#F6D77C' }}
+          />
           {business.rating.toFixed(1)}
         </span>
-      ),
-    });
-  }
-  if (parts.length === 0) return null;
-  return (
-    <div
-      className="flex items-center gap-2 mb-2 text-[11px] font-semibold tracking-[0.14em] uppercase"
-      style={{ color: primary }}
-    >
-      {parts.map((p, i) => (
-        <span key={p.key} className="flex items-center gap-2">
-          {i > 0 && <span className="text-white/30">·</span>}
-          <span>{p.node}</span>
-        </span>
-      ))}
+      )}
     </div>
   );
 }

@@ -1,6 +1,7 @@
 'use client';
 
 import Image from 'next/image';
+import { useState } from 'react';
 import { getTileColour } from '@/lib/tile-palette';
 
 /**
@@ -70,7 +71,12 @@ export function BusinessIcon({
 }: BusinessIconProps) {
   const colour = getTileColour(primary_colour ?? undefined).mid;
   const r = radius ?? Math.round(size * 0.22);
-  const imgSrc = processed_icon_url || logo_url || null;
+  // A row like "Dublin Iron Gym" can have a non-null processed_icon_url that
+  // 404s (stale path, deleted asset). Track load failures and fall through
+  // to the initials tile so we never render a broken-image gap.
+  const [imageFailed, setImageFailed] = useState(false);
+  const imgSrc = imageFailed ? null : processed_icon_url || logo_url || null;
+  const showInitials = !imgSrc;
 
   return (
     <div
@@ -79,12 +85,12 @@ export function BusinessIcon({
         width: size,
         height: size,
         borderRadius: r,
-        background: imgSrc
-          ? '#0B0B0D'
-          : `linear-gradient(145deg, ${colour} 0%, ${colour}55 100%)`,
-        boxShadow: imgSrc
-          ? '0 1px 2px rgba(0,0,0,0.3)'
-          : `inset 0 1px 0 rgba(255,255,255,0.18), 0 1px 2px rgba(0,0,0,0.3)`,
+        background: showInitials
+          ? `linear-gradient(145deg, ${colour} 0%, ${colour}55 100%)`
+          : '#0B0B0D',
+        boxShadow: showInitials
+          ? `inset 0 1px 0 rgba(255,255,255,0.18), 0 1px 2px rgba(0,0,0,0.3)`
+          : '0 1px 2px rgba(0,0,0,0.3)',
       }}
       aria-hidden
     >
@@ -95,6 +101,7 @@ export function BusinessIcon({
           fill
           sizes={`${size}px`}
           className="object-cover"
+          onError={() => setImageFailed(true)}
         />
       ) : (
         <span

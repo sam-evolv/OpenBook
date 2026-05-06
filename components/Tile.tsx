@@ -49,7 +49,6 @@ export function Tile({
 }: TileProps) {
   const tileColour = getTileColour(colour);
   const monogram = name.trim().charAt(0).toUpperCase() || '?';
-  const labelTrimmed = name.length > 12 ? `${name.slice(0, 11)}…` : name;
 
   const buttonRef = useRef<HTMLButtonElement>(null);
   const longPressTimer = useRef<number | null>(null);
@@ -242,17 +241,21 @@ export function Tile({
       {!hideLabel && (
         <span
           style={{
+            // 11px keeps things compact; the wider maxWidth and CSS-only
+            // ellipsis let names like "Evolv Performance" land on
+            // "Evolv Perform…" instead of the cramped "Evolv Perfo…".
             fontSize: 11,
             color: 'var(--ob-text-1, rgba(255,255,255,0.9))',
             fontWeight: 500,
-            maxWidth: size + 12,
+            maxWidth: size + 28,
             textAlign: 'center',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
+            letterSpacing: '-0.01em',
           }}
         >
-          {labelTrimmed}
+          {name}
         </span>
       )}
 
