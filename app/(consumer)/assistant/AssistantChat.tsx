@@ -795,7 +795,7 @@ export function AssistantChat() {
     busy || (inputDisabledUntil > 0 && Date.now() < inputDisabledUntil);
 
   return (
-    <div className="relative flex flex-col min-h-[calc(100dvh-120px)]">
+    <div className="relative mx-auto flex min-h-[100dvh] w-full max-w-md flex-col">
       {/* Header row with New chat affordance — only shown once a conversation exists */}
       {hasMessages && (
         <div className="flex items-center justify-between px-4 pt-3 pb-1">
@@ -825,9 +825,9 @@ export function AssistantChat() {
 
       {/* Hero / empty state */}
       {!hasMessages && (
-        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-48">
+        <div className="flex-1 flex flex-col items-center justify-center px-6 pb-[236px] pt-safe">
           <div
-            className="relative w-[108px] h-[108px] rounded-full flex items-center justify-center shadow-[0_20px_60px_rgba(212,175,55,0.35),inset_0_1px_0_rgba(255,255,255,0.3)]"
+            className="relative flex h-[112px] w-[112px] items-center justify-center rounded-full shadow-[0_24px_70px_rgba(212,175,55,0.34),inset_0_1px_0_rgba(255,255,255,0.34)]"
             style={{
               background:
                 'radial-gradient(circle at 30% 25%, #F4D57A 0%, #D4AF37 45%, #8B6428 100%)',
@@ -845,17 +845,17 @@ export function AssistantChat() {
             />
           </div>
 
-          <p className="mt-6 text-[11px] font-semibold tracking-[0.22em] text-[#D4AF37] uppercase">
+          <p className="mt-7 text-[11px] font-semibold tracking-[0.24em] text-[#D4AF37] uppercase">
             OpenBook Assistant
           </p>
 
-          <h1 className="mt-4 text-[26px] font-bold tracking-tight text-center leading-[1.2] max-w-[320px] font-serif">
+          <h1 className="mt-4 max-w-[330px] text-center font-serif text-[28px] font-bold leading-[1.12] tracking-tight text-white">
             Ask anything about
             <br />
             local businesses
           </h1>
 
-          <p className="mt-3 text-[15px] text-white/55 text-center max-w-[320px] leading-snug">
+          <p className="mt-3 max-w-[320px] text-center text-[15px] leading-snug text-white/58">
             Book a trainer, find a sauna, reserve a barber.
             <br />
             Answered instantly.
@@ -866,7 +866,7 @@ export function AssistantChat() {
               <button
                 key={s.label}
                 onClick={() => send(s.q)}
-                className="h-11 px-4 rounded-full text-[13.5px] font-medium bg-white/[0.04] border border-white/[0.08] hover:border-white/20 active:scale-95 transition-all text-white/85"
+                className="h-11 rounded-full border border-white/[0.10] bg-white/[0.045] px-4 text-[13.5px] font-medium text-white/88 shadow-[inset_0_1px_0_rgba(255,255,255,0.08),0_10px_28px_rgba(0,0,0,0.22)] transition-all hover:border-white/20 active:scale-95"
               >
                 {s.label}
               </button>
@@ -879,7 +879,7 @@ export function AssistantChat() {
       {hasMessages && (
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto px-4 pt-3 pb-[180px] space-y-3"
+          className="flex-1 overflow-y-auto px-4 pt-3 pb-[242px] space-y-3"
         >
           {messages.map((m) => (
             <MessageRow
@@ -910,35 +910,41 @@ export function AssistantChat() {
 
       {/* Input bar — pinned just above tab bar */}
       <div
-        className="fixed left-0 right-0 z-40 px-4 pb-[110px] bg-gradient-to-t from-[#050505] via-[#050505]/90 to-transparent pt-6"
-        style={{ bottom: 0 }}
+        className="pointer-events-none fixed left-0 right-0 z-40 px-4 pt-10"
+        style={{
+          bottom: 'calc(138px + env(safe-area-inset-bottom))',
+          background:
+            'linear-gradient(180deg, transparent 0%, rgba(5,5,5,0.82) 38%, rgba(5,5,5,0.96) 100%)',
+        }}
       >
-        <p className="text-center text-[11px] text-white/35 mb-2">
-          Powered by AI · Information for reference only
-        </p>
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            send(input);
-          }}
-          className="flex items-center gap-2 h-[52px] pl-5 pr-2 rounded-full bg-white/[0.05] border border-white/[0.10] focus-within:border-white/25 transition shadow-[0_10px_30px_rgba(0,0,0,0.5)]"
-        >
-          <input
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder="Ask about any business…"
-            className="flex-1 bg-transparent outline-none text-[15px] placeholder:text-white/35 text-white"
-            disabled={inputDisabled}
-          />
-          <button
-            type="submit"
-            disabled={!input.trim() || inputDisabled}
-            className="w-10 h-10 rounded-full flex items-center justify-center bg-[#D4AF37] text-black disabled:opacity-40 disabled:pointer-events-none active:scale-95 transition shadow-[0_4px_12px_rgba(212,175,55,0.4)]"
-            aria-label="Send"
+        <div className="pointer-events-auto mx-auto max-w-md">
+          <p className="mb-2 text-center text-[11px] text-white/35">
+            Powered by AI · Information for reference only
+          </p>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              send(input);
+            }}
+            className="flex h-[54px] items-center gap-2 rounded-full border border-white/[0.12] bg-white/[0.065] pl-5 pr-2 shadow-[0_16px_44px_rgba(0,0,0,0.56),inset_0_1px_0_rgba(255,255,255,0.09)] backdrop-blur-2xl transition focus-within:border-[#D4AF37]/55"
           >
-            <ArrowUp className="w-5 h-5" strokeWidth={2.6} />
-          </button>
-        </form>
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Ask about any business..."
+              className="min-w-0 flex-1 bg-transparent text-[15px] text-white outline-none placeholder:text-white/38"
+              disabled={inputDisabled}
+            />
+            <button
+              type="submit"
+              disabled={!input.trim() || inputDisabled}
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-[#D4AF37] text-black shadow-[0_4px_14px_rgba(212,175,55,0.42),inset_0_1px_0_rgba(255,255,255,0.28)] transition active:scale-95 disabled:pointer-events-none disabled:opacity-40"
+              aria-label="Send"
+            >
+              <ArrowUp className="h-5 w-5" strokeWidth={2.6} />
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   );
