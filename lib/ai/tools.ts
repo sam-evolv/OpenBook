@@ -14,11 +14,45 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
+// ---------------------------------------------------------------------------
+// Europe/Dublin timezone helpers
+// ---------------------------------------------------------------------------
+//
+// Single source of truth for every time the agent constructs, queries, or
+// displays. The OpenBook business runs on Dublin local time year-round —
+// that means BST (UTC+1) from late March to late October and GMT (UTC+0)
+// the rest of the year. Every helper here uses Intl with the Europe/Dublin
+// time zone so daylight-savings transitions are handled by the platform
+// rather than hand-rolled offset arithmetic.
+
+const DUBLIN_TZ = 'Europe/Dublin';
+
 const DUBLIN_TIME_FMT = new Intl.DateTimeFormat('en-IE', {
-  timeZone: 'Europe/Dublin',
+  timeZone: DUBLIN_TZ,
   weekday: 'long',
   day: 'numeric',
   month: 'long',
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+});
+
+const DUBLIN_DATE_FMT = new Intl.DateTimeFormat('en-CA', {
+  timeZone: DUBLIN_TZ,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+});
+
+const DUBLIN_HHMM_FMT = new Intl.DateTimeFormat('en-GB', {
+  timeZone: DUBLIN_TZ,
+  hour: '2-digit',
+  minute: '2-digit',
+  hour12: false,
+});
+
+const DUBLIN_DISPLAY_TIME_FMT = new Intl.DateTimeFormat('en-IE', {
+  timeZone: DUBLIN_TZ,
   hour: 'numeric',
   minute: '2-digit',
   hour12: true,
@@ -33,6 +67,104 @@ function formatDublinTime(d: Date): string {
     parts.find((p) => p.type === type)?.value ?? '';
   const dayPeriod = (get('dayPeriod') || '').toUpperCase();
   return `${get('weekday')} ${get('day')} ${get('month')} at ${get('hour')}:${get('minute')} ${dayPeriod}`.trim();
+}
+
+/** YYYY-MM-DD calendar date in Europe/Dublin for a UTC instant. */
+function dublinDateOf(d: Date): string {
+  return DUBLIN_DATE_FMT.format(d);
+}
+
+/** "HH:MM" (24-hour) wall-clock in Europe/Dublin for a UTC instant. */
+function dublinHHMMOf(d: Date): string {
+  const parts = DUBLIN_HHMM_FMT.formatToParts(d);
+  const h = parts.find((p) => p.type === 'hour')?.value ?? '00';
+  const m = parts.find((p) => p.type === 'minute')?.value ?? '00';
+  // en-GB midnight is sometimes returned as "24" — normalise to "00".
+  return `${h === '24' ? '00' : h}:${m}`;
+}
+
+/** "3:00 PM"-style short Dublin time, used as a slot display string. */
+function dublinShortTime(d: Date): string {
+  const parts = DUBLIN_DISPLAY_TIME_FMT.formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
+  const dayPeriod = (get('dayPeriod') || '').toUpperCase();
+  return `${get('hour')}:${get('minute')} ${dayPeriod}`.trim();
+}
+
+/**
+ * Convert a Dublin wall-clock (Y/M/D h:m) into the correct UTC instant.
+ * Uses the round-trip-through-Intl trick so DST is handled automatically:
+ * we ask the platform what wall-clock that tentative UTC instant displays
+ * as in Dublin, derive the offset from the delta, and shift accordingly.
+ */
+function dublinWallClockToInstant(
+  y: number,
+  m: number,
+  d: number,
+  h: number,
+  min: number,
+  sec = 0
+): Date {
+  const tentativeUtc = Date.UTC(y, m - 1, d, h, min, sec);
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: DUBLIN_TZ,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hour12: false,
+  }).formatToParts(new Date(tentativeUtc));
+  const part = (t: string) =>
+    Number(parts.find((p) => p.type === t)?.value ?? '0');
+  const dY = part('year');
+  const dM = part('month');
+  const dD = part('day');
+  let dH = part('hour');
+  if (dH === 24) dH = 0;
+  const dMin = part('minute');
+  const dSec = part('second');
+  const dublinAsUtc = Date.UTC(dY, dM - 1, dD, dH, dMin, dSec);
+  const offsetMs = dublinAsUtc - tentativeUtc;
+  return new Date(tentativeUtc - offsetMs);
+}
+
+const HAS_OFFSET_RE = /([+-]\d{2}:?\d{2}|Z)$/i;
+const NAIVE_DATETIME_RE =
+  /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2})(?::(\d{2}))?(?:\.\d+)?$/;
+
+/**
+ * Parse a slot_start string into a UTC Date instant, treating any value
+ * without an explicit offset as Europe/Dublin local time. The model often
+ * fabricates a "naked" timestamp from the user's natural-language ask
+ * ("3pm today") — interpreting that as UTC produces a one-hour-off booking
+ * during BST. By assuming Dublin-local for naked strings we recover the
+ * intent the user actually expressed.
+ */
+function parseSlotStartFlexible(input: unknown): Date | null {
+  if (typeof input !== 'string' || input.trim() === '') return null;
+  const s = input.trim();
+  if (HAS_OFFSET_RE.test(s)) {
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const m = NAIVE_DATETIME_RE.exec(s);
+  if (m) {
+    const [, y, mo, da, hh, mm, ss] = m;
+    return dublinWallClockToInstant(
+      Number(y),
+      Number(mo),
+      Number(da),
+      Number(hh),
+      Number(mm),
+      Number(ss ?? '0')
+    );
+  }
+  // Last-ditch: let JS try. If it parses, callers can still match by
+  // Dublin local time downstream.
+  const fallback = new Date(s);
+  return isNaN(fallback.getTime()) ? null : fallback;
 }
 
 export type ToolName =
@@ -82,7 +214,7 @@ export const TOOL_DEFS = [
     function: {
       name: 'get_availability',
       description:
-        "Check available time slots for a specific service on a specific date. Returns ISO timestamps in UTC. Always use Europe/Dublin when reasoning about dates the user mentions ('tomorrow', 'Tuesday').",
+        "Check available time slots for a specific service on a specific date in Europe/Dublin. Returns each slot as `{ slot_start, slot_end, display_time, dublin_local }` where `slot_start` is a UTC ISO timestamp (the canonical instant), `display_time` is the human-readable Dublin time (e.g. '3:00 PM'), and `dublin_local` is the Dublin wall-clock (e.g. '15:00'). When the user asks for a specific time like '3pm', match it against `display_time` or `dublin_local` — never against the UTC offset in `slot_start`. Resolve every relative date the user mentions ('today', 'tomorrow', 'Friday') in Europe/Dublin, then pass YYYY-MM-DD.",
       parameters: {
         type: 'object',
         properties: {
@@ -102,7 +234,7 @@ export const TOOL_DEFS = [
     function: {
       name: 'propose_slot',
       description:
-        'Propose a specific slot to the user. The slot_start MUST be one of the slot_start values returned by a previous get_availability call — pass it through verbatim. Never construct your own ISO timestamp from a user-stated time; that will produce wrong-timezone bookings. Does NOT book yet — the UI confirms deterministically.',
+        "Propose a specific slot to the user. The slot_start MUST be one of the `slot_start` UTC ISO values returned verbatim by a previous get_availability call — copy it character-for-character. Do not re-format, do not strip the offset, and do not construct your own timestamp from the user's natural-language time. The dispatcher can recover from a mis-formatted timestamp by matching the Dublin wall-clock, but a verbatim slot_start is always correct. Times are interpreted in Europe/Dublin; the displayed proposal will always show Dublin local time.",
       parameters: {
         type: 'object',
         properties: {
@@ -318,7 +450,38 @@ export async function dispatchTool(
         });
         return { modelResult: { error: error.message }, events };
       }
-      return { modelResult: { slots: data ?? [] }, events };
+      // Enrich every slot with Dublin local display strings so the model
+      // never has to convert UTC offsets in its head. The previous bug
+      // pattern: model saw `slot_start: 14:00+00:00`, read that as "2pm"
+      // (forgetting BST), and told the user there was no 3pm slot — even
+      // though 14:00 UTC IS 3pm Dublin in summer. Now the model can match
+      // user intent against `display_time` / `dublin_local` directly.
+      const rawSlots = (data ?? []) as Array<{
+        slot_start: string;
+        slot_end: string;
+      }>;
+      const slots = rawSlots.map((s) => {
+        const start = new Date(s.slot_start);
+        const end = new Date(s.slot_end);
+        return {
+          slot_start: s.slot_start,
+          slot_end: s.slot_end,
+          display_time: dublinShortTime(start),
+          display_end: dublinShortTime(end),
+          dublin_local: dublinHHMMOf(start),
+          dublin_date: dublinDateOf(start),
+        };
+      });
+      return {
+        modelResult: {
+          slots,
+          tz: DUBLIN_TZ,
+          requested_date: args.date,
+          note:
+            'All times are Europe/Dublin. To match a user-requested time, compare against `display_time` (e.g. "3:00 PM") or `dublin_local` (e.g. "15:00"). When calling propose_slot, pass the matching `slot_start` value verbatim.',
+        },
+        events,
+      };
     }
 
     case 'propose_slot': {
@@ -367,21 +530,31 @@ export async function dispatchTool(
           events,
         };
       }
-      const start = new Date(args.slot_start);
-      // Validate slot_start is actually one of the slots get_availability
+
+      // Parse the model-supplied slot_start tolerantly. A naked
+      // "2026-05-06T15:00:00" is treated as Europe/Dublin local time
+      // (so "3pm today" routes to the right UTC instant during BST).
+      // Strings carrying an explicit offset are honoured as-is.
+      const requested = parseSlotStartFlexible(args.slot_start);
+      if (!requested) {
+        const msg = 'invalid_slot_start';
+        events.push({ type: 'error', data: { code: msg, message: msg } });
+        return {
+          modelResult: {
+            error: msg,
+            hint: 'slot_start must be one of the slot_start values returned by get_availability (UTC ISO with offset). Copy the value verbatim.',
+          },
+          events,
+        };
+      }
+
+      // Validate the slot is actually one of the slots get_availability
       // returned for that Dublin date. Catches the model fabricating an
       // ISO string from a user-stated time (e.g. "3:15" → "15:15+00:00",
       // which is 4:15 PM Dublin during BST) rather than passing through
-      // the verbatim slot from a prior get_availability result. Both the
-      // ProposalCard and the agent's text are derived from this same
-      // instant, so a fabricated slot_start would otherwise make both
-      // surfaces show the wrong (off-by-one-hour) time consistently.
-      const dublinDate = new Intl.DateTimeFormat('en-CA', {
-        timeZone: 'Europe/Dublin',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-      }).format(start);
+      // the verbatim slot from a prior get_availability result.
+      const dublinDate = dublinDateOf(requested);
+      const dublinHHMM = dublinHHMMOf(requested);
       const { data: availData } = await ctx.userClient.rpc(
         'get_availability_for_ai',
         {
@@ -390,29 +563,62 @@ export async function dispatchTool(
           p_date: dublinDate,
         }
       );
-      const slots = (availData ?? []) as Array<{ slot_start: string }>;
-      const proposedInstant = start.getTime();
-      const matched = slots.some(
+      const availSlots = (availData ?? []) as Array<{ slot_start: string }>;
+      const proposedInstant = requested.getTime();
+
+      // First try an exact-instant match (the happy path: the model
+      // copied a slot_start verbatim).
+      let canonical = availSlots.find(
         (s) => new Date(s.slot_start).getTime() === proposedInstant
       );
-      if (!matched) {
+
+      // Fall back to a Dublin-wall-clock match: same Dublin date, same
+      // HH:MM. This recovers from the model passing "3pm" as a UTC
+      // timestamp during BST (which is one hour off the canonical slot)
+      // by matching on the local time the user actually meant. We never
+      // silently shift the day — only the offset within the same Dublin
+      // date — so we can't accidentally book the user a day later.
+      if (!canonical) {
+        canonical = availSlots.find((s) => {
+          const d = new Date(s.slot_start);
+          return (
+            dublinDateOf(d) === dublinDate && dublinHHMMOf(d) === dublinHHMM
+          );
+        });
+        if (canonical) {
+          console.warn('[propose_slot] recovered via Dublin-local match', {
+            requested: requested.toISOString(),
+            dublin_local: `${dublinDate} ${dublinHHMM}`,
+            canonical: canonical.slot_start,
+          });
+        }
+      }
+
+      if (!canonical) {
         const msg = 'slot_not_in_availability';
         console.error('[propose_slot] slot not in availability', {
-          proposed: start.toISOString(),
+          proposed: requested.toISOString(),
           dublin_date: dublinDate,
-          available_count: slots.length,
-          first_few: slots.slice(0, 6).map((s) => s.slot_start),
+          dublin_local: dublinHHMM,
+          available_count: availSlots.length,
+          first_few: availSlots.slice(0, 6).map((s) => s.slot_start),
         });
         events.push({ type: 'error', data: { code: msg, message: msg } });
         return {
           modelResult: {
             error: msg,
-            hint: 'Pick a slot_start verbatim from your most recent get_availability result. Do not construct your own ISO timestamp from a user-stated time — that produces wrong-timezone bookings during BST.',
-            available_today: slots.slice(0, 6).map((s) => s.slot_start),
+            hint: `No slot at ${dublinHHMM} on ${dublinDate} (Europe/Dublin). Pick a slot_start verbatim from your most recent get_availability result and copy it character-for-character.`,
+            available_today: availSlots.slice(0, 6).map((s) => ({
+              slot_start: s.slot_start,
+              dublin_local: dublinHHMMOf(new Date(s.slot_start)),
+              display_time: dublinShortTime(new Date(s.slot_start)),
+            })),
           },
           events,
         };
       }
+
+      const start = new Date(canonical.slot_start);
       const end = new Date(start.getTime() + svc.duration_minutes * 60_000);
       const proposal = {
         business_id: biz.id,
@@ -433,9 +639,14 @@ export async function dispatchTool(
       const displayTime = formatDublinTime(start);
       return {
         modelResult: {
-          proposed: { ...proposal, display_time: displayTime },
+          proposed: {
+            ...proposal,
+            display_time: displayTime,
+            dublin_local: dublinHHMMOf(start),
+            tz: DUBLIN_TZ,
+          },
           note:
-            `Proposal shown to user for ${displayTime}. When you acknowledge, use that exact time string verbatim — do not re-format the ISO timestamp yourself. Your work is done for this booking; the UI handles confirmation deterministically. If the user wants a different time, propose another slot. Do not announce the booking as confirmed yourself.`,
+            `Proposal shown to user for ${displayTime} (Europe/Dublin). When you acknowledge, use that exact time string verbatim — do not re-format the ISO timestamp yourself. Your work is done for this booking; the UI handles confirmation deterministically. If the user wants a different time, propose another slot. Do not announce the booking as confirmed yourself.`,
         },
         events,
       };
