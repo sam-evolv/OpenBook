@@ -1,7 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, ImageIcon } from 'lucide-react';
+import { getTileColour } from '@/lib/tile-palette';
 
 interface Props {
   business: any;
@@ -10,26 +11,55 @@ interface Props {
 export function BusinessGallery({ business }: Props) {
   const gallery: string[] = business.gallery_urls ?? [];
   const [activeIndex, setActiveIndex] = useState<number | null>(null);
+  const primary = getTileColour(business.primary_colour).mid;
 
   if (gallery.length === 0) {
     return (
-      <div className="pt-20 px-5 text-center">
-        <p style={{ color: 'rgba(255,255,255,0.6)' }}>No photos yet.</p>
+      <div className="px-5 pt-[calc(82px+env(safe-area-inset-top))] text-center">
+        <div
+          className="rounded-[28px] px-6 py-10"
+          style={{
+            background:
+              'linear-gradient(180deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.025) 100%)',
+            border: '0.5px solid rgba(255,255,255,0.10)',
+          }}
+        >
+          <ImageIcon className="mx-auto mb-3 h-7 w-7" style={{ color: primary }} strokeWidth={1.7} />
+          <p className="text-[15px] font-semibold text-white/82">Gallery coming soon</p>
+          <p className="mx-auto mt-1 max-w-[260px] text-[12.5px] leading-snug text-white/45">
+            Photos from {business.name} will appear here soon.
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="pt-20 px-3 pb-6">
-      <div className="grid grid-cols-2 gap-1.5">
+    <div className="px-3 pb-8 pt-[calc(78px+env(safe-area-inset-top))]">
+      <div className="px-2 pb-4">
+        <p
+          className="text-[10px] font-semibold uppercase tracking-[0.18em]"
+          style={{ color: primary }}
+        >
+          Gallery
+        </p>
+        <h1 className="mt-1 font-serif text-[34px] font-semibold leading-none tracking-[-0.025em]">
+          {business.name}
+        </h1>
+      </div>
+      <div className="grid grid-cols-2 gap-2">
         {gallery.map((url, i) => (
           <button
             key={url}
             onClick={() => setActiveIndex(i)}
-            className="relative aspect-square rounded-xl overflow-hidden active:scale-[0.99] transition-transform"
+            className="relative aspect-square overflow-hidden rounded-[24px] active:scale-[0.99] transition-transform first:col-span-2 first:aspect-[1.35]"
+            style={{
+              boxShadow: '0 14px 36px rgba(0,0,0,0.30)',
+            }}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src={url} alt="" className="w-full h-full object-cover" />
+            <div className="pointer-events-none absolute inset-0 border border-white/10 rounded-[24px]" />
           </button>
         ))}
       </div>

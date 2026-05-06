@@ -61,55 +61,61 @@ export default async function BookingPage({
 
       <ConsumerHeader />
 
-      <div className="pb-36">
+      <div className="mx-auto max-w-md pb-44">
         {/* Summary header */}
         <div className="px-5 pt-4">
-          <p className="text-[11px] font-semibold tracking-[0.16em] text-white/40 uppercase mb-2">
-            Booking
-          </p>
           <div
-            className="
-              flex items-center gap-3 p-3 rounded-2xl
-              bg-white/[0.04] border border-white/[0.06]
-            "
+            className="overflow-hidden rounded-[30px] p-4"
+            style={{
+              background:
+                'linear-gradient(180deg, rgba(255,255,255,0.075) 0%, rgba(255,255,255,0.035) 100%)',
+              border: '0.5px solid rgba(255,255,255,0.12)',
+              boxShadow:
+                'inset 0 1px 0 rgba(255,255,255,0.10), 0 18px 48px rgba(0,0,0,0.34)',
+            }}
           >
-            <div
-              className="relative w-14 h-14 rounded-xl overflow-hidden shrink-0"
-              style={{
-                background: `linear-gradient(145deg, ${colour} 0%, ${colour}55 100%)`,
-              }}
-            >
-              {business.cover_image_url && (
-                <Image
-                  src={business.cover_image_url}
-                  alt={business.name}
-                  fill
-                  sizes="56px"
-                  className="object-cover"
-                />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-[13px] text-white/55 truncate">
-                {business.name}
-              </p>
-              <h1 className="text-[17px] font-semibold tracking-tight truncate">
-                {service.name}
-              </h1>
-              <p className="mt-0.5 text-[12px] text-white/55">
-                {formatDuration(service.duration_minutes)} ·{' '}
-                <span style={{ color: colour }} className="font-semibold">
-                  {formatPrice(service.price_cents)}
-                </span>
-              </p>
-            </div>
-          </div>
-          <div className="mt-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] px-4 py-3">
-            <p className="text-[12.5px] leading-snug text-white/60">
-              {requiresOnlinePayment
-                ? 'Your slot is held after you tap confirm, then you pay securely with Stripe to lock it in.'
-                : 'Your booking is confirmed immediately. If payment is needed, you pay the business directly.'}
+            <p className="mb-3 text-[10px] font-semibold uppercase tracking-[0.18em]" style={{ color: colour }}>
+              Booking
             </p>
+            <div className="flex items-center gap-3">
+              <div
+                className="relative w-16 h-16 rounded-[20px] overflow-hidden shrink-0"
+                style={{
+                  background: `linear-gradient(145deg, ${colour} 0%, ${colour}55 100%)`,
+                }}
+              >
+                {business.cover_image_url && (
+                  <Image
+                    src={business.cover_image_url}
+                    alt={business.name}
+                    fill
+                    sizes="64px"
+                    className="object-cover"
+                  />
+                )}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] text-white/55 truncate">
+                  {business.name}
+                </p>
+                <h1 className="font-serif text-[23px] font-semibold leading-tight tracking-[-0.02em] truncate">
+                  {service.name}
+                </h1>
+                <p className="mt-1 text-[12.5px] text-white/58">
+                  {formatDuration(service.duration_minutes)} ·{' '}
+                  <span style={{ color: colour }} className="font-semibold">
+                    {formatPrice(service.price_cents)}
+                  </span>
+                </p>
+              </div>
+            </div>
+            <div className="mt-4 rounded-[20px] border border-white/[0.07] bg-black/20 px-4 py-3">
+              <p className="text-[12.5px] leading-snug text-white/60">
+                {requiresOnlinePayment
+                  ? 'Choose a time, then pay securely with Stripe to lock it in.'
+                  : 'Choose a time and your booking is confirmed immediately.'}
+              </p>
+            </div>
           </div>
         </div>
 

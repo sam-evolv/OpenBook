@@ -1,25 +1,27 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Clock, ChevronRight, Sparkles, Star, MapPin, ImageIcon } from 'lucide-react';
+import { Clock, ChevronRight, Sparkles, Star, MapPin, ImageIcon, CircleCheck } from 'lucide-react';
+import { getBusinessOpenness, type BusinessHourRow } from '@/lib/business-hours';
+import { heroForBusiness } from '@/lib/categories';
 import { getTileColour } from '@/lib/tile-palette';
 
 interface Props {
   business: any;
   services: any[];
+  hours: BusinessHourRow[];
   onBookService: (s: any) => void;
   onOpenGallery: () => void;
   hasGallery: boolean;
 }
 
-export function BusinessHome({ business, services, onBookService, onOpenGallery, hasGallery }: Props) {
+export function BusinessHome({ business, services, hours, onBookService, onOpenGallery, hasGallery }: Props) {
   const primary = getTileColour(business.primary_colour).mid;
   const gallery: string[] = business.gallery_urls ?? [];
-  // hero_image_url is the explicit hero. Fall through cover_image_url and the
-  // first gallery photo so any business with photography gets a real hero —
-  // the radial-gradient fallback only fires for businesses with zero photos.
-  const heroSrc: string | null =
+  const uploadedHeroSrc: string | null =
     business.hero_image_url ?? business.cover_image_url ?? gallery[0] ?? null;
+  const heroSrc = uploadedHeroSrc ?? heroForBusiness(business.slug ?? business.id ?? business.name, business.category);
+  const openness = getBusinessOpenness(hours, business.business_closures ?? []);
 
   const cheapest = services.length === 0
     ? null
@@ -39,25 +41,27 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
           otherwise paint over siblings on iOS Safari). max-h caps the hero
           on tall desktop viewports so the name + CTA stay above the fold. */}
       <div
-        className="relative w-full min-h-[68svh] max-h-[760px] overflow-hidden isolate ob-hero-enter"
+        className="relative w-full min-h-[70svh] max-h-[780px] overflow-hidden isolate ob-hero-enter"
       >
-        {heroSrc ? (
-          /* eslint-disable-next-line @next/next/no-img-element */
-          <img
-            src={heroSrc}
-            alt={business.name}
-            className="absolute inset-0 w-full h-full object-cover will-change-transform"
-            // scale(1.1) gives parallax room to translate without revealing
-            // the bottom edge of the image. iOS Safari ignores
-            // background-attachment: fixed, so we drive the offset from JS.
-            style={{ transform: `translateY(${scrollY * 0.5}px) scale(1.1)`, zIndex: 0 }}
-          />
-        ) : (
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={heroSrc}
+          alt={business.name}
+          className="absolute inset-0 w-full h-full object-cover will-change-transform"
+          style={{
+            transform: `translateY(${scrollY * 0.5}px) scale(1.1)`,
+            zIndex: 0,
+            opacity: uploadedHeroSrc ? 1 : 0.58,
+            filter: uploadedHeroSrc ? 'none' : 'saturate(0.82) contrast(1.08)',
+          }}
+        />
+
+        {!uploadedHeroSrc && (
           <div
-            className="absolute inset-0"
+            aria-hidden
+            className="absolute inset-0 z-[1]"
             style={{
-              background: `radial-gradient(ellipse at 18% 8%, ${primary}70 0%, transparent 42%), radial-gradient(ellipse at 82% 18%, ${primary}38 0%, transparent 44%), linear-gradient(165deg, #171717 0%, #050505 48%, #000 100%)`,
-              zIndex: 0,
+              background: `radial-gradient(circle at 50% 32%, ${primary}55 0%, transparent 34%), linear-gradient(160deg, rgba(0,0,0,0.20) 0%, rgba(0,0,0,0.82) 64%, #000 100%)`,
             }}
           />
         )}
@@ -77,9 +81,17 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
           className="absolute inset-0 z-10 pointer-events-none"
           style={{
             background:
-              'linear-gradient(180deg, rgba(0,0,0,0.18) 0%, rgba(0,0,0,0.08) 30%, rgba(0,0,0,0.72) 72%, rgba(0,0,0,0.96) 100%)',
+              'linear-gradient(180deg, rgba(0,0,0,0.16) 0%, rgba(0,0,0,0.08) 24%, rgba(0,0,0,0.66) 68%, rgba(0,0,0,0.98) 100%)',
           }}
         />
+
+        {!uploadedHeroSrc && (
+          <div className="absolute inset-x-0 top-[18svh] z-20 flex justify-center">
+            <div className="scale-[1.26] opacity-95">
+              <BusinessAvatar business={business} primary={primary} />
+            </div>
+          </div>
+        )}
 
         {/* Name + meta + Book CTA — overlaid on the hero so the customer
             can see what the business is and act on it without scrolling. */}
@@ -88,7 +100,7 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
             <BusinessAvatar business={business} primary={primary} />
             <div className="min-w-0 flex-1 pb-1">
               <p className="text-[10px] font-semibold tracking-[0.18em] uppercase text-white/55">
-                Book direct
+                {uploadedHeroSrc ? 'Book direct' : 'Private booking app'}
               </p>
               {business.city && (
                 <p className="mt-1 inline-flex items-center gap-1 text-[12px] text-white/68">
@@ -143,6 +155,7 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
       </div>
 
       <AtAGlance business={business} services={services} primary={primary} />
+      <StorefrontSignal business={business} openness={openness} primary={primary} />
 
       {/* Services list */}
       <div className="px-5 pt-9 pb-7">
@@ -157,10 +170,12 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
 
         {services.length === 0 ? (
           <div
-            className="rounded-2xl p-8 text-center"
+            className="rounded-[26px] p-8 text-center"
             style={{
-              background: 'rgba(255,255,255,0.04)',
-              border: '0.5px solid rgba(255,255,255,0.08)',
+              background:
+                'linear-gradient(180deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.025) 100%)',
+              border: '0.5px solid rgba(255,255,255,0.10)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.08), 0 12px 32px rgba(0,0,0,0.24)',
             }}
           >
             <Sparkles
@@ -169,7 +184,10 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
               strokeWidth={1.6}
             />
             <p className="text-[14px] text-white/70">
-              Services coming soon
+              Services are being prepared
+            </p>
+            <p className="mx-auto mt-1 max-w-[260px] text-[12.5px] leading-snug text-white/42">
+              New bookable options will appear here as soon as they are ready.
             </p>
           </div>
         ) : (
@@ -191,7 +209,7 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
                 }}
               >
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-serif text-[18px] font-medium leading-tight text-white">
+                  <h3 className="font-serif text-[19px] font-medium leading-tight text-white">
                     {svc.name}
                   </h3>
                   <div className="flex items-center gap-3 mt-1.5">
@@ -200,12 +218,12 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
                         className="h-3 w-3 text-white/40"
                         strokeWidth={2}
                       />
-                      <span className="text-[12px] text-white/55">
+                      <span className="text-[12px] text-white/58">
                         {formatDuration(svc.duration_minutes)}
                       </span>
                     </div>
                     {svc.description && (
-                      <span className="text-[12px] truncate text-white/45">
+                      <span className="text-[12px] truncate text-white/48">
                         {svc.description}
                       </span>
                     )}
@@ -256,7 +274,7 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
               <button
                 key={url}
                 onClick={onOpenGallery}
-                className="relative aspect-square overflow-hidden rounded-xl first:col-span-2 first:row-span-2 first:aspect-auto"
+                className="relative aspect-square overflow-hidden rounded-[18px] first:col-span-2 first:row-span-2 first:aspect-auto active:scale-[0.99] transition-transform"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img src={url} alt="" className="w-full h-full object-cover" />
@@ -281,6 +299,63 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
         </div>
       )}
     </div>
+  );
+}
+
+function StorefrontSignal({
+  business,
+  openness,
+  primary,
+}: {
+  business: any;
+  openness: ReturnType<typeof getBusinessOpenness>;
+  primary: string;
+}) {
+  const statusColour =
+    openness.status === 'open'
+      ? '#7BE495'
+      : openness.status === 'opens-soon'
+        ? '#F6D77C'
+        : 'rgba(255,255,255,0.42)';
+
+  return (
+    <section className="px-5 pt-5">
+      <div
+        className="flex items-center gap-3 rounded-[24px] px-4 py-3.5"
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(255,255,255,0.055) 0%, rgba(255,255,255,0.025) 100%)',
+          border: '0.5px solid rgba(255,255,255,0.10)',
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.07), 0 10px 28px rgba(0,0,0,0.22)',
+        }}
+      >
+        <div
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full"
+          style={{ background: `${primary}20` }}
+        >
+          <CircleCheck className="h-5 w-5" style={{ color: primary }} strokeWidth={2.1} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[13px] font-semibold text-white/88">
+            Direct with {business.name}
+          </p>
+          <p className="mt-0.5 truncate text-[12px] text-white/48">
+            {business.tagline ||
+              [business.category, business.city].filter(Boolean).join(' · ') ||
+              'Book straight from this page.'}
+          </p>
+        </div>
+        <span
+          className="shrink-0 rounded-full px-2.5 py-1 text-[11px] font-semibold"
+          style={{
+            color: statusColour,
+            background: 'rgba(255,255,255,0.045)',
+          }}
+        >
+          {openness.label}
+        </span>
+      </div>
+    </section>
   );
 }
 

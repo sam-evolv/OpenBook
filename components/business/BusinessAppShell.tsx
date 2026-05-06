@@ -53,6 +53,7 @@ export function BusinessAppShell({ business, services, hours, initialTab = 'home
             <BusinessHome
               business={business}
               services={services}
+              hours={hours}
               onBookService={openBookingForService}
               onOpenGallery={() => setTab('gallery')}
               hasGallery={hasGallery}

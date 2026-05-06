@@ -1,6 +1,6 @@
 'use client';
 
-import { Phone, Globe, MapPin, Instagram, Clock } from 'lucide-react';
+import { Phone, Globe, MapPin, Instagram, Clock, Sparkles } from 'lucide-react';
 import { getTileColour } from '@/lib/tile-palette';
 
 interface Props {
@@ -20,19 +20,28 @@ export function BusinessAbout({ business, hours }: Props) {
     .filter(Boolean);
 
   return (
-    <div className="pt-20 px-5 pb-6">
-      <div className="mb-6">
+    <div className="px-5 pb-8 pt-[calc(78px+env(safe-area-inset-top))]">
+      <div
+        className="mb-6 rounded-[30px] p-5"
+        style={{
+          background:
+            'linear-gradient(180deg, rgba(255,255,255,0.075) 0%, rgba(255,255,255,0.035) 100%)',
+          border: '0.5px solid rgba(255,255,255,0.12)',
+          boxShadow:
+            'inset 0 1px 0 rgba(255,255,255,0.10), 0 18px 48px rgba(0,0,0,0.34)',
+        }}
+      >
         <p
           className="text-[10px] font-semibold tracking-[0.18em] uppercase mb-1.5"
           style={{ color: primary }}
         >
           About
         </p>
-        <h1 className="text-[28px] font-bold leading-tight tracking-[-0.02em]">
+        <h1 className="font-serif text-[36px] font-semibold leading-[0.96] tracking-[-0.03em]">
           {business.name}
         </h1>
         {business.tagline && (
-          <p className="mt-2 text-[15px]" style={{ color: 'rgba(255,255,255,0.7)' }}>
+          <p className="mt-3 text-[15px] leading-snug" style={{ color: 'rgba(255,255,255,0.72)' }}>
             {business.tagline}
           </p>
         )}
@@ -40,9 +49,15 @@ export function BusinessAbout({ business, hours }: Props) {
 
       {/* Long description */}
       {business.about_long && (
-        <section className="mb-8">
+        <section
+          className="mb-8 rounded-[26px] px-5 py-5"
+          style={{
+            background: 'rgba(255,255,255,0.035)',
+            border: '0.5px solid rgba(255,255,255,0.08)',
+          }}
+        >
           <p
-            className="text-[14px] leading-relaxed"
+            className="text-[14.5px] leading-relaxed"
             style={{ color: 'rgba(255,255,255,0.8)' }}
           >
             {business.about_long}
@@ -55,6 +70,22 @@ export function BusinessAbout({ business, hours }: Props) {
               — {business.founder_name}
             </p>
           )}
+        </section>
+      )}
+
+      {!business.about_long && (
+        <section
+          className="mb-8 rounded-[26px] px-5 py-8 text-center"
+          style={{
+            background: 'rgba(255,255,255,0.035)',
+            border: '0.5px solid rgba(255,255,255,0.08)',
+          }}
+        >
+          <Sparkles className="mx-auto mb-3 h-6 w-6" style={{ color: primary }} strokeWidth={1.7} />
+          <p className="text-[14px] font-semibold text-white/80">Story coming soon</p>
+          <p className="mx-auto mt-1 max-w-[260px] text-[12.5px] leading-snug text-white/45">
+            More detail about the team, space and approach will appear here soon.
+          </p>
         </section>
       )}
 
@@ -75,10 +106,11 @@ export function BusinessAbout({ business, hours }: Props) {
             </p>
           </div>
           <div
-            className="rounded-2xl divide-y overflow-hidden"
+            className="rounded-[24px] divide-y overflow-hidden"
             style={{
               background: 'rgba(255,255,255,0.04)',
-              border: '0.5px solid rgba(255,255,255,0.08)',
+              border: '0.5px solid rgba(255,255,255,0.09)',
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05)',
             }}
           >
             {orderedHours.map((h: any) => (
