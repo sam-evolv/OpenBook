@@ -52,32 +52,37 @@ export function HomeTileGrid({ businesses }: { businesses: HomeBusiness[] }) {
 
   return (
     <PullToRefresh onRefresh={refresh}>
-      {/* iOS-style icon grid. Responsive column count via Tailwind:
-          - default (mobile, < 640 px): 2 columns
-          - sm and up (tablet/desktop, ≥ 640 px): 4 columns
-          The container is capped at `max-w-screen-sm` and is NOT
-          centred (no `mx-auto`), so on wide desktop viewports the rows
-          sit on the left edge of the section. Horizontal padding keeps
-          the tiles off the screen edges on any viewport. We avoid an
-          inline `gridTemplateColumns` here — that would override the
-          responsive Tailwind classes at every breakpoint and re-create
-          the mobile overflow that prompted this fix. Each grid child
-          is wrapped in an identical flex cell so auto-placement walks
-          uniformly. */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-4 gap-y-7 max-w-screen-sm px-4">
-        <div className="flex justify-center">
+      {/* iOS-style 4-column icon grid at every viewport. The grid
+          declaration is intentionally inline so it cannot be overridden
+          by Tailwind cascade or breakpoint classes — see PRs #95/#96
+          for the breakage that responsive utilities caused here.
+          Tile sizing is vw-based with a max cap (see Tile.tsx) so four
+          icons always fit, scaling down on iPhone and capping at 96 px
+          on tablet/desktop. */}
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, 1fr)',
+          gap: '24px 16px',
+          padding: '0 16px',
+          width: '100%',
+        }}
+      >
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
           <SystemAppIcon kind="discover" />
         </div>
         {sortedBusinesses.map((b, i) => {
           const hours = b.business_hours ?? [];
           const openness = getBusinessOpenness(hours, b.business_closures ?? []);
           return (
-            <div key={b.id} className="flex justify-center">
+            <div
+              key={b.id}
+              style={{ display: 'flex', justifyContent: 'center' }}
+            >
               <Tile
                 name={b.name}
                 colour={b.primary_colour}
                 logoUrl={b.processed_icon_url ?? b.logo_url ?? null}
-                size={72}
                 status={openness.status}
                 animationDelay={i * 30}
                 viewTransitionName={`tile-${b.slug}`}
@@ -87,10 +92,10 @@ export function HomeTileGrid({ businesses }: { businesses: HomeBusiness[] }) {
             </div>
           );
         })}
-        <div className="flex justify-center">
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
           <SystemAppIcon kind="wallet" />
         </div>
-        <div className="flex justify-center">
+        <div style={{ display: 'flex', justifyContent: 'center' }}>
           <SystemAppIcon kind="me" />
         </div>
       </div>
