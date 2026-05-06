@@ -32,45 +32,64 @@ export default async function HomePage() {
   const greeting = timeGreeting();
 
   return (
-    <main className="relative min-h-[100dvh] text-white antialiased">
+    <main
+      className="relative text-white antialiased overflow-hidden"
+      style={{ height: '100dvh' }}
+    >
       <HomeWallpaper />
-      <ConsumerHeader showClose={false} />
 
-      {/* Greeting — real typography, not just "bold" */}
-      <header className="px-6 pt-3 pb-1 animate-reveal-up">
-        <p
-          className="text-caption-eyebrow"
-          style={{ color: 'var(--label-3)' }}
+      {/* iPhone-shaped frame on any viewport. The whole consumer
+          surface is capped at `max-w-md` (28rem ≈ 448 px, just wider
+          than an iPhone Pro Max) and centred with `mx-auto`, so on a
+          desktop monitor the page reads as an iPhone home screen
+          floating in the centre. Inside the frame we lay everything
+          out as a flex column that fills 100dvh: header / greeting /
+          grid (flex-grow, vertically centred) / page dots. The
+          BottomTabBar lives outside this frame because it is itself
+          `position: fixed` and already caps + centres at max-w-md. */}
+      <div className="relative mx-auto flex h-full max-w-md flex-col">
+        <ConsumerHeader showClose={false} />
+
+        {/* Greeting — real typography, not just "bold" */}
+        <header className="px-6 pt-3 pb-1 animate-reveal-up">
+          <p
+            className="text-caption-eyebrow"
+            style={{ color: 'var(--label-3)' }}
+          >
+            {greeting}
+          </p>
+          <h1
+            className="mt-1 text-display leading-[0.95]"
+            style={{ fontSize: '36px', color: 'var(--label-1)' }}
+          >
+            OpenBook<span style={{ color: 'var(--brand-gold)' }}>.</span>
+          </h1>
+        </header>
+
+        {/* App grid — `flex-1` plus `justify-center` parks the icons
+            in the middle of the remaining vertical space, exactly
+            like an iPhone home page where the dock is anchored bottom
+            and the apps sit centred above it. `pb-28` reserves room
+            for the floating BottomTabBar. */}
+        <section
+          className="flex flex-1 flex-col justify-center px-5 pb-28 animate-reveal-up"
+          style={{ animationDelay: '60ms' }}
         >
-          {greeting}
-        </p>
-        <h1
-          className="mt-1 text-display leading-[0.95]"
-          style={{ fontSize: '36px', color: 'var(--label-1)' }}
-        >
-          OpenBook<span style={{ color: 'var(--brand-gold)' }}>.</span>
-        </h1>
-      </header>
+          <HomeTileGrid businesses={businesses} />
 
-      {/* App grid */}
-      <section
-        className="mt-10 px-5 pb-44 animate-reveal-up"
-        style={{ animationDelay: '60ms' }}
-      >
-        <HomeTileGrid businesses={businesses} />
-
-        {/* iOS page dots */}
-        <div className="mt-12 flex items-center justify-center gap-1.5">
-          <span
-            className="w-[7px] h-[7px] rounded-full"
-            style={{ background: 'rgba(255,255,255,0.9)' }}
-          />
-          <span
-            className="w-[7px] h-[7px] rounded-full"
-            style={{ background: 'rgba(255,255,255,0.28)' }}
-          />
-        </div>
-      </section>
+          {/* iOS page dots */}
+          <div className="mt-8 flex items-center justify-center gap-1.5">
+            <span
+              className="w-[7px] h-[7px] rounded-full"
+              style={{ background: 'rgba(255,255,255,0.9)' }}
+            />
+            <span
+              className="w-[7px] h-[7px] rounded-full"
+              style={{ background: 'rgba(255,255,255,0.28)' }}
+            />
+          </div>
+        </section>
+      </div>
 
       <BottomTabBar />
     </main>
