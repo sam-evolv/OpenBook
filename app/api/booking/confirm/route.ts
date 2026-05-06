@@ -116,12 +116,6 @@ export async function POST(req: NextRequest) {
 
   // Hold the slot. The RPC enforces auth via auth.uid() under the user client,
   // confirms free bookings inline, and parks paid bookings in awaiting_payment.
-  console.log('[ai/confirm] hold_slot_for_ai inputs', {
-    business_id: businessId,
-    service_id: serviceId,
-    slot_start: slotStart,
-    customer_id: customerId,
-  });
   const { data: holdData, error: holdError } = await userClient.rpc(
     'hold_slot_for_ai',
     { p_service_id: serviceId, p_slot_start: slotStart }
@@ -157,13 +151,6 @@ export async function POST(req: NextRequest) {
   if (!row?.booking_id) {
     return NextResponse.json({ error: 'hold_failed' }, { status: 500 });
   }
-
-  console.log('[ai/confirm] hold ok:', {
-    booking_id: row.booking_id,
-    requires_payment: row.requires_payment,
-    expires_at: row.expires_at,
-    price_cents: row.price_cents,
-  });
 
   // Free path — already confirmed inside the RPC. Mirror lib/ai/tools.ts:
   // fire confirmation emails Promise.allSettled fire-and-forget so a Resend
@@ -223,10 +210,6 @@ export async function POST(req: NextRequest) {
         { status: 502 }
       );
     }
-    console.log('[ai/confirm] checkout ok:', {
-      booking_id: row.booking_id,
-      has_url: Boolean(payload.checkout_url),
-    });
     return NextResponse.json({
       kind: 'checkout',
       booking_id: row.booking_id,
@@ -272,8 +255,6 @@ async function rollbackOrphanedHold(bookingId: string) {
         message: error.message,
         code: error.code ?? null,
       });
-    } else {
-      console.log('[ai/confirm] orphan hold cancelled:', { booking_id: bookingId });
     }
   } catch (err: any) {
     console.error('[ai/confirm] orphan-hold rollback threw:', {

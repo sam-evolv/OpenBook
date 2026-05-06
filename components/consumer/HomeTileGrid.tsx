@@ -1,7 +1,8 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { Info, X } from 'lucide-react';
 import { Tile } from '@/components/Tile';
 import { TilePeek, type TilePeekAction } from '@/components/TilePeek';
 import { SystemAppIcon } from '@/components/consumer/SystemAppIcon';
@@ -19,6 +20,7 @@ export interface HomeBusiness extends Business {
 
 export function HomeTileGrid({ businesses }: { businesses: HomeBusiness[] }) {
   const router = useRouter();
+  const [showHint, setShowHint] = useState(false);
 
   async function refresh() {
     // router.refresh() re-runs the server component and refetches data.
@@ -50,8 +52,41 @@ export function HomeTileGrid({ businesses }: { businesses: HomeBusiness[] }) {
     })
   );
 
+  useEffect(() => {
+    if (sortedBusinesses.length === 0) return;
+    if (window.localStorage.getItem('ob_home_hint_dismissed') === 'true') return;
+    setShowHint(true);
+  }, [sortedBusinesses.length]);
+
+  function dismissHint() {
+    window.localStorage.setItem('ob_home_hint_dismissed', 'true');
+    setShowHint(false);
+  }
+
   return (
     <PullToRefresh onRefresh={refresh}>
+      {showHint && (
+        <div className="mx-auto mb-5 flex max-w-[312px] items-start gap-2.5 rounded-[20px] px-3.5 py-3 mat-glass-thin animate-reveal-up">
+          <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#D4AF37]" strokeWidth={2} />
+          <div className="min-w-0 flex-1">
+            <p className="text-[12.5px] font-semibold leading-snug text-white/90">
+              Tap a tile to book. Press and hold to peek.
+            </p>
+            <p className="mt-0.5 text-[11.5px] leading-snug text-white/45">
+              Your favourite local businesses live here like apps.
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={dismissHint}
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/[0.05] text-white/50 active:scale-95"
+            aria-label="Dismiss home tip"
+          >
+            <X className="h-3.5 w-3.5" strokeWidth={2.2} />
+          </button>
+        </div>
+      )}
+
       {/* iPhone Springboard layout. Tracks are a *fixed* 72 px — the
           iPhone icon size — rather than `1fr`, so the grid's intrinsic
           width is exactly four tiles + three column gaps. The page-
@@ -105,6 +140,15 @@ export function HomeTileGrid({ businesses }: { businesses: HomeBusiness[] }) {
           <SystemAppIcon kind="me" />
         </div>
       </div>
+
+      {sortedBusinesses.length === 0 && (
+        <div className="mx-auto mt-8 max-w-[300px] rounded-[22px] p-4 text-center mat-glass-thin">
+          <p className="text-[14px] font-semibold text-white/90">No live businesses yet</p>
+          <p className="mt-1 text-[12.5px] leading-snug text-white/50">
+            Explore is ready. As soon as a business goes live, its tile appears here.
+          </p>
+        </div>
+      )}
 
       {peekState && (
         <PeekForBusiness

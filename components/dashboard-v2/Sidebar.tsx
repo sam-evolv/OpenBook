@@ -62,6 +62,7 @@ interface SidebarProps {
   plan?: SidebarPlan;
   unreadMessagesCount?: number;
   upcomingBookingsCount?: number;
+  className?: string;
 }
 
 export function Sidebar({
@@ -72,6 +73,7 @@ export function Sidebar({
   plan = 'free',
   unreadMessagesCount = 0,
   upcomingBookingsCount = 0,
+  className,
 }: SidebarProps) {
   const pathname = usePathname();
   const { mode, toggle } = useTheme();
@@ -95,7 +97,7 @@ export function Sidebar({
   const isFreePlan = plan === 'free';
 
   return (
-    <aside className="sticky top-0 flex h-screen w-[244px] flex-col border-r bg-paper-bg dark:bg-ink-bg border-paper-border dark:border-ink-border px-3 pt-4 pb-3.5 text-[13.5px]">
+    <aside className={cn("sticky top-0 flex h-screen w-[244px] flex-col border-r bg-paper-bg dark:bg-ink-bg border-paper-border dark:border-ink-border px-3 pt-4 pb-3.5 text-[13.5px]", className)}>
       <div className="flex items-center gap-2.5 px-2 pb-3.5 mb-2.5 border-b border-paper-border dark:border-ink-border">
         <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-gold to-gold-muted text-[13px] font-bold text-black shadow-[0_0_0_1px_rgba(212,175,55,0.25)]">
           {businessName[0]}
@@ -211,5 +213,85 @@ export function Sidebar({
         </button>
       </div>
     </aside>
+  );
+}
+
+export function MobileDashboardNav({
+  businessName = 'Your business',
+  unreadMessagesCount = 0,
+  upcomingBookingsCount = 0,
+}: Pick<SidebarProps, 'businessName' | 'unreadMessagesCount' | 'upcomingBookingsCount'>) {
+  const pathname = usePathname();
+  const { mode, toggle } = useTheme();
+
+  const items = navItems.map((item) => ({
+    ...item,
+    count:
+      item.id === 'messages'
+        ? unreadMessagesCount > 0
+          ? unreadMessagesCount
+          : undefined
+        : item.id === 'bookings'
+          ? upcomingBookingsCount > 0
+            ? upcomingBookingsCount
+            : undefined
+          : undefined,
+  }));
+
+  return (
+    <header className="sticky top-0 z-40 border-b border-paper-border bg-paper-bg/95 px-4 py-3 backdrop-blur-xl dark:border-ink-border dark:bg-ink-bg/95 lg:hidden">
+      <div className="flex items-center gap-3">
+        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-gold to-gold-muted text-[14px] font-bold text-black">
+          {businessName[0]}
+        </div>
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[14px] font-semibold text-paper-text-1 dark:text-ink-text-1">
+            {businessName}
+          </p>
+          <p className="text-[11px] text-paper-text-3 dark:text-ink-text-3">
+            Dashboard
+          </p>
+        </div>
+        <button
+          onClick={toggle}
+          className="flex h-8 w-8 items-center justify-center rounded-md border border-paper-border bg-paper-surface text-paper-text-2 transition-colors dark:border-ink-border dark:bg-ink-surface dark:text-ink-text-2"
+          aria-label={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}
+        >
+          {mode === 'dark' ? <Sun size={14} /> : <Moon size={14} />}
+        </button>
+      </div>
+
+      <nav className="no-scrollbar mt-3 flex gap-2 overflow-x-auto">
+        {items.map((item) => {
+          const Icon = item.icon;
+          const isActive = pathname?.startsWith(item.href) ?? false;
+          return (
+            <Link
+              key={item.id}
+              href={item.href}
+              className={cn(
+                'relative flex h-10 shrink-0 items-center gap-2 rounded-full border px-3 text-[13px] font-medium transition-colors',
+                isActive
+                  ? 'border-gold bg-gold text-black'
+                  : 'border-paper-border bg-paper-surface text-paper-text-2 dark:border-ink-border dark:bg-ink-surface dark:text-ink-text-2',
+              )}
+            >
+              <Icon size={14} strokeWidth={isActive ? 2.2 : 1.8} />
+              <span>{item.label}</span>
+              {item.count !== undefined && (
+                <span
+                  className={cn(
+                    'ml-0.5 min-w-[17px] rounded-full px-1.5 text-center text-[10px] font-semibold tabular-nums',
+                    isActive ? 'bg-black/12 text-black' : 'bg-gold text-black',
+                  )}
+                >
+                  {item.count}
+                </span>
+              )}
+            </Link>
+          );
+        })}
+      </nav>
+    </header>
   );
 }

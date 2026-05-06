@@ -607,12 +607,6 @@ export function AssistantChat() {
     async (proposal: Proposal) => {
       if (busy) return;
       setBusy(true);
-      console.log('[ai/confirm] →', {
-        business_id: proposal.business_id,
-        service_id: proposal.service_id,
-        slot_start: proposal.slot_start,
-        requires_payment: proposal.requires_payment,
-      });
       try {
         const res = await fetch('/api/booking/confirm', {
           method: 'POST',
@@ -631,7 +625,6 @@ export function AssistantChat() {
           error?: string;
           message?: string;
         };
-        console.log('[ai/confirm] ←', { status: res.status, payload });
 
         // 401 → render the AuthGate card. localStorage already has the
         // proposal (the persistence useEffect runs on every messages
@@ -674,11 +667,6 @@ export function AssistantChat() {
         }
 
         if (payload.kind === 'checkout' && payload.booking_id && payload.url) {
-          console.log('[ai/confirm] rendering PaymentCard', {
-            booking_id: payload.booking_id,
-            url: payload.url,
-            expires_at: payload.expires_at,
-          });
           appendMessage({
             id: uid(),
             kind: 'payment',

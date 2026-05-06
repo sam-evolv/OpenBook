@@ -149,8 +149,25 @@ export function ExploreClient({ businesses }: { businesses: Business[] }) {
             ))}
           </div>
         ) : (
-          <div className="py-16 text-center text-white/45 text-[14px]">
-            No businesses match your search.
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-4 py-12 text-center">
+            <p className="text-[15px] font-semibold text-white/75">
+              No businesses match your search.
+            </p>
+            <p className="mx-auto mt-1 max-w-[260px] text-[12.5px] leading-snug text-white/45">
+              Try a broader category or clear the search to browse everything live on OpenBook.
+            </p>
+            {(query || category !== 'all') && (
+              <button
+                type="button"
+                onClick={() => {
+                  setQuery('');
+                  setCategory('all');
+                }}
+                className="mt-4 h-10 rounded-full bg-[#D4AF37] px-5 text-[13px] font-semibold text-black active:scale-95"
+              >
+                Clear search
+              </button>
+            )}
           </div>
         )}
       </section>

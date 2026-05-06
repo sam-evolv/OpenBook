@@ -64,7 +64,6 @@ export async function POST(req: NextRequest) {
 
   if (insertErr) {
     if ((insertErr as { code?: string }).code === '23505') {
-      console.log(`stripe-webhook: duplicate event ${event.id}, skipping`);
       return NextResponse.json({ received: true, deduped: true });
     }
     console.error('stripe-webhook: failed to record event', insertErr);
@@ -254,20 +253,13 @@ export async function POST(req: NextRequest) {
             stripe_account_id: account.id,
             event_id: event.id,
           });
-        } else {
-          console.log('stripe-webhook: account.updated applied', {
-            business_id: updated.id,
-            stripe_account_id: account.id,
-            charges_enabled: account.charges_enabled === true,
-            details_submitted: account.details_submitted === true,
-          });
         }
 
         break;
       }
 
       default:
-        console.log(`stripe-webhook: ignoring event type ${event.type}`);
+        break;
     }
 
     // 3. Mark the event as processed so we have an audit trail of

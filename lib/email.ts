@@ -220,9 +220,6 @@ export async function sendBookingConfirmation({
 
   if (audience === 'customer') {
     if (!customer?.email) {
-      console.log('sendBookingConfirmation: skipping customer email — no email on file', {
-        bookingId,
-      });
       return null;
     }
 

@@ -16,10 +16,7 @@ export function Step8Payments({ state, update, next }: StepProps) {
   const [error, setError] = useState<string | null>(null);
 
   async function connectStripe() {
-    console.log('[stripe-link] connect clicked', { businessId: state.businessId });
-
     if (!state.businessId) {
-      console.error('[stripe-link] aborting: state.businessId is missing — saveProgress has not assigned a draft business yet');
       setError(
         "We couldn't link your business yet. Go back a step and continue forward to save your progress, then try again."
       );
@@ -31,37 +28,30 @@ export function Step8Payments({ state, update, next }: StepProps) {
 
     try {
       const body = { businessId: state.businessId };
-      console.log('[stripe-link] POST /api/onboarding/stripe-link', body);
 
       const res = await fetch('/api/onboarding/stripe-link', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
-      console.log('[stripe-link] response status', res.status);
 
       const data = await res.json().catch(() => null);
-      console.log('[stripe-link] response data', data);
 
       if (!res.ok) {
         const message = data?.error ?? `Stripe link failed (HTTP ${res.status})`;
-        console.error('[stripe-link] non-OK response', message);
         setError(message);
         setConnecting(false);
         return;
       }
 
       if (!data?.url) {
-        console.error('[stripe-link] response missing `url` field', data);
         setError("Stripe didn't return an onboarding link. Try again or skip for now.");
         setConnecting(false);
         return;
       }
 
-      console.log('[stripe-link] redirecting to Stripe', data.url);
       window.location.href = data.url;
     } catch (err) {
-      console.error('[stripe-link] fetch threw', err);
       setError(err instanceof Error ? err.message : 'Network error contacting Stripe.');
       setConnecting(false);
     }

@@ -5,4 +5,7 @@
  * registration that still posts to /api/stripe/webhook continues to
  * be processed identically (signature check, dedupe, handlers).
  */
-export { POST, runtime, dynamic } from '@/app/api/webhooks/stripe/route';
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+export { POST } from '@/app/api/webhooks/stripe/route';
