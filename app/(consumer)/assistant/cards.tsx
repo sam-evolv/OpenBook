@@ -26,6 +26,7 @@ import {
   XCircle,
   Clock,
   ExternalLink,
+  Mail,
 } from 'lucide-react';
 import { OpenBookMark } from '@/components/consumer/OpenBookMark';
 import { BusinessIcon } from '@/components/consumer/BusinessIcon';
@@ -554,34 +555,62 @@ export function AuthGateCard({
   conversationId: string;
 }) {
   const accent = getTileColour(undefined).mid;
-  const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState<'apple' | 'google' | 'email' | null>(null);
+  const [emailMode, setEmailMode] = useState(false);
+  const [email, setEmail] = useState('');
+  const [emailSent, setEmailSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  async function continueWithGoogle() {
-    if (submitting) return;
-    setSubmitting(true);
+  function callbackUrl() {
+    const next = encodeURIComponent(`/assistant?resume=${conversationId}`);
+    return `${window.location.origin}/auth/callback?next=${next}`;
+  }
+
+  async function continueWithProvider(provider: 'apple' | 'google') {
+    if (loading) return;
+    setLoading(provider);
     setError(null);
     try {
       const supabase = createSupabaseBrowserClient();
-      // CRITICAL: encode the entire `next` value — it contains a `?`
-      // (`/assistant?resume=<id>`) which would otherwise be parsed as a
-      // top-level query separator on the callback URL and produce a 404.
-      const next = encodeURIComponent(`/assistant?resume=${conversationId}`);
       const { error: oauthError } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
+        provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback?next=${next}`,
+          redirectTo: callbackUrl(),
         },
       });
       if (oauthError) {
         setError(oauthError.message);
-        setSubmitting(false);
+        setLoading(null);
       }
-      // On success the browser is already redirecting to Google — do
-      // not clear submitting; the page is leaving.
+      // On success the browser is already redirecting to the provider.
     } catch (err: any) {
-      setError(err?.message ?? 'Could not start Google sign-in.');
-      setSubmitting(false);
+      setError(err?.message ?? 'Could not start sign-in.');
+      setLoading(null);
+    }
+  }
+
+  async function sendMagicLink(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email.trim() || loading) return;
+    setLoading('email');
+    setError(null);
+    try {
+      const supabase = createSupabaseBrowserClient();
+      const { error: otpError } = await supabase.auth.signInWithOtp({
+        email: email.trim(),
+        options: {
+          emailRedirectTo: callbackUrl(),
+        },
+      });
+      if (otpError) {
+        setError(otpError.message);
+      } else {
+        setEmailSent(true);
+      }
+    } catch (err: any) {
+      setError(err?.message ?? 'Could not send magic link.');
+    } finally {
+      setLoading(null);
     }
   }
 
@@ -615,37 +644,96 @@ export function AuthGateCard({
         <p className="text-white/55">{formatPrice(proposal.price_cents)}</p>
       </div>
 
-      <div className="mt-4 flex flex-col gap-2">
-        <button
-          type="button"
-          onClick={continueWithGoogle}
-          disabled={submitting}
-          className="h-11 rounded-full text-[14px] font-semibold text-black active:scale-95 transition disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-2"
-          style={{ background: accent }}
-        >
-          {submitting ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <>
-              <GoogleIcon />
-              <span>Continue with Google</span>
-            </>
-          )}
-        </button>
-
-        <button
-          type="button"
-          disabled
-          aria-disabled="true"
-          className="h-11 rounded-full text-[14px] font-medium text-white/70 border border-white/15 bg-white/[0.03] flex items-center justify-center gap-2 opacity-50 cursor-not-allowed"
-        >
-          <AppleIcon />
-          <span>Continue with Apple</span>
-          <span className="text-[11px] text-white/55 ml-1">— coming soon</span>
-        </button>
-
-        {error && <p className="text-[12px] text-red-300 px-1">{error}</p>}
-      </div>
+      {emailSent ? (
+        <div className="mt-4 rounded-2xl border border-white/[0.08] bg-white/[0.04] px-4 py-3">
+          <p className="text-[14px] font-semibold text-white">Check your inbox</p>
+          <p className="mt-1 text-[12.5px] leading-snug text-white/55">
+            We sent a secure link to {email}. It will bring this booking back.
+          </p>
+          <button
+            type="button"
+            onClick={() => {
+              setEmailSent(false);
+              setEmailMode(false);
+            }}
+            className="mt-3 text-[12.5px] font-semibold"
+            style={{ color: accent }}
+          >
+            Use another method
+          </button>
+        </div>
+      ) : emailMode ? (
+        <form onSubmit={sendMagicLink} className="mt-4 flex flex-col gap-2">
+          <div className="flex h-11 items-center gap-2.5 rounded-full border border-white/15 bg-white/[0.03] px-4">
+            <Mail className="h-4 w-4 text-white/45" strokeWidth={2} />
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              className="min-w-0 flex-1 bg-transparent text-[14px] text-white outline-none placeholder:text-white/35"
+            />
+          </div>
+          <button
+            type="submit"
+            disabled={loading !== null || !email.trim()}
+            className="h-11 rounded-full text-[14px] font-semibold text-black active:scale-95 transition disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-2"
+            style={{ background: accent }}
+          >
+            {loading === 'email' ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Send magic link'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setEmailMode(false)}
+            className="h-9 rounded-full text-[13px] font-medium text-white/55 active:scale-95"
+          >
+            Back
+          </button>
+          {error && <p className="text-[12px] text-red-300 px-1">{error}</p>}
+        </form>
+      ) : (
+        <div className="mt-4 flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => continueWithProvider('apple')}
+            disabled={loading !== null}
+            className="h-11 rounded-full text-[14px] font-semibold text-white active:scale-95 transition disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-2 border border-white/15 bg-white/[0.06]"
+          >
+            {loading === 'apple' ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <>
+                <AppleIcon />
+                <span>Continue with Apple</span>
+              </>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => continueWithProvider('google')}
+            disabled={loading !== null}
+            className="h-11 rounded-full text-[14px] font-semibold text-black active:scale-95 transition disabled:opacity-40 disabled:pointer-events-none flex items-center justify-center gap-2"
+            style={{ background: accent }}
+          >
+            {loading === 'google' ? (
+              <Loader2 className="w-4 h-4 animate-spin" />
+            ) : (
+              <>
+                <GoogleIcon />
+                <span>Continue with Google</span>
+              </>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setEmailMode(true)}
+            className="h-10 rounded-full text-[13px] font-medium text-white/60 active:scale-95"
+          >
+            Or continue with email
+          </button>
+          {error && <p className="text-[12px] text-red-300 px-1">{error}</p>}
+        </div>
+      )}
     </div>
   );
 }

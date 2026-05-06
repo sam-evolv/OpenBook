@@ -1,9 +1,9 @@
 import { cookies } from 'next/headers';
 import Link from 'next/link';
 import {
-  Bell,
+  Calendar,
   Shield,
-  CreditCard,
+  Wallet,
   HelpCircle,
   LogOut,
   ChevronRight,
@@ -14,6 +14,7 @@ import {
 import { supabaseAdmin } from '@/lib/supabase';
 import { ConsumerHeader } from '@/components/consumer/ConsumerHeader';
 import { BottomTabBar } from '@/components/consumer/BottomTabBar';
+import { DeleteAccountButton } from './DeleteAccountButton';
 
 export const dynamic = 'force-dynamic';
 
@@ -30,14 +31,14 @@ async function getCustomer() {
 }
 
 const ACCOUNT_ITEMS = [
-  { href: '/me/notifications', icon: Bell, label: 'Notifications' },
-  { href: '/me/payment', icon: CreditCard, label: 'Payment methods' },
-  { href: '/me/privacy', icon: Shield, label: 'Privacy & security' },
+  { href: '/consumer-bookings', icon: Calendar, label: 'My bookings' },
+  { href: '/wallet', icon: Wallet, label: 'Wallet & credits' },
+  { href: 'https://openbook.ie/privacy', icon: Shield, label: 'Privacy policy' },
 ];
 
 const SUPPORT_ITEMS = [
-  { href: '/me/help', icon: HelpCircle, label: 'Help & support' },
-  { href: '/me/feedback', icon: MessageSquare, label: 'Send feedback' },
+  { href: 'mailto:support@openbook.ie', icon: HelpCircle, label: 'Help & support' },
+  { href: 'mailto:feedback@openbook.ie', icon: MessageSquare, label: 'Send feedback' },
 ];
 
 export default async function MePage() {
@@ -115,7 +116,7 @@ export default async function MePage() {
 
         {/* For businesses promo */}
         <Link
-          href="/signup"
+          href="/onboard"
           className="
             mt-4 flex items-center gap-3 p-4 rounded-2xl
             border border-[#D4AF37]/25 bg-[#D4AF37]/5
@@ -161,7 +162,7 @@ export default async function MePage() {
         {customer && (
           <Section>
             <Link
-              href="/api/logout"
+              href="/api/auth/signout"
               className="
                 flex items-center gap-3 px-4 py-3.5 rounded-2xl
                 bg-white/[0.03] border border-white/[0.06]
@@ -179,6 +180,11 @@ export default async function MePage() {
             </Link>
           </Section>
         )}
+
+        <Section title="Data & privacy">
+          <MenuRow href="https://openbook.ie/terms" icon={Shield} label="Terms of service" />
+          <DeleteAccountButton hasCustomer={Boolean(customer)} />
+        </Section>
 
         <p className="mt-8 text-center text-[11px] text-white/30">
           OpenBook AI · A trading name of OpenHouse AI Limited
@@ -218,20 +224,36 @@ function MenuRow({
   icon: typeof UserCircle2;
   label: string;
 }) {
-  return (
-    <Link
-      href={href}
-      className="
+  const isExternal = href.startsWith('http') || href.startsWith('mailto:');
+  const classes = `
         flex items-center gap-3 px-4 py-3.5 rounded-2xl
         bg-white/[0.03] border border-white/[0.06]
         hover:border-white/[0.14] active:scale-[0.99] transition
-      "
-    >
+      `;
+  const content = (
+    <>
       <Icon className="w-[18px] h-[18px] text-white/60" strokeWidth={2} />
       <span className="flex-1 text-[14px] font-medium text-white/90">
         {label}
       </span>
       <ChevronRight className="w-4 h-4 text-white/30" strokeWidth={2} />
+    </>
+  );
+
+  if (isExternal) {
+    return (
+      <a href={href} className={classes}>
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      className={classes}
+    >
+      {content}
     </Link>
   );
 }

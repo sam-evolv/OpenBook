@@ -10,6 +10,7 @@ interface SlotPickerProps {
   businessId: string;
   businessSlug: string;
   colour: string;
+  requiresOnlinePayment: boolean;
 }
 
 const DATE_DAYS = 14;
@@ -19,6 +20,7 @@ export function SlotPicker({
   businessId,
   businessSlug,
   colour,
+  requiresOnlinePayment,
 }: SlotPickerProps) {
   const router = useRouter();
   const [selectedDate, setSelectedDate] = useState<Date>(() => new Date());
@@ -27,6 +29,7 @@ export function SlotPicker({
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
 
   const dates = useMemo(() => {
     const today = new Date();
@@ -44,10 +47,17 @@ export function SlotPicker({
         const res = await fetch(
           `/api/availability?serviceId=${serviceId}&date=${iso}`
         );
+        if (!res.ok) throw new Error('Availability failed');
         const data = await res.json();
-        if (!cancelled) setSlots(data.slots ?? []);
+        if (!cancelled) {
+          setSlots(data.slots ?? []);
+          setAvailabilityError(null);
+        }
       } catch {
-        if (!cancelled) setSlots([]);
+        if (!cancelled) {
+          setSlots([]);
+          setAvailabilityError('Could not load slots. Check your connection and try again.');
+        }
       } finally {
         if (!cancelled) setLoadingSlots(false);
       }
@@ -127,6 +137,18 @@ export function SlotPicker({
     // until the page unloads.
   }
 
+  function retryAvailability() {
+    setSelectedDate(new Date(selectedDate));
+  }
+
+  function chooseNextDate() {
+    const currentIndex = dates.findIndex(
+      (d) => d.toDateString() === selectedDate.toDateString()
+    );
+    const nextDate = dates[Math.min(currentIndex + 1, dates.length - 1)];
+    if (nextDate) setSelectedDate(nextDate);
+  }
+
   return (
     <>
       {/* Date strip */}
@@ -195,9 +217,35 @@ export function SlotPicker({
           <div className="py-12 flex items-center justify-center text-white/40">
             <Loader2 className="w-5 h-5 animate-spin" />
           </div>
+        ) : availabilityError ? (
+          <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-5 text-center">
+            <p className="text-[14px] font-medium text-red-100">
+              {availabilityError}
+            </p>
+            <button
+              type="button"
+              onClick={retryAvailability}
+              className="mt-3 h-9 rounded-full border border-red-300/25 px-4 text-[13px] font-semibold text-red-100 active:scale-95"
+            >
+              Retry
+            </button>
+          </div>
         ) : slots.length === 0 ? (
-          <div className="py-12 text-center text-white/45 text-[14px]">
-            No slots available on this day.
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-4 py-7 text-center">
+            <p className="text-[14px] font-semibold text-white/75">
+              No slots available on this day.
+            </p>
+            <p className="mx-auto mt-1 max-w-[260px] text-[12.5px] leading-snug text-white/45">
+              Try the next date or ask the AI tab to find the soonest opening.
+            </p>
+            <button
+              type="button"
+              onClick={chooseNextDate}
+              disabled={selectedDate.toDateString() === dates[dates.length - 1]?.toDateString()}
+              className="mt-4 h-10 rounded-full bg-white/[0.06] px-5 text-[13px] font-semibold text-white/80 border border-white/[0.10] active:scale-95 disabled:opacity-40"
+            >
+              Try next date
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-3 gap-2">
@@ -244,6 +292,13 @@ export function SlotPicker({
         {error && (
           <p className="mb-2 text-center text-[12px] text-red-400">{error}</p>
         )}
+        <p className="mb-2 text-center text-[12px] text-white/45">
+          {selectedSlot
+            ? requiresOnlinePayment
+              ? 'Next step: secure Stripe payment. Your slot is held briefly.'
+              : 'No online payment is needed. This confirms the booking.'
+            : 'Choose a time to continue.'}
+        </p>
         <button
           onClick={confirmBooking}
           disabled={!selectedSlot || submitting}

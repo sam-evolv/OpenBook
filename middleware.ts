@@ -55,11 +55,6 @@ export async function middleware(req: NextRequest) {
               ? { ...options, domain: COOKIE_DOMAIN }
               : options;
             response.cookies.set(name, value, opts);
-            if (name.startsWith('sb-')) {
-              console.log(
-                `[mw] set-cookie name=${name} domain=${opts.domain ?? '(host)'} maxAge=${opts.maxAge ?? '—'} host=${host}`
-              );
-            }
           });
         },
       },
@@ -100,9 +95,6 @@ export async function middleware(req: NextRequest) {
       const rewritten = existing.map((header) => {
         if (!/^sb-/i.test(header)) return header;
         if (/;\s*Domain=/i.test(header)) return header;
-        console.log(
-          `[mw] stamping Domain=${COOKIE_DOMAIN} on header: ${header.slice(0, 60)}…`
-        );
         return `${header}; Domain=${COOKIE_DOMAIN}`;
       });
       response.headers.delete('set-cookie');

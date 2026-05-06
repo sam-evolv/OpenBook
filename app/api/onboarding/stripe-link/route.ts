@@ -74,8 +74,6 @@ export async function POST(req: NextRequest) {
 
   const returnUrl = `${origin}/onboard/flow?stripe=ok`;
   const refreshUrl = `${origin}/onboard/flow?stripe=retry`;
-  console.log('[stripe-link] account-link urls', { accountId, returnUrl, refreshUrl });
-
   const link = await stripe.accountLinks.create({
     account: accountId,
     return_url: returnUrl,

@@ -91,15 +91,6 @@ export async function POST(req: NextRequest) {
       business.stripe_charges_enabled === true &&
       service.price_cents > 0;
 
-    console.log('[checkout/create] gating:', {
-      booking_id: booking.id,
-      booking_status: booking.status,
-      price_cents: booking.price_cents,
-      has_stripe_account: Boolean(business.stripe_account_id),
-      charges_enabled: business.stripe_charges_enabled,
-      requires_payment: requiresPayment,
-    });
-
     if (!requiresPayment) {
       return NextResponse.json({
         requires_payment: false,
@@ -141,12 +132,6 @@ export async function POST(req: NextRequest) {
       expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
       success_url: `${appUrl}/booking/confirm?id=${booking.id}&session_id={CHECKOUT_SESSION_ID}`,
       cancel_url: `${appUrl}/booking/confirm?id=${booking.id}&cancelled=1`,
-    });
-
-    console.log('[checkout/create] stripe session created:', {
-      booking_id: booking.id,
-      session_id: session.id,
-      has_url: Boolean(session.url),
     });
 
     return NextResponse.json({
