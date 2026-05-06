@@ -16,7 +16,12 @@ export interface TileProps {
   colour: TileColourSlug | string | null | undefined;
   /** Pre-processed monochrome white logo URL. Optional. */
   logoUrl?: string | null;
-  /** Tile size in CSS pixels. Default 64. */
+  /**
+   * Optional fixed size in CSS pixels. When omitted, the tile uses
+   * responsive viewport-relative sizing (`min(calc(25vw - 20px), 96px)`)
+   * so four tiles always fit the home grid. Surfaces that need a fixed
+   * size (peek preview, colour picker swatches) pass an explicit number.
+   */
   size?: number;
   /** Status indicator dot. */
   status?: 'open' | 'opens-soon' | 'closed';
@@ -35,11 +40,17 @@ export interface TileProps {
 const LONG_PRESS_MS = 380;
 const PRESS_MOVE_TOLERANCE = 8;
 
+// Drives every size below — viewport-relative so four tiles always fit
+// the home grid's 4-column layout, capped at 96 px on tablet/desktop so
+// the icons don't grow comically large. Read via `var(--tile-size)`
+// from each style block.
+const RESPONSIVE_TILE_SIZE = 'min(calc(25vw - 20px), 96px)';
+
 export function Tile({
   name,
   colour,
   logoUrl,
-  size = 64,
+  size,
   status,
   onTap,
   onLongPress,
@@ -106,14 +117,29 @@ export function Tile({
   const textColour = tileTextColour(tileColour);
   const dropShadowColour =
     textColour === '#ffffff' ? 'rgba(0,0,0,0.25)' : 'rgba(255,255,255,0.18)';
-  const monogramFontSize = Math.round(size * 0.46);
-  const logoSize = Math.round(size * 0.6);
-  const radius = Math.round(size * 0.25);
+
+  // When `size` is passed, keep legacy fixed-px sizing; otherwise the
+  // wrapper sets `--tile-size` to the viewport-relative expression and
+  // every dimension below references it.
+  const sizeBase: string | number = size ?? 'var(--tile-size)';
+  const monogramFontSize =
+    typeof size === 'number'
+      ? Math.round(size * 0.46)
+      : `calc(${sizeBase} * 0.46)`;
+  const logoDimension =
+    typeof size === 'number'
+      ? Math.round(size * 0.6)
+      : `calc(${sizeBase} * 0.6)`;
+  const radius =
+    typeof size === 'number'
+      ? Math.round(size * 0.25)
+      : `calc(${sizeBase} * 0.25)`;
 
   const buttonStyle: CSSProperties = {
     position: 'relative',
-    width: size,
-    height: size,
+    width: sizeBase,
+    height: sizeBase,
+    aspectRatio: '1 / 1',
     borderRadius: radius,
     padding: 0,
     border: 'none',
@@ -137,11 +163,17 @@ export function Tile({
     <div
       className="ob-tile-wrap"
       style={{
+        // Set the responsive --tile-size custom property only when no
+        // explicit size was passed — peek preview / colour picker keep
+        // their fixed numeric size and never read this variable.
+        ...(size === undefined && {
+          ['--tile-size' as string]: RESPONSIVE_TILE_SIZE,
+        }),
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
         gap: 6,
-      }}
+      } as CSSProperties}
     >
       <button
         ref={buttonRef}
@@ -187,11 +219,9 @@ export function Tile({
             <img
               src={logoUrl}
               alt=""
-              width={logoSize}
-              height={logoSize}
               style={{
-                width: logoSize,
-                height: logoSize,
+                width: logoDimension,
+                height: logoDimension,
                 objectFit: 'contain',
                 filter: `drop-shadow(0 1px 2px ${dropShadowColour})`,
                 pointerEvents: 'none',
@@ -247,7 +277,10 @@ export function Tile({
             fontSize: 11,
             color: 'var(--ob-text-1, rgba(255,255,255,0.9))',
             fontWeight: 500,
-            maxWidth: size + 28,
+            maxWidth:
+              typeof size === 'number'
+                ? size + 28
+                : `calc(${sizeBase} + 28px)`,
             textAlign: 'center',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
