@@ -36,9 +36,12 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
 
   return (
     <div className="flex flex-col">
-      {/* Hero */}
+      {/* Hero — `isolate` so the parallax-transformed image stays under the
+          overlays (transformed elements create stacking contexts and could
+          otherwise paint over siblings on iOS Safari). max-h caps the hero
+          on tall desktop viewports so the name + CTA stay above the fold. */}
       <div
-        className="relative w-full aspect-[16/10] overflow-hidden ob-hero-enter"
+        className="relative w-full aspect-[16/10] max-h-[68svh] overflow-hidden isolate ob-hero-enter"
       >
         {heroSrc ? (
           /* eslint-disable-next-line @next/next/no-img-element */
@@ -49,13 +52,14 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
             // scale(1.1) gives parallax room to translate without revealing
             // the bottom edge of the image. iOS Safari ignores
             // background-attachment: fixed, so we drive the offset from JS.
-            style={{ transform: `translateY(${scrollY * 0.5}px) scale(1.1)` }}
+            style={{ transform: `translateY(${scrollY * 0.5}px) scale(1.1)`, zIndex: 0 }}
           />
         ) : (
           <div
             className="absolute inset-0"
             style={{
               background: `radial-gradient(ellipse at 30% 20%, ${primary}40 0%, #000 70%), linear-gradient(180deg, #111 0%, #000 100%)`,
+              zIndex: 0,
             }}
           />
         )}
@@ -63,7 +67,7 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
         {/* Stronger, longer bottom fade so the name + CTA are legible above
             the fold regardless of which photo lands behind them. */}
         <div
-          className="absolute inset-0"
+          className="absolute inset-0 z-10 pointer-events-none"
           style={{
             background:
               'linear-gradient(180deg, rgba(0,0,0,0.0) 0%, rgba(0,0,0,0.15) 35%, rgba(0,0,0,0.65) 70%, rgba(0,0,0,0.92) 100%)',
@@ -72,15 +76,19 @@ export function BusinessHome({ business, services, onBookService, onOpenGallery,
 
         {/* Name + meta + Book CTA — overlaid on the hero so the customer
             can see what the business is and act on it without scrolling. */}
-        <div className="absolute bottom-0 left-0 right-0 p-6 pt-20">
+        <div className="absolute inset-x-0 bottom-0 z-20 p-6 pt-20">
           <h1
             className="font-serif text-[38px] font-semibold leading-[1.02] tracking-[-0.02em] text-white"
+            style={{ textShadow: '0 2px 12px rgba(0,0,0,0.55)' }}
           >
             {business.name}
           </h1>
           <HeroMeta business={business} />
           {business.tagline && (
-            <p className="mt-2 text-[14px] text-white/75">
+            <p
+              className="mt-2 text-[14px] text-white/80"
+              style={{ textShadow: '0 1px 6px rgba(0,0,0,0.5)' }}
+            >
               {business.tagline}
             </p>
           )}
