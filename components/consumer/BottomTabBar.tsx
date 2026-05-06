@@ -2,13 +2,19 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { Home, Search, Sparkles, Calendar, type LucideIcon } from 'lucide-react';
+import type { ComponentType, SVGProps } from 'react';
+import { Home, Search, Calendar } from 'lucide-react';
+import { OpenBookMark } from './OpenBookMark';
 
-const DOCK_APPS = [
-  { href: '/home', label: 'Home', Icon: Home },
-  { href: '/explore', label: 'Explore', Icon: Search },
-  { href: '/assistant', label: 'AI', Icon: Sparkles },
-  { href: '/consumer-bookings', label: 'Bookings', Icon: Calendar },
+type IconComponent = ComponentType<
+  SVGProps<SVGSVGElement> & { strokeWidth?: number; size?: number }
+>;
+
+const DOCK_APPS: { href: string; label: string; Icon: IconComponent }[] = [
+  { href: '/home', label: 'Home', Icon: Home as IconComponent },
+  { href: '/explore', label: 'Explore', Icon: Search as IconComponent },
+  { href: '/assistant', label: 'AI', Icon: OpenBookMark as IconComponent },
+  { href: '/consumer-bookings', label: 'Bookings', Icon: Calendar as IconComponent },
 ];
 
 export function BottomTabBar() {
@@ -71,7 +77,7 @@ function DockIcon({
 }: {
   href: string;
   label: string;
-  Icon: LucideIcon;
+  Icon: IconComponent;
   active: boolean;
 }) {
   const size = 54;

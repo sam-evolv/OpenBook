@@ -27,6 +27,7 @@ import {
   Clock,
   ExternalLink,
 } from 'lucide-react';
+import { OpenBookMark } from '@/components/consumer/OpenBookMark';
 import { getTileColour } from '@/lib/tile-palette';
 import { createSupabaseBrowserClient } from '@/lib/supabase-browser';
 import {
@@ -62,6 +63,50 @@ export function TypingDots() {
         className="block w-1.5 h-1.5 rounded-full bg-white/55 animate-gentle-pulse"
         style={{ animationDelay: '0.3s' }}
       />
+    </div>
+  );
+}
+
+/**
+ * Premium "thinking" state shown after the user sends a message and
+ * before the first token arrives. A pulsing gold-on-black AI mark sits
+ * next to a shimmering "Thinking" label — feels considered rather than
+ * a generic loader.
+ */
+export function ThinkingState() {
+  return (
+    <div className={`${cardEnter} flex items-center gap-2.5`}>
+      <div
+        className="relative w-7 h-7 rounded-full flex items-center justify-center"
+        style={{
+          background:
+            'radial-gradient(circle at 30% 25%, #1a1a1a 0%, #050505 100%)',
+          boxShadow:
+            '0 0 0 0.5px rgba(212,175,55,0.45), 0 0 22px rgba(212,175,55,0.35)',
+        }}
+      >
+        <span
+          aria-hidden
+          className="absolute inset-0 rounded-full animate-think-glow"
+          style={{
+            background:
+              'radial-gradient(circle, rgba(212,175,55,0.45) 0%, transparent 70%)',
+          }}
+        />
+        <OpenBookMark
+          size={14}
+          strokeWidth={1.7}
+          style={{ color: '#D4AF37', position: 'relative' }}
+        />
+      </div>
+      <span className="thinking-shimmer text-[13.5px] font-medium tracking-tight">
+        Thinking
+        <span className="thinking-ellipsis">
+          <span>.</span>
+          <span>.</span>
+          <span>.</span>
+        </span>
+      </span>
     </div>
   );
 }

@@ -178,10 +178,53 @@ html {
 .animate-gentle-pulse { animation: gentle-pulse 4s var(--ease-apple) infinite; }
 .animate-reveal-up { animation: reveal-up 500ms var(--ease-apple) both; }
 
+@keyframes think-glow {
+  0%, 100% { opacity: 0.35; transform: scale(0.92); }
+  50%      { opacity: 0.95; transform: scale(1.08); }
+}
+.animate-think-glow {
+  animation: think-glow 1.6s var(--ease-apple) infinite;
+}
+
+.thinking-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.45) 0%,
+    rgba(212, 175, 55, 0.95) 40%,
+    rgba(255, 255, 255, 0.45) 80%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: shimmer 2.4s linear infinite;
+}
+
+.thinking-ellipsis {
+  display: inline-block;
+  margin-left: 1px;
+}
+.thinking-ellipsis span {
+  display: inline-block;
+  opacity: 0.2;
+  animation: think-dot 1.2s var(--ease-apple) infinite;
+}
+.thinking-ellipsis span:nth-child(2) { animation-delay: 0.18s; }
+.thinking-ellipsis span:nth-child(3) { animation-delay: 0.36s; }
+
+@keyframes think-dot {
+  0%, 60%, 100% { opacity: 0.2; transform: translateY(0); }
+  30%           { opacity: 1;   transform: translateY(-1px); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-float,
   .animate-gentle-pulse,
-  .animate-reveal-up {
+  .animate-reveal-up,
+  .animate-think-glow,
+  .thinking-shimmer,
+  .thinking-ellipsis span {
     animation: none;
   }
 }

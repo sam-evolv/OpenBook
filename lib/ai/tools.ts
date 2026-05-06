@@ -48,7 +48,7 @@ export const TOOL_DEFS = [
     function: {
       name: 'search_businesses',
       description:
-        "Search live OpenBook businesses in Ireland. Returns at most 5 results, ranked by rating then name. Pass the user's free-text query exactly — business name, service type, or both. Examples: 'Evolv', 'physio Cork', 'haircut', 'Yoga Flow Cork'. Use this once at the start of a booking conversation. Do not call it again after a business has been chosen.",
+        "Search live OpenBook businesses in Ireland. Returns at most 5 results, ranked by rating then name, INCLUDING each business's bookable services with service_id, name, duration_minutes, price_cents and description. Pass the user's free-text query exactly — business name, service type, or both. Examples: 'Evolv', 'physio Cork', 'haircut', 'Yoga Flow Cork'. Use this once at the start of a booking conversation. Because services are returned alongside the business, you usually do NOT need to call list_services unless the search results are stale. Do not call search_businesses again after a business has been chosen.",
       parameters: {
         type: 'object',
         properties: {
@@ -243,7 +243,49 @@ export async function dispatchTool(
         });
         return { modelResult: { error: error.message }, events };
       }
-      return { modelResult: { businesses: data ?? [] }, events };
+      const rawBusinesses = (data ?? []) as Array<{
+        business_id: string;
+        [k: string]: any;
+      }>;
+
+      // Pull active services for every returned business in a single
+      // round-trip. Without this the model says "no specific services
+      // listed" the moment a user asks "do they have a fade and how
+      // much is it" — the search result alone has no service detail.
+      let servicesByBusiness: Record<string, any[]> = {};
+      const ids = rawBusinesses.map((b) => b.business_id).filter(Boolean);
+      if (ids.length > 0) {
+        const { data: svcRows, error: svcErr } = await ctx.adminClient
+          .from('services')
+          .select(
+            'id, business_id, name, duration_minutes, price_cents, description, sort_order'
+          )
+          .in('business_id', ids)
+          .eq('is_active', true)
+          .order('sort_order', { ascending: true, nullsFirst: false });
+        if (svcErr) {
+          console.error('[search_businesses] services lookup failed', svcErr);
+        } else {
+          for (const row of svcRows ?? []) {
+            const list = servicesByBusiness[row.business_id] ?? [];
+            list.push({
+              service_id: row.id,
+              name: row.name,
+              duration_minutes: row.duration_minutes,
+              price_cents: row.price_cents,
+              description: row.description ?? null,
+            });
+            servicesByBusiness[row.business_id] = list;
+          }
+        }
+      }
+
+      const businesses = rawBusinesses.map((b) => ({
+        ...b,
+        services: servicesByBusiness[b.business_id] ?? [],
+      }));
+
+      return { modelResult: { businesses }, events };
     }
 
     case 'list_services': {
