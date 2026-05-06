@@ -18,7 +18,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { ArrowUp, Plus, Sparkles } from 'lucide-react';
+import { ArrowUp, Plus } from 'lucide-react';
+import { OpenBookMark } from '@/components/consumer/OpenBookMark';
+import { Markdown } from './Markdown';
 import { parseSSE } from './sse';
 import {
   AuthGateCard,
@@ -28,8 +30,8 @@ import {
   ErrorPill,
   PaymentCard,
   ProposalCard,
+  ThinkingState,
   ToolPill,
-  TypingDots,
 } from './cards';
 import {
   clearActiveConversation,
@@ -91,6 +93,12 @@ export function AssistantChat() {
   // mark the pill 'done' and drop it once the result is rendered as a
   // standalone card (chips, slots, proposal, etc).
   const activeToolPillsRef = useRef<{ id: string; tool: string }[]>([]);
+  // Typewriter: incoming SSE deltas are buffered here and drained at a
+  // controlled cadence so the user sees a smooth flow rather than React
+  // batching whole responses into a single render. Keyed by message id.
+  const pendingTextRef = useRef<Record<string, string>>({});
+  const drainTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const streamFinishedRef = useRef(false);
 
   // ----- Init / resume -----
   useEffect(() => {
@@ -187,6 +195,61 @@ export function AssistantChat() {
 
   // ----- Streaming runner -----------------------------------------
 
+  // Drain buffered deltas into the active text bubble at a steady cadence.
+  // Without this the React batching of dozens of setState calls inside an
+  // async for-await loop coalesces a whole response into one paint, which
+  // erases the streaming feel even though the server is sending tokens.
+  const startDrainer = useCallback(() => {
+    if (drainTimerRef.current) return;
+    const TICK_MS = 28;
+    const CHARS_PER_TICK = 3;
+    drainTimerRef.current = setInterval(() => {
+      const pending = pendingTextRef.current;
+      const ids = Object.keys(pending);
+      if (ids.length === 0) {
+        if (streamFinishedRef.current) {
+          stopDrainer();
+        }
+        return;
+      }
+      let dirty = false;
+      const flushAll = streamFinishedRef.current;
+      for (const id of ids) {
+        const buf = pending[id] ?? '';
+        if (!buf) continue;
+        // While the stream is live, eat a few chars per tick. Once the
+        // stream is finished, flush whatever is left so we never trail
+        // behind a closed connection.
+        const take = flushAll ? buf.length : Math.min(buf.length, CHARS_PER_TICK);
+        const slice = buf.slice(0, take);
+        pending[id] = buf.slice(take);
+        dirty = true;
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === id && m.kind === 'assistant_text'
+              ? { ...m, content: m.content + slice }
+              : m
+          )
+        );
+      }
+      if (!dirty && streamFinishedRef.current) stopDrainer();
+    }, TICK_MS);
+  }, []);
+
+  const stopDrainer = useCallback(() => {
+    if (drainTimerRef.current) {
+      clearInterval(drainTimerRef.current);
+      drainTimerRef.current = null;
+    }
+  }, []);
+
+  // Cleanup on unmount.
+  useEffect(() => {
+    return () => {
+      if (drainTimerRef.current) clearInterval(drainTimerRef.current);
+    };
+  }, []);
+
   const runStream = useCallback(
     async (history: Message[]) => {
       if (busy) return;
@@ -194,6 +257,9 @@ export function AssistantChat() {
       setStreamPending(true);
       activeTextIdRef.current = null;
       activeToolPillsRef.current = [];
+      pendingTextRef.current = {};
+      streamFinishedRef.current = false;
+      startDrainer();
 
       try {
         const res = await fetch('/api/ai/chat', {
@@ -228,12 +294,35 @@ export function AssistantChat() {
           message: 'Lost connection to the assistant. Please try again.',
         });
       } finally {
+        // Mark the stream as done and let the drainer flush any tail.
+        streamFinishedRef.current = true;
         setBusy(false);
         setStreamPending(false);
         activeTextIdRef.current = null;
+        // Safety net: ensure any tail is flushed promptly even if the
+        // drainer interval is paused (tab inactive, etc.).
+        setTimeout(() => {
+          const pending = pendingTextRef.current;
+          const ids = Object.keys(pending);
+          if (ids.length > 0) {
+            for (const id of ids) {
+              const tail = pending[id] ?? '';
+              if (!tail) continue;
+              pending[id] = '';
+              setMessages((prev) =>
+                prev.map((m) =>
+                  m.id === id && m.kind === 'assistant_text'
+                    ? { ...m, content: m.content + tail }
+                    : m
+                )
+              );
+            }
+          }
+          stopDrainer();
+        }, 600);
       }
     },
-    [busy, appendMessage]
+    [busy, appendMessage, startDrainer, stopDrainer]
   );
 
   function handleSSE(event: string, data: any) {
@@ -243,15 +332,16 @@ export function AssistantChat() {
         if (!delta) return;
         const activeId = activeTextIdRef.current;
         if (activeId) {
-          updateMessage(activeId, (m) =>
-            m.kind === 'assistant_text'
-              ? { ...m, content: m.content + delta }
-              : m
-          );
+          // Buffer the delta — the drainer flushes characters into the
+          // message at a steady cadence so the user sees a smooth
+          // typewriter rather than React-batched bursts.
+          pendingTextRef.current[activeId] =
+            (pendingTextRef.current[activeId] ?? '') + delta;
         } else {
           const id = uid();
           activeTextIdRef.current = id;
-          appendMessage({ id, kind: 'assistant_text', content: delta });
+          pendingTextRef.current[id] = delta;
+          appendMessage({ id, kind: 'assistant_text', content: '' });
         }
         return;
       }
@@ -723,7 +813,11 @@ export function AssistantChat() {
         <div className="flex items-center justify-between px-4 pt-3 pb-1">
           {showResumeNote ? (
             <p className="text-[12px] text-white/60 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
+              <OpenBookMark
+                size={14}
+                strokeWidth={1.7}
+                style={{ color: '#D4AF37' }}
+              />
               Welcome back — ready when you are.
             </p>
           ) : (
@@ -751,7 +845,11 @@ export function AssistantChat() {
                 'radial-gradient(circle at 30% 25%, #F4D57A 0%, #D4AF37 45%, #8B6428 100%)',
             }}
           >
-            <Sparkles className="w-12 h-12 text-black/80" strokeWidth={2} />
+            <OpenBookMark
+              size={48}
+              strokeWidth={1.6}
+              style={{ color: 'rgba(0,0,0,0.82)' }}
+            />
             <div
               aria-hidden
               className="absolute inset-0 rounded-full pointer-events-none"
@@ -809,9 +907,16 @@ export function AssistantChat() {
               cardsDisabled={busy}
             />
           ))}
-          {streamPending && activeTextIdRef.current === null && (
-            <TypingDots />
-          )}
+          {streamPending &&
+            (() => {
+              const activeId = activeTextIdRef.current;
+              if (!activeId) return <ThinkingState />;
+              const m = messages.find((x) => x.id === activeId);
+              if (m && m.kind === 'assistant_text' && m.content.length === 0) {
+                return <ThinkingState />;
+              }
+              return null;
+            })()}
         </div>
       )}
 
@@ -888,8 +993,8 @@ function MessageRow({
       if (!msg.content) return null;
       return (
         <div className="flex">
-          <div className="max-w-[86%] px-4 py-3 rounded-[20px] rounded-bl-md bg-white/[0.05] border border-white/[0.08] text-[15px] leading-relaxed text-white/90 whitespace-pre-wrap">
-            {msg.content}
+          <div className="max-w-[86%] px-4 py-3 rounded-[20px] rounded-bl-md bg-white/[0.05] border border-white/[0.08] text-[15px] leading-relaxed text-white/90">
+            <Markdown>{msg.content}</Markdown>
           </div>
         </div>
       );
