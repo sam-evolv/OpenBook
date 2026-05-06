@@ -52,36 +52,51 @@ export function HomeTileGrid({ businesses }: { businesses: HomeBusiness[] }) {
 
   return (
     <PullToRefresh onRefresh={refresh}>
-      {/* iOS-style 4-column grid. We deliberately keep 4 cols at every
-          width: the system + business tiles flow Discover → businesses →
-          wallet → me with no empty cells in between. justify-items: center
-          on each cell so the 72px tile sits centred without a wrapper div
-          (a wrapper div was previously inserted only around <Tile>, making
-          it the sole grid child with stretch alignment, while
-          <SystemAppIcon> placed itself directly — that mismatch is what
-          shifted Discover into a row of its own on some viewports). */}
-      <div className="grid grid-cols-4 gap-x-4 gap-y-7 justify-items-center">
-        <SystemAppIcon kind="discover" />
+      {/* iOS-style 4-column grid. Every grid child is wrapped in an
+          identical <div className="grid-cell"> so the items have a
+          uniform shape — auto-placement then walks left-to-right, top-to-
+          bottom with no orphans (a previous structure that left
+          <SystemAppIcon> as a bare flex Link while wrapping <Tile> in an
+          extra div produced inconsistent intrinsic sizes that, on wide
+          desktop viewports, pushed Discover onto its own row).
+          `display: grid` + `grid-template-columns` are also set inline
+          so the layout is robust against any class-processing edge case. */}
+      <div
+        className="gap-x-4 gap-y-7"
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+          gridAutoFlow: 'row',
+        }}
+      >
+        <div className="flex justify-center">
+          <SystemAppIcon kind="discover" />
+        </div>
         {sortedBusinesses.map((b, i) => {
           const hours = b.business_hours ?? [];
           const openness = getBusinessOpenness(hours, b.business_closures ?? []);
           return (
-            <Tile
-              key={b.id}
-              name={b.name}
-              colour={b.primary_colour}
-              logoUrl={b.processed_icon_url ?? b.logo_url ?? null}
-              size={72}
-              status={openness.status}
-              animationDelay={i * 30}
-              viewTransitionName={`tile-${b.slug}`}
-              onTap={(rect) => navigate(`/business/${b.slug}`, rect)}
-              onLongPress={(rect) => setPeekState({ business: b, rect })}
-            />
+            <div key={b.id} className="flex justify-center">
+              <Tile
+                name={b.name}
+                colour={b.primary_colour}
+                logoUrl={b.processed_icon_url ?? b.logo_url ?? null}
+                size={72}
+                status={openness.status}
+                animationDelay={i * 30}
+                viewTransitionName={`tile-${b.slug}`}
+                onTap={(rect) => navigate(`/business/${b.slug}`, rect)}
+                onLongPress={(rect) => setPeekState({ business: b, rect })}
+              />
+            </div>
           );
         })}
-        <SystemAppIcon kind="wallet" />
-        <SystemAppIcon kind="me" />
+        <div className="flex justify-center">
+          <SystemAppIcon kind="wallet" />
+        </div>
+        <div className="flex justify-center">
+          <SystemAppIcon kind="me" />
+        </div>
       </div>
 
       {peekState && (
