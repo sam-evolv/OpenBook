@@ -146,7 +146,23 @@ export function PullToRefresh({
       : `translateY(${pull}px)`;
 
   return (
-    <div ref={containerRef} style={{ position: 'relative', minHeight: '100dvh' }}>
+    <div
+      ref={containerRef}
+      style={{
+        // Fill the parent (the home page already pins itself to a fixed
+        // 100dvh and wraps this in a flex column). Previously this was
+        // `min-height: 100dvh`, which overrode any flex centering on
+        // the parent — the wrapper was always at least one viewport
+        // tall, so on a short page the content was pinned to the top
+        // instead of being centred. Inheriting the parent's height +
+        // becoming a flex column lets the page lay things out
+        // naturally and keeps pull-to-refresh working unchanged.
+        position: 'relative',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column',
+      }}
+    >
       <div
         aria-hidden
         style={{
@@ -172,6 +188,9 @@ export function PullToRefresh({
 
       <div
         style={{
+          flex: 1,
+          display: 'flex',
+          flexDirection: 'column',
           transform: contentTransform,
           transition:
             phase === 'idle' || phase === 'refreshing'

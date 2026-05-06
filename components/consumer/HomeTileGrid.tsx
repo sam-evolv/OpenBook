@@ -52,21 +52,25 @@ export function HomeTileGrid({ businesses }: { businesses: HomeBusiness[] }) {
 
   return (
     <PullToRefresh onRefresh={refresh}>
-      {/* iPhone Springboard layout. The grid container is inline-styled
-          so the 4-column declaration cannot be overridden by Tailwind
-          cascade or breakpoints (see PRs #95–#97 for the breakage that
-          utility-class responsive grids produced). Tiles are a fixed
-          72 px — iPhone home-screen icon size — and the grid is
-          centred inside the iPhone-shaped page frame in
-          `app/(consumer)/home/page.tsx`. */}
+      {/* iPhone Springboard layout. Tracks are a *fixed* 72 px — the
+          iPhone icon size — rather than `1fr`, so the grid's intrinsic
+          width is exactly four tiles + three column gaps. The page-
+          level section already does `items-center justify-center`, so
+          a content-sized grid is automatically centred horizontally
+          and vertically inside the phone frame on every viewport. The
+          `mx-auto` here is belt-and-braces in case a future parent
+          changes its alignment. Inline styles ensure the 4-track
+          declaration can't be overridden by Tailwind utilities. */}
       <div
+        className="mx-auto"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 1fr)',
+          gridTemplateColumns: 'repeat(4, 72px)',
           columnGap: 16,
           rowGap: 24,
-          padding: '0 16px',
-          width: '100%',
+          width: 'max-content',
+          maxWidth: '100%',
+          justifyContent: 'center',
         }}
       >
         <div style={{ display: 'flex', justifyContent: 'center' }}>
