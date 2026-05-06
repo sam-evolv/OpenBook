@@ -60,6 +60,11 @@ export interface BusinessIconProps {
   radius?: number;
 }
 
+// Anything below this is almost certainly a browser favicon (16/32/48 px) and
+// not a real business logo — favicons load with HTTP 200 so onError never
+// fires, and they look terrible scaled into the 56px booking-row tile.
+const MIN_LOGO_DIMENSION = 50;
+
 export function BusinessIcon({
   name,
   primary_colour,
@@ -72,10 +77,12 @@ export function BusinessIcon({
   const colour = getTileColour(primary_colour ?? undefined).mid;
   const r = radius ?? Math.round(size * 0.22);
   // A row like "Dublin Iron Gym" can have a non-null processed_icon_url that
-  // 404s (stale path, deleted asset). Track load failures and fall through
-  // to the initials tile so we never render a broken-image gap.
-  const [imageFailed, setImageFailed] = useState(false);
-  const imgSrc = imageFailed ? null : processed_icon_url || logo_url || null;
+  // either 404s (stale path) or loads HTTP 200 but points at a tiny browser
+  // favicon. Track both cases and fall through to the initials tile so we
+  // never render a broken or favicon-quality icon.
+  const [imageRejected, setImageRejected] = useState(false);
+  const candidate = processed_icon_url || logo_url || null;
+  const imgSrc = imageRejected ? null : candidate;
   const showInitials = !imgSrc;
 
   return (
@@ -101,7 +108,18 @@ export function BusinessIcon({
           fill
           sizes={`${size}px`}
           className="object-cover"
-          onError={() => setImageFailed(true)}
+          onError={() => setImageRejected(true)}
+          onLoad={(e) => {
+            const img = e.currentTarget as HTMLImageElement;
+            if (
+              img.naturalWidth > 0 &&
+              img.naturalHeight > 0 &&
+              (img.naturalWidth < MIN_LOGO_DIMENSION ||
+                img.naturalHeight < MIN_LOGO_DIMENSION)
+            ) {
+              setImageRejected(true);
+            }
+          }}
         />
       ) : (
         <span
