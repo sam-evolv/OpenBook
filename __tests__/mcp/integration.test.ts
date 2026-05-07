@@ -83,18 +83,28 @@ describe('POST /api/mcp', () => {
     );
   });
 
-  it('dispatches tools/call with valid args to the stub handler', async () => {
-    // record_post_booking_feedback is the only remaining stub.
-    const { json } = await callJson({
-      jsonrpc: '2.0',
-      id: 3,
-      method: 'tools/call',
-      params: {
-        name: 'record_post_booking_feedback',
-        arguments: { booking_id: '11111111-1111-1111-1111-111111111111' },
-      },
-    });
-    expect(json.result).toEqual({ error: 'not_implemented' });
+  it('every registered tool is now a REAL handler (no not_implemented stubs left)', async () => {
+    // After PR #N (record_post_booking_feedback), all eight Section 5
+    // tools are real. This test guards that invariant — if anyone wires
+    // a stub back in, it fails loudly.
+    const { TOOL_HANDLERS } = await import('../../app/api/mcp/tools/index');
+    const names = Object.keys(TOOL_HANDLERS).sort();
+    expect(names).toEqual(
+      [
+        'check_booking_status',
+        'get_availability',
+        'get_business_info',
+        'get_promoted_inventory',
+        'hold_and_checkout',
+        'join_waitlist',
+        'record_post_booking_feedback',
+        'search_businesses',
+      ].sort(),
+    );
+
+    for (const name of names) {
+      expect(typeof TOOL_HANDLERS[name]).toBe('function');
+    }
   });
 
   it('returns -32602 for invalid arguments', async () => {
