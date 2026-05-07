@@ -1298,5 +1298,93 @@ The internal benchmark: **show the demo to a small business owner who has never 
 - **Source assistant** — which AI the tool call came from. Inferred from User-Agent and Origin.
 - **Customer context** — preferences, constraints, and conversational details passed from assistant to MCP server.
 - **Agentic loop** — the assistant's continued involvement after the initial booking handoff, via `check_booking_status` and `record_post_booking_feedback`.
+
+## Appendix D — Database column mappings (db ↔ spec)
+
+This spec describes the **canonical / external** naming — the field names that appear in MCP tool inputs and outputs, i.e. what assistants see on the wire. The Supabase database uses **internal** column names that predate this spec and were chosen for the consumer app and dashboard. The two diverge in a handful of places.
+
+The convention going forward:
+
+- The MCP wire format always uses **spec naming**.
+- Internal database queries always use **db naming**.
+- **Tool handlers do the mapping.** Each handler in `app/api/mcp/tools/*` is responsible for translating between the two — selecting the right db columns, transforming units (cents → euros), synthesising fields the db doesn't store, and dropping fields the assistant doesn't need to see.
+
+The mappings below are the ones discovered while implementing `get_business_info` (PR 107). New tools may surface more; add to this table as they do.
+
+### `businesses`
+
+| Spec field | DB column | Notes |
+|---|---|---|
+| `full_description` | `about_long` (fallback: `description`) | Truncated to 1000 chars before returning. |
+| `address.line_1` | `address_line` (fallback: `address`) | |
+| `address.line_2` | — | Not stored. Omitted from output when not in db. |
+| `address.city` | `city` | Same name. |
+| `address.county` | — | Not stored. Returned as `""` for now to keep the wire shape stable; populate when the column lands. |
+| `address.eircode` | — | Not stored. Omitted from output. |
+| `website_url` | `website` | |
+| `contact_phone` | `phone` | |
+| `space.description` | `space_description` | Added in Migration C. |
+| `space.amenities` | `amenities` (text[]) | Added in Migration C. |
+| `space.accessibility_notes` | `accessibility_notes` | Added in Migration C. |
+| `space.parking` | `parking_info` | Added in Migration C. |
+| `space.nearest_landmark` | `nearest_landmark` | Added in Migration C. |
+| `space.public_transport` | `public_transport_info` | Added in Migration C. |
+
+### `business_hours`
+
+| Spec field | DB column | Notes |
+|---|---|---|
+| `opens` | `open_time` | Postgres `time` value; serialised as `"HH:mm"`. |
+| `closes` | `close_time` | |
+| (filter) | `is_open`, `is_closed` | Spec's `hours[]` is the list of *open* days. Tool handlers must skip rows where `is_closed = true` or `is_open = false`. |
+
+### `business_closures`
+
+| Spec field | DB column | Notes |
+|---|---|---|
+| `starts` | `date` (synthesised) | Tool handlers expand to `${date}T00:00:00.000Z`. |
+| `ends` | `date` (synthesised) | Tool handlers expand to `${date}T23:59:59.999Z`. |
+| `reason` | `name` | |
+
+> **Note on closure granularity.** The current `business_closures` schema only supports **full-day** closures (single `date` column). Partial-day closures — e.g. closing at 3pm on a particular Tuesday — are out of scope for v1. If a future requirement needs them, this will need a schema migration to add `starts` / `ends` `timestamptz` columns and a backfill from existing `date` values. Until then, the spec's `starts` / `ends` are synthesised UTC day bounds.
+
+### `services`
+
+| Spec field | DB column | Notes |
+|---|---|---|
+| `service_id` | `id` | |
+| `name` | `name` | |
+| `description` | `description` | |
+| `duration_minutes` | `duration_minutes` | |
+| `price_eur` | `price_cents` | Divide by 100. |
+| `deposit_eur` | — | Not stored. Omitted from output. Add a column if the product needs deposits in v1.x. |
+| `cancellation_policy` | — | Not stored. Omitted from output. Currently lives only in business-level free text (e.g. `about_long`). |
+| (filter) | `is_active` | Tool handlers exclude rows where `is_active = false`. |
+| (sort) | `sort_order` | Spec output ordering follows `sort_order ASC`. |
+
+### `bookings`
+
+| Spec field | DB column | Notes |
+|---|---|---|
+| `start_iso` | `starts_at` | Stored as `timestamptz`. |
+| `end_iso` | `ends_at` | |
+| `price_paid_eur` | `price_cents` | Divide by 100. |
+| `source` | `source` | Same name. Migration C extends the check constraint to allow `'mcp'`. |
+| `source_assistant` | `source_assistant` | Added in Migration C. |
+| `polling_token_hash` | `polling_token_hash` | Added in Migration C. |
+| `outcome` | `outcome` | Added in Migration C. |
+
+### `reviews`
+
+| Spec field | DB column | Notes |
+|---|---|---|
+| `rating` | `rating` | Same name. |
+| `comment` | `comment` | Same name. |
+| `created_at` | `created_at` | Same name. Used to pick the most recent highlights. |
+
+### `business_media`
+
+Columns match the spec one-to-one (`url`, `caption`, `kind`, `sort_order`); no mapping needed.
+
 ---
 *End of spec. Comments, corrections, and disagreements welcome — file an issue against this document, don't fix it silently.*
