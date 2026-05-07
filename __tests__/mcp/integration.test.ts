@@ -84,11 +84,12 @@ describe('POST /api/mcp', () => {
   });
 
   it('dispatches tools/call with valid args to the stub handler', async () => {
+    // check_booking_status remains a stub in this PR.
     const { json } = await callJson({
       jsonrpc: '2.0',
       id: 3,
       method: 'tools/call',
-      params: { name: 'get_business_info', arguments: { slug: 'evolv-performance' } },
+      params: { name: 'check_booking_status', arguments: { polling_token: 'abc' } },
     });
     expect(json.result).toEqual({ error: 'not_implemented' });
   });

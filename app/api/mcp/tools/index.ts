@@ -1,6 +1,8 @@
-// Tool handler stubs. Each returns { error: 'not_implemented' }; real
-// behaviour lands in subsequent PRs (one per tool, per the build plan
-// in docs/mcp-server-spec.md section 15.1).
+// Tool handler registry. Real handlers replace the not_implemented stubs
+// one at a time; the remaining stubs stay until their PR lands (per the
+// build plan in docs/mcp-server-spec.md section 15.1).
+
+import { getBusinessInfoHandler } from './get-business-info';
 
 export type ToolContext = {
   sourceAssistant: string;
@@ -14,7 +16,7 @@ const notImplemented: ToolHandler = async () => ({ error: 'not_implemented' });
 
 export const TOOL_HANDLERS: Record<string, ToolHandler> = {
   search_businesses: notImplemented,
-  get_business_info: notImplemented,
+  get_business_info: getBusinessInfoHandler,
   get_availability: notImplemented,
   hold_and_checkout: notImplemented,
   check_booking_status: notImplemented,
