@@ -13,7 +13,10 @@ import {
 } from '../../../../lib/mcp/schemas';
 import { supabaseAdmin } from '../../../../lib/supabase';
 import { signHoldToken, signPollingToken } from '../../../../lib/mcp/tokens';
+import { humaniseDateTime } from '../../../../lib/checkout/format-datetime';
 import type { ToolContext, ToolHandler } from './index';
+
+export { humaniseDateTime };
 
 const HOLD_DURATION_MIN = 10;
 const APP_DOMAIN = (() => {
@@ -29,83 +32,6 @@ const APP_DOMAIN = (() => {
 function checkoutBaseUrl(): string {
   if (APP_DOMAIN.startsWith('http://') || APP_DOMAIN.startsWith('https://')) return APP_DOMAIN;
   return `https://${APP_DOMAIN}`;
-}
-
-const DUBLIN_TZ = 'Europe/Dublin';
-
-const NUMBER_WORDS: Record<number, string> = {
-  0: 'midnight',
-  1: 'one',
-  2: 'two',
-  3: 'three',
-  4: 'four',
-  5: 'five',
-  6: 'six',
-  7: 'seven',
-  8: 'eight',
-  9: 'nine',
-  10: 'ten',
-  11: 'eleven',
-  12: 'twelve',
-};
-
-function dublinParts(date: Date) {
-  const fmt = new Intl.DateTimeFormat('en-GB', {
-    timeZone: DUBLIN_TZ,
-    weekday: 'long',
-    year: 'numeric',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
-  const parts = fmt.formatToParts(date);
-  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? '';
-  return {
-    weekday: get('weekday'),
-    year: Number(get('year')),
-    month: Number(get('month')),
-    day: Number(get('day')),
-    hour: Number(get('hour')),
-    minute: Number(get('minute')),
-  };
-}
-
-function dublinDayKey(date: Date): string {
-  const p = dublinParts(date);
-  return `${p.year}-${String(p.month).padStart(2, '0')}-${String(p.day).padStart(2, '0')}`;
-}
-
-function partOfDay(hour: number): string {
-  if (hour >= 5 && hour < 12) return 'in the morning';
-  if (hour >= 12 && hour < 17) return 'in the afternoon';
-  if (hour >= 17 && hour < 22) return 'in the evening';
-  return 'at night';
-}
-
-function humaniseTime(hour: number, minute: number): string {
-  const h12 = hour % 12 === 0 ? 12 : hour % 12;
-  const hourWord = NUMBER_WORDS[h12] ?? String(h12);
-  if (minute === 0) return `${hourWord} ${partOfDay(hour)}`;
-  if (minute === 15) return `quarter past ${hourWord} ${partOfDay(hour)}`;
-  if (minute === 30) return `half past ${hourWord} ${partOfDay(hour)}`;
-  if (minute === 45) return `quarter to ${hourWord === 'twelve' ? 'one' : NUMBER_WORDS[(h12 % 12) + 1] ?? ''} ${partOfDay(hour)}`;
-  return `${hourWord} ${String(minute).padStart(2, '0')} ${partOfDay(hour)}`;
-}
-
-export function humaniseDateTime(date: Date, now: Date = new Date()): string {
-  const dKey = dublinDayKey(date);
-  const nowKey = dublinDayKey(now);
-  const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-  const tomorrowKey = dublinDayKey(tomorrow);
-
-  const p = dublinParts(date);
-  const time = humaniseTime(p.hour, p.minute);
-
-  if (dKey === nowKey) return `today at ${time}`;
-  if (dKey === tomorrowKey) return `tomorrow at ${time}`;
-  return `${p.weekday} at ${time}`;
 }
 
 const responseError = (code: string, message: string, extras: Record<string, unknown> = {}) => ({
