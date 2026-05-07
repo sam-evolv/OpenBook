@@ -5,6 +5,7 @@
 import { getBusinessInfoHandler } from './get-business-info';
 import { getAvailabilityHandler } from './get-availability';
 import { searchBusinessesHandler } from './search-businesses';
+import { holdAndCheckoutHandler } from './hold-and-checkout';
 
 export type ToolContext = {
   sourceAssistant: string;
@@ -20,7 +21,7 @@ export const TOOL_HANDLERS: Record<string, ToolHandler> = {
   search_businesses: searchBusinessesHandler,
   get_business_info: getBusinessInfoHandler,
   get_availability: getAvailabilityHandler,
-  hold_and_checkout: notImplemented,
+  hold_and_checkout: holdAndCheckoutHandler,
   check_booking_status: notImplemented,
   join_waitlist: notImplemented,
   get_promoted_inventory: notImplemented,
