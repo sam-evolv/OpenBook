@@ -4,6 +4,7 @@
 
 import { getBusinessInfoHandler } from './get-business-info';
 import { getAvailabilityHandler } from './get-availability';
+import { searchBusinessesHandler } from './search-businesses';
 
 export type ToolContext = {
   sourceAssistant: string;
@@ -16,7 +17,7 @@ export type ToolHandler = (input: unknown, ctx: ToolContext) => Promise<unknown>
 const notImplemented: ToolHandler = async () => ({ error: 'not_implemented' });
 
 export const TOOL_HANDLERS: Record<string, ToolHandler> = {
-  search_businesses: notImplemented,
+  search_businesses: searchBusinessesHandler,
   get_business_info: getBusinessInfoHandler,
   get_availability: getAvailabilityHandler,
   hold_and_checkout: notImplemented,

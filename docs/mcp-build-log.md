@@ -4,6 +4,7 @@ Track of every PR shipped against docs/mcp-server-spec.md.
 Keep entries short. One line per PR. Newest at top.
 
 ## PRs
+- PR #N: Tool 3 — search_businesses implementation
 - PR #N: Intent classifier — standalone module + cache + tests
 - PR #N: Tool 2 — get_availability implementation
 - PR #N: Docs — Appendix D documenting db ↔ spec column mappings

@@ -63,7 +63,7 @@ export const searchBusinessesOutput = z.object({
       slug: z.string(),
       name: z.string(),
       category: z.string(),
-      short_description: z.string().max(140),
+      short_description: z.string().max(140).optional(),
       location_summary: z.string(),
       rating: z
         .object({
