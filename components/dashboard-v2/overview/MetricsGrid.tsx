@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { Metric } from '../Metric';
 import { Card } from '../Card';
 import type { MetricsPayload } from '@/lib/dashboard-v2/overview-queries';
+import { publicBusinessDisplayUrl, publicBusinessUrl } from '@/lib/public-url';
 
 interface MetricsGridProps {
   data: MetricsPayload;
@@ -18,6 +19,9 @@ function hasAnySignal(data: MetricsPayload): boolean {
 }
 
 export function MetricsGrid({ data, businessSlug }: MetricsGridProps) {
+  const publicUrl = publicBusinessUrl(businessSlug);
+  const displayUrl = publicBusinessDisplayUrl(businessSlug);
+
   if (!hasAnySignal(data)) {
     return (
       <Card padding="lg">
@@ -33,12 +37,12 @@ export function MetricsGrid({ data, businessSlug }: MetricsGridProps) {
             and active customers all start showing up here with 7-day sparklines.
           </p>
           <Link
-            href={`https://openbook.ie/${businessSlug}`}
+            href={publicUrl}
             target="_blank"
             rel="noopener noreferrer"
             className="mt-5 text-[13px] font-semibold text-gold hover:underline"
           >
-            openbook.ie/{businessSlug} →
+            {displayUrl} →
           </Link>
         </div>
       </Card>

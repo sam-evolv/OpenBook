@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Check, Copy, Share2, Smartphone, Loader2, PartyPopper } from 'lucide-react';
 import type { OnboardingState } from '../OnboardingFlow';
+import { publicBusinessUrl } from '@/lib/public-url';
 
 interface StepProps {
   state: OnboardingState;
@@ -19,11 +20,8 @@ export function Step9Launch({ state, update }: StepProps) {
   const [error, setError] = useState<string | null>(null);
   const publishOnce = useRef(false);
 
-  const appHost = typeof window !== 'undefined'
-    ? window.location.host.replace('dash.', 'app.').replace(/^localhost.*$/, 'app.openbook.ie')
-    : 'app.openbook.ie';
   const publicUrl = state.slug
-    ? `https://${appHost}/business/${state.slug}`
+    ? publicBusinessUrl(state.slug, typeof window === 'undefined' ? undefined : window.location.origin)
     : '';
 
   /**

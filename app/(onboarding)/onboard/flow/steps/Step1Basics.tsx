@@ -4,6 +4,7 @@ import { useEffect, useMemo } from 'react';
 import { Dumbbell, Scissors, Flame, Sparkles, Stethoscope, HandHelping, Brush, Waves, Car, Building2, type LucideIcon } from 'lucide-react';
 import { StepHeader, Field, TextInput, NextButton } from './shared';
 import type { OnboardingState } from '../OnboardingFlow';
+import { publicBusinessDisplayUrl } from '@/lib/public-url';
 
 interface StepProps {
   state: OnboardingState;
@@ -124,7 +125,7 @@ export function Step1Basics({ state, update, next }: StepProps) {
 
         <Field
           label="Your URL"
-          hint={`openbook.ie/${state.slug || 'your-booking-page'}`}
+          hint={publicBusinessDisplayUrl(state.slug || 'your-booking-page')}
         >
           <TextInput
             value={state.slug}

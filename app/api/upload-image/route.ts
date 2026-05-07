@@ -27,6 +27,26 @@ const GALLERY_LIMIT = 6;
 const HERO_MAX_SIZE = 8 * 1024 * 1024;   // 8MB
 const GALLERY_MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
+function polishImage(input: Buffer, kind: 'hero' | 'gallery') {
+  const base = sharp(input, { failOn: 'none' })
+    .rotate()
+    .normalise()
+    .modulate({ brightness: 1.01, saturation: 1.04 })
+    .sharpen({ sigma: 0.7, m1: 0.8, m2: 1.4, x1: 2, y2: 10, y3: 20 });
+
+  if (kind === 'hero') {
+    return base
+      .resize(1800, 1100, { fit: 'cover', position: 'attention' })
+      .jpeg({ quality: 88, progressive: true, mozjpeg: true })
+      .toBuffer();
+  }
+
+  return base
+    .resize(1200, 1200, { fit: 'cover', position: 'attention' })
+    .jpeg({ quality: 88, progressive: true, mozjpeg: true })
+    .toBuffer();
+}
+
 export async function POST(req: NextRequest) {
   const sb = createSupabaseServerClient();
   const {
@@ -85,17 +105,9 @@ export async function POST(req: NextRequest) {
   try {
     const raw = Buffer.from(await file.arrayBuffer());
 
-    /* Process with sharp — resize + compress + convert to webp-ish-quality jpeg */
-    const processed =
-      kind === 'hero'
-        ? await sharp(raw)
-            .resize(1600, 900, { fit: 'cover', position: 'attention' })
-            .jpeg({ quality: 85, progressive: true, mozjpeg: true })
-            .toBuffer()
-        : await sharp(raw)
-            .resize(1200, 1200, { fit: 'cover', position: 'attention' })
-            .jpeg({ quality: 85, progressive: true, mozjpeg: true })
-            .toBuffer();
+    /* Universal storefront treatment: auto-orient, smart-crop, gently lift
+       colour/detail, and compress to a dependable app-ready JPEG. */
+    const processed = await polishImage(raw, kind);
 
     const bucket = kind === 'hero' ? 'hero-images' : 'gallery-images';
     const path = `${business.id}/${Date.now()}.jpg`;
