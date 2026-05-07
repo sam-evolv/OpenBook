@@ -117,6 +117,13 @@ export default async function BookingPage({
               </p>
             </div>
           </div>
+          <div className="mt-3 rounded-2xl border border-white/[0.06] bg-white/[0.03] px-4 py-3">
+            <p className="text-[12.5px] leading-snug text-white/60">
+              {requiresOnlinePayment
+                ? 'Your slot is held after you tap confirm, then you pay securely with Stripe to lock it in.'
+                : 'Your booking is confirmed immediately. If payment is needed, you pay the business directly.'}
+            </p>
+          </div>
         </div>
 
         <SlotPicker

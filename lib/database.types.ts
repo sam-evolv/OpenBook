@@ -112,7 +112,7 @@ export type Database = {
           cancelled_at: string | null
           cancelled_by: string | null
           created_at: string | null
-          customer_id: string
+          customer_id: string | null
           ends_at: string
           flash_sale_id: string | null
           id: string
@@ -132,7 +132,7 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           created_at?: string | null
-          customer_id: string
+          customer_id?: string | null
           ends_at: string
           flash_sale_id?: string | null
           id?: string

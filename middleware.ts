@@ -25,7 +25,11 @@ import { createServerClient } from '@supabase/ssr';
  */
 
 const DASHBOARD_HOST = 'dash.openbook.ie';
+const MCP_HOST = 'mcp.openbook.ie';
 const COOKIE_DOMAIN = '.openbook.ie';
+
+// mcp.openbook.ie/anything → /api/mcp
+// any-other-host/anything → unchanged
 
 export async function middleware(req: NextRequest) {
   const url = req.nextUrl.clone();
@@ -33,6 +37,14 @@ export async function middleware(req: NextRequest) {
   const pathname = url.pathname;
   const isProduction = process.env.NODE_ENV === 'production';
   const useCrossSubdomain = isProduction && host.endsWith('openbook.ie');
+
+  /* MCP subdomain: every path on mcp.openbook.ie hits the JSON-RPC route.
+     Done before the Supabase cookie refresh so MCP traffic stays cookie-free
+     and doesn't fight the cross-subdomain cookie domain logic below. */
+  if (host === MCP_HOST) {
+    url.pathname = '/api/mcp';
+    return NextResponse.rewrite(url);
+  }
 
   let response = NextResponse.next({ request: { headers: req.headers } });
 
