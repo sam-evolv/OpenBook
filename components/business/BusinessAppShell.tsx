@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Home, Calendar, ImageIcon, Info, X } from 'lucide-react';
 import { BusinessHome } from './BusinessHome';
@@ -8,7 +8,10 @@ import { BusinessBook } from './BusinessBook';
 import { BusinessGallery } from './BusinessGallery';
 import { BusinessAbout } from './BusinessAbout';
 import { getTileColour } from '@/lib/tile-palette';
-import { getBusinessAppConfig } from '@/lib/business-app-config';
+import {
+  getBusinessAppConfig,
+  mergeBusinessAppConfig,
+} from '@/lib/business-app-config';
 
 export type BusinessTab = 'home' | 'book' | 'gallery' | 'about';
 
@@ -19,10 +22,39 @@ interface Props {
   initialTab?: BusinessTab;
 }
 
-export function BusinessAppShell({ business, services, hours, initialTab = 'home' }: Props) {
+const STUDIO_PREVIEW_MESSAGE = 'openbook:studio-preview';
+
+export function BusinessAppShell({ business: initialBusiness, services, hours, initialTab = 'home' }: Props) {
   const router = useRouter();
   const [tab, setTab] = useState<BusinessTab>(initialTab);
   const [selectedService, setSelectedService] = useState<any>(null);
+  const [business, setBusiness] = useState<any>(initialBusiness);
+
+  // Listen for live edits posted from the dashboard "My App" studio iframe
+  // parent. Same-origin only; ignores anything else.
+  useEffect(() => {
+    if (typeof window === 'undefined' || window.parent === window) return;
+
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      const data = event.data;
+      if (!data || typeof data !== 'object' || data.type !== STUDIO_PREVIEW_MESSAGE) return;
+      const patch = data.patch as Record<string, unknown> | undefined;
+      const appConfig = data.appConfig as Parameters<typeof mergeBusinessAppConfig>[1] | undefined;
+      setBusiness((prev: any) => {
+        const next = { ...prev, ...(patch ?? {}) };
+        if (appConfig) {
+          next.offers = mergeBusinessAppConfig(prev.offers, appConfig);
+        }
+        return next;
+      });
+    };
+
+    window.addEventListener('message', onMessage);
+    // Tell the parent we're ready to receive the current draft.
+    window.parent.postMessage({ type: 'openbook:studio-preview-ready' }, window.location.origin);
+    return () => window.removeEventListener('message', onMessage);
+  }, []);
 
   const primary = getTileColour(business.primary_colour).mid;
   const gallery = business.gallery_urls ?? [];

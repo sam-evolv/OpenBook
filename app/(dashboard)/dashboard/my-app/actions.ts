@@ -25,13 +25,18 @@ export async function saveMyAppProfile(payload: MyAppProfilePayload) {
   if (!owner) return { ok: false as const, error: 'Not signed in' };
 
   const sb = createSupabaseServerClient();
-  const { data: business } = await sb
+  // Mirror requireCurrentBusiness: pick the most recent live business when an
+  // owner has more than one. .maybeSingle() errors on multi-row matches, which
+  // is what produced the spurious "No live business" save error.
+  const { data: businesses } = await sb
     .from('businesses')
     .select('id, slug, offers')
     .eq('owner_id', owner.id)
     .eq('is_live', true)
-    .maybeSingle();
+    .order('created_at', { ascending: false })
+    .limit(1);
 
+  const business = businesses?.[0];
   if (!business) return { ok: false as const, error: 'No live business' };
 
   const primary_colour =
