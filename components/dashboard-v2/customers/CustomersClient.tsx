@@ -20,6 +20,7 @@ import type {
 } from '@/lib/dashboard-v2/customers-queries';
 import { formatPrice } from '@/lib/supabase';
 import { cn } from '@/lib/utils';
+import { publicBusinessDisplayUrl, publicBusinessUrl } from '@/lib/public-url';
 
 export interface CustomersClientProps {
   payload: CustomersPayload;
@@ -82,6 +83,8 @@ export function CustomersClient({
 
   const effectiveCohort = previewMode ? previewCohort : cohort;
   const effectiveQ = previewMode ? previewQ : q;
+  const publicUrl = publicBusinessUrl(businessSlug);
+  const displayUrl = publicBusinessDisplayUrl(businessSlug);
 
   const pushFilter = (patch: { cohort?: CohortFilter; q?: string }) => {
     if (previewMode) {
@@ -227,12 +230,12 @@ export function CustomersClient({
             description="When someone books through your business page, WhatsApp bot, or AI assistants, they'll show up here with full history and LTV."
             action={
               <a
-                href={`https://openbook.ie/${businessSlug}`}
+                href={publicUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[13px] font-semibold text-gold hover:underline"
               >
-                openbook.ie/{businessSlug} →
+                {displayUrl} →
               </a>
             }
           />

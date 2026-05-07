@@ -102,7 +102,7 @@ export function HomeTileGrid({ businesses }: { businesses: HomeBusiness[] }) {
           display: 'grid',
           gridTemplateColumns: 'repeat(4, 72px)',
           columnGap: 16,
-          rowGap: 24,
+          rowGap: 28,
           width: 'max-content',
           maxWidth: '100%',
           justifyContent: 'center',
@@ -123,6 +123,7 @@ export function HomeTileGrid({ businesses }: { businesses: HomeBusiness[] }) {
                 name={b.name}
                 colour={b.primary_colour}
                 logoUrl={b.processed_icon_url ?? b.logo_url ?? null}
+                logoIsProcessedIcon={Boolean(b.processed_icon_url)}
                 size={72}
                 status={openness.status}
                 animationDelay={i * 30}
@@ -200,6 +201,7 @@ function PeekForBusiness({
       name={business.name}
       colour={business.primary_colour}
       logoUrl={business.processed_icon_url ?? business.logo_url ?? null}
+      logoIsProcessedIcon={Boolean(business.processed_icon_url)}
       subtitle={subtitle}
       actions={actions}
       onClose={onClose}

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Copy, ExternalLink, Check } from 'lucide-react';
 import { TopBar } from '../TopBar';
 import { Button } from '../Button';
+import { publicBusinessUrl } from '@/lib/public-url';
 
 function greetingFor(now: Date): string {
   const hour = now.getHours();
@@ -30,7 +31,10 @@ export function OverviewTopBar({ ownerFullName, businessName, businessSlug }: Ov
 
   const name = firstName(ownerFullName);
   const title = name ? `${greetingFor(new Date())} ${name}` : `Overview`;
-  const publicUrl = `https://openbook.ie/${businessSlug}`;
+  const publicUrl = publicBusinessUrl(
+    businessSlug,
+    typeof window === 'undefined' ? undefined : window.location.origin,
+  );
 
   const onCopy = async () => {
     try {

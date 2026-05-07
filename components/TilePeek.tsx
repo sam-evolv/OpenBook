@@ -20,6 +20,7 @@ export interface TilePeekProps {
   name: string;
   colour: TileColourSlug | string | null | undefined;
   logoUrl?: string | null;
+  logoIsProcessedIcon?: boolean;
   /** Subtitle line under the tile (e.g. next slot or category). */
   subtitle?: string;
   /** Quick-action menu items. */
@@ -38,6 +39,7 @@ export function TilePeek({
   name,
   colour,
   logoUrl,
+  logoIsProcessedIcon = false,
   subtitle,
   actions,
   onClose,
@@ -102,6 +104,7 @@ export function TilePeek({
           name={name}
           colour={colour}
           logoUrl={logoUrl}
+          logoIsProcessedIcon={logoIsProcessedIcon}
           size={128}
           hideLabel
         />

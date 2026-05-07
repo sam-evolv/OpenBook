@@ -12,17 +12,19 @@ import {
   Clock,
   Settings,
   Wallet,
-  Search,
-  Command,
   Sparkles,
   ArrowRight,
   Sun,
   Moon,
   ChevronDown,
+  MonitorSmartphone,
+  BadgePercent,
+  UserRound,
   type LucideIcon,
 } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 import { cn } from '@/lib/utils';
+import { publicBusinessDisplayUrl } from '@/lib/public-url';
 
 interface NavItem {
   id: string;
@@ -36,12 +38,16 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { id: 'overview', label: 'Overview', href: '/dashboard/overview', icon: LayoutGrid },
+  { id: 'my-app', label: 'My App', href: '/dashboard/my-app', icon: MonitorSmartphone },
   { id: 'calendar', label: 'Calendar', href: '/dashboard/calendar', icon: CalendarDays },
   { id: 'bookings', label: 'Bookings', href: '/dashboard/bookings', icon: Calendar },
   { id: 'customers', label: 'Customers', href: '/dashboard/customers', icon: Users },
   { id: 'catalog', label: 'Catalog', href: '/dashboard/catalog', icon: Layers },
   { id: 'messages', label: 'Messages', href: '/dashboard/messages', icon: MessageCircle },
+  { id: 'flash-sales', label: 'Flash Sales', href: '/dashboard/flash-sales', icon: BadgePercent },
+  { id: 'intelligence', label: 'Intelligence', href: '/dashboard/intelligence', icon: Sparkles },
   { id: 'finance', label: 'Finance', href: '/dashboard/finance', icon: Wallet },
+  { id: 'team', label: 'Team', href: '/dashboard/team', icon: UserRound },
   { id: 'hours', label: 'Hours', href: '/dashboard/hours', icon: Clock },
   { id: 'settings', label: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
@@ -95,6 +101,7 @@ export function Sidebar({
 
   const planLabel = PLAN_LABEL[plan] ?? PLAN_LABEL.free;
   const isFreePlan = plan === 'free';
+  const displayUrl = publicBusinessDisplayUrl(businessSlug);
 
   return (
     <aside className={cn("sticky top-0 flex h-screen w-[244px] flex-col border-r bg-paper-bg dark:bg-ink-bg border-paper-border dark:border-ink-border px-3 pt-4 pb-3.5 text-[13.5px]", className)}>
@@ -107,19 +114,11 @@ export function Sidebar({
             {businessName}
           </div>
           <div className="text-[11.5px] font-mono text-paper-text-3 dark:text-ink-text-3">
-            openbook.ie/{businessSlug}
+            {displayUrl}
           </div>
         </div>
         <ChevronDown size={14} className="text-paper-text-3 dark:text-ink-text-3" />
       </div>
-
-      <button className="flex items-center gap-2.5 w-full px-2.5 py-2 mb-3.5 rounded-md bg-paper-surface dark:bg-ink-surface border border-paper-border dark:border-ink-border text-left text-[13px] text-paper-text-3 dark:text-ink-text-3 hover:bg-paper-surface2 dark:hover:bg-ink-surface2 transition-colors">
-        <Search size={14} />
-        <span className="flex-1">Jump to…</span>
-        <div className="flex items-center gap-0.5 px-1.5 py-0.5 rounded bg-paper-surface2 dark:bg-ink-surface2 text-[10.5px]">
-          <Command size={9} /> K
-        </div>
-      </button>
 
       <nav className="flex-1 flex flex-col gap-0.5 overflow-y-auto">
         {items.map((item) => {

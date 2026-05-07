@@ -7,12 +7,11 @@ import {
   HelpCircle,
   LogOut,
   ChevronRight,
-  UserCircle2,
   MessageSquare,
   Building2,
+  type LucideIcon,
 } from 'lucide-react';
 import { supabaseAdmin } from '@/lib/supabase';
-import { ConsumerHeader } from '@/components/consumer/ConsumerHeader';
 import { BottomTabBar } from '@/components/consumer/BottomTabBar';
 import { DeleteAccountButton } from './DeleteAccountButton';
 
@@ -46,6 +45,12 @@ export default async function MePage() {
   const name = customer?.full_name ?? 'Guest';
   const email = customer?.email ?? 'Sign in to sync your bookings';
   const initial = name[0]?.toUpperCase() ?? '?';
+  const memberSince = customer?.created_at
+    ? new Intl.DateTimeFormat('en-IE', {
+        month: 'short',
+        year: 'numeric',
+      }).format(new Date(customer.created_at))
+    : null;
 
   return (
     <main className="relative min-h-[100dvh] text-white antialiased overflow-hidden">
@@ -54,74 +59,89 @@ export default async function MePage() {
         className="fixed inset-0 -z-10"
         style={{
           background:
-            'radial-gradient(800px 400px at 50% -10%, rgba(212,175,55,0.08), transparent 55%),' +
+            'radial-gradient(760px 420px at 50% -8%, rgba(212,175,55,0.14), transparent 58%),' +
+            'radial-gradient(580px 340px at 8% 74%, rgba(212,175,55,0.06), transparent 62%),' +
             'linear-gradient(180deg, #050505 0%, #020202 100%)',
         }}
       />
 
-      <ConsumerHeader showClose={false} domain="openbook.ie" />
+      <div className="mx-auto max-w-md px-5 pb-40 pt-safe">
+        <div className="pt-8" />
 
-      <div className="px-5 pt-4 pb-36">
         {/* Identity card */}
         <div
-          className="
-            flex items-center gap-4 p-5 rounded-[24px]
-            bg-white/[0.03] border border-white/[0.06]
-          "
+          className="relative overflow-hidden rounded-[30px] p-5"
+          style={{
+            background:
+              'linear-gradient(180deg, rgba(255,255,255,0.075) 0%, rgba(255,255,255,0.035) 100%)',
+            border: '0.5px solid rgba(255,255,255,0.12)',
+            boxShadow:
+              'inset 0 1px 0 rgba(255,255,255,0.10), 0 18px 52px rgba(0,0,0,0.42)',
+          }}
         >
           <div
-            className="
-              w-16 h-16 rounded-full flex items-center justify-center
-              shadow-[0_8px_20px_rgba(212,175,55,0.35),inset_0_1px_0_rgba(255,255,255,0.3)]
-              shrink-0
-            "
+            aria-hidden
+            className="absolute inset-x-0 top-0 h-px"
             style={{
-              background: 'linear-gradient(145deg, #E8C76B 0%, #B8923A 100%)',
+              background:
+                'linear-gradient(90deg, transparent, rgba(246,215,124,0.46), transparent)',
             }}
-          >
-            <span className="text-[26px] font-bold text-black/80">{initial}</span>
-          </div>
-          <div className="flex-1 min-w-0">
-            <h1 className="text-[22px] font-bold tracking-tight truncate leading-tight">
-              {name}
-            </h1>
-            <p className="text-[13px] text-white/55 truncate">{email}</p>
-          </div>
-          {customer ? (
-            <Link
-              href="/me/edit"
-              className="
-                h-9 px-4 rounded-full text-[12px] font-semibold
-                bg-white/[0.06] border border-white/[0.08]
-                hover:border-white/20 active:scale-95 transition
-                flex items-center
-              "
+          />
+          <div className="flex items-center gap-4">
+            <div
+              className="flex h-[72px] w-[72px] shrink-0 items-center justify-center rounded-full shadow-[0_16px_38px_rgba(212,175,55,0.28),inset_0_1px_0_rgba(255,255,255,0.32)]"
+              style={{
+                background:
+                  'radial-gradient(circle at 30% 20%, #F6D77C 0%, #D4AF37 48%, #8A6429 100%)',
+              }}
             >
-              Edit
-            </Link>
-          ) : (
-            <Link
-              href="/login"
-              className="
-                h-9 px-4 rounded-full text-[12px] font-semibold
-                bg-[#D4AF37] text-black
-                active:scale-95 transition
-                flex items-center
-              "
-            >
-              Sign in
-            </Link>
-          )}
+              <span className="text-[28px] font-bold text-black/80">{initial}</span>
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#D4AF37]">
+                {customer ? 'OpenBook account' : 'Welcome'}
+              </p>
+              <h1 className="mt-1 truncate text-[25px] font-bold leading-tight tracking-tight">
+                {name}
+              </h1>
+              <p className="mt-0.5 truncate text-[13px] text-white/58">{email}</p>
+            </div>
+            {customer ? (
+              <Link
+                href="/me/edit"
+                className="flex h-10 items-center rounded-full border border-white/[0.10] bg-white/[0.055] px-4 text-[12px] font-semibold text-white/90 transition hover:border-white/20 active:scale-95"
+              >
+                Edit
+              </Link>
+            ) : (
+              <Link
+                href="/login"
+                className="flex h-10 items-center rounded-full bg-[#D4AF37] px-4 text-[12px] font-semibold text-black shadow-[0_8px_20px_rgba(212,175,55,0.28)] transition active:scale-95"
+              >
+                Sign in
+              </Link>
+            )}
+          </div>
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            <ProfilePill
+              label={customer ? 'Bookings' : 'Sync'}
+              value={customer ? 'Synced' : 'Sign in'}
+            />
+            <ProfilePill
+              label={customer ? 'Member since' : 'Status'}
+              value={memberSince ?? 'Guest'}
+            />
+          </div>
         </div>
 
         {/* For businesses promo */}
         <Link
           href="/onboard"
           className="
-            mt-4 flex items-center gap-3 p-4 rounded-2xl
-            border border-[#D4AF37]/25 bg-[#D4AF37]/5
+            mt-4 flex items-center gap-3 rounded-[24px] p-4
+            border border-[#D4AF37]/28 bg-[#D4AF37]/[0.07]
             hover:border-[#D4AF37]/40 active:scale-[0.99]
-            transition-all
+            transition-all shadow-[0_14px_38px_rgba(0,0,0,0.22)]
           "
         >
           <div
@@ -210,8 +230,21 @@ function Section({
           {title}
         </h2>
       )}
-      <div className="flex flex-col gap-2">{children}</div>
+      <div className="flex flex-col gap-2.5">{children}</div>
     </section>
+  );
+}
+
+function ProfilePill({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-[18px] border border-white/[0.07] bg-black/20 px-3 py-3">
+      <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-white/36">
+        {label}
+      </p>
+      <p className="mt-1 truncate text-[13px] font-semibold text-white/86">
+        {value}
+      </p>
+    </div>
   );
 }
 
@@ -221,18 +254,21 @@ function MenuRow({
   label,
 }: {
   href: string;
-  icon: typeof UserCircle2;
+  icon: LucideIcon;
   label: string;
 }) {
   const isExternal = href.startsWith('http') || href.startsWith('mailto:');
   const classes = `
-        flex items-center gap-3 px-4 py-3.5 rounded-2xl
-        bg-white/[0.03] border border-white/[0.06]
-        hover:border-white/[0.14] active:scale-[0.99] transition
+        flex items-center gap-3 rounded-[20px] px-4 py-3.5
+        bg-white/[0.04] border border-white/[0.075]
+        hover:border-white/[0.16] active:scale-[0.99] transition
+        shadow-[inset_0_1px_0_rgba(255,255,255,0.045)]
       `;
   const content = (
     <>
-      <Icon className="w-[18px] h-[18px] text-white/60" strokeWidth={2} />
+      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-white/[0.055]">
+        <Icon className="h-[17px] w-[17px] text-white/66" strokeWidth={2} />
+      </span>
       <span className="flex-1 text-[14px] font-medium text-white/90">
         {label}
       </span>

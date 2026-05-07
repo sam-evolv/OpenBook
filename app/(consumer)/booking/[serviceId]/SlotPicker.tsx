@@ -168,7 +168,7 @@ export function SlotPicker({
                 key={d.toISOString()}
                 onClick={() => setSelectedDate(d)}
                 className={`
-                  shrink-0 w-[62px] h-[78px] rounded-2xl
+                  shrink-0 w-[64px] h-[80px] rounded-[22px]
                   flex flex-col items-center justify-center gap-0.5
                   transition-all active:scale-95
                   ${
@@ -231,7 +231,7 @@ export function SlotPicker({
             </button>
           </div>
         ) : slots.length === 0 ? (
-          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] px-4 py-7 text-center">
+          <div className="rounded-[26px] border border-white/[0.08] bg-white/[0.035] px-4 py-8 text-center">
             <p className="text-[14px] font-semibold text-white/75">
               No slots available on this day.
             </p>
@@ -248,7 +248,7 @@ export function SlotPicker({
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-3 gap-2.5">
             {slots.map((iso) => {
               const dt = new Date(iso);
               const active = selectedSlot === iso;
@@ -257,7 +257,7 @@ export function SlotPicker({
                   key={iso}
                   onClick={() => setSelectedSlot(iso)}
                   className={`
-                    h-12 rounded-2xl text-[14px] font-semibold
+                    h-12 rounded-[18px] text-[14px] font-semibold
                     transition-all active:scale-95
                     ${
                       active
@@ -283,48 +283,49 @@ export function SlotPicker({
 
       {/* Sticky confirm */}
       <div
-        className="
-          fixed left-0 right-0 z-40 px-4 pb-[110px] pt-6
-          bg-gradient-to-t from-[#020202] via-[#020202]/95 to-transparent
-        "
-        style={{ bottom: 0 }}
+        className="pointer-events-none fixed left-0 right-0 z-40 px-2 pt-10"
+        style={{ bottom: 'calc(138px + env(safe-area-inset-bottom))' }}
       >
-        {error && (
-          <p className="mb-2 text-center text-[12px] text-red-400">{error}</p>
-        )}
-        <p className="mb-2 text-center text-[12px] text-white/45">
-          {selectedSlot
-            ? requiresOnlinePayment
-              ? 'Next step: secure Stripe payment. Your slot is held briefly.'
-              : 'No online payment is needed. This confirms the booking.'
-            : 'Choose a time to continue.'}
-        </p>
-        <button
-          onClick={confirmBooking}
-          disabled={!selectedSlot || submitting}
-          className="
-            w-full h-14 rounded-full font-semibold text-[15px]
-            flex items-center justify-center gap-2
-            disabled:opacity-40 disabled:pointer-events-none
-            active:scale-[0.98] transition
-            shadow-[0_10px_30px_rgba(0,0,0,0.5)]
-          "
+        <div
+          aria-hidden
+          className="absolute inset-x-0 bottom-0 top-0"
           style={{
-            backgroundColor: colour,
-            color: '#000',
+            background:
+              'linear-gradient(180deg, transparent 0%, rgba(2,2,2,0.86) 40%, rgba(2,2,2,0.98) 100%)',
           }}
-        >
-          {submitting ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
-          ) : (
-            <>
-              <Check className="w-5 h-5" strokeWidth={2.5} />
-              {selectedSlot
-                ? `Confirm for ${timeLabel(new Date(selectedSlot))}`
-                : 'Select a time'}
-            </>
+        />
+        <div className="pointer-events-auto mx-auto max-w-[432px]">
+          {error && (
+            <p className="mb-2 text-center text-[12px] text-red-400">{error}</p>
           )}
-        </button>
+          <p className="mb-2 text-center text-[12px] text-white/45">
+            {selectedSlot
+              ? requiresOnlinePayment
+                ? 'Next step: secure Stripe payment. Your slot is held briefly.'
+                : 'No online payment is needed. This confirms the booking.'
+              : 'Choose a time to continue.'}
+          </p>
+          <button
+            onClick={confirmBooking}
+            disabled={!selectedSlot || submitting}
+            className="flex h-14 w-full items-center justify-center gap-2 rounded-full text-[15px] font-semibold shadow-[0_16px_44px_rgba(0,0,0,0.56)] transition active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40"
+            style={{
+              backgroundColor: colour,
+              color: '#000',
+            }}
+          >
+            {submitting ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <>
+                <Check className="w-5 h-5" strokeWidth={2.5} />
+                {selectedSlot
+                  ? `Confirm for ${timeLabel(new Date(selectedSlot))}`
+                  : 'Select a time'}
+              </>
+            )}
+          </button>
+        </div>
       </div>
     </>
   );

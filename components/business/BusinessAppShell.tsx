@@ -8,6 +8,7 @@ import { BusinessBook } from './BusinessBook';
 import { BusinessGallery } from './BusinessGallery';
 import { BusinessAbout } from './BusinessAbout';
 import { getTileColour } from '@/lib/tile-palette';
+import { getBusinessAppConfig } from '@/lib/business-app-config';
 
 export type BusinessTab = 'home' | 'book' | 'gallery' | 'about';
 
@@ -25,7 +26,8 @@ export function BusinessAppShell({ business, services, hours, initialTab = 'home
 
   const primary = getTileColour(business.primary_colour).mid;
   const gallery = business.gallery_urls ?? [];
-  const hasGallery = gallery.length > 0;
+  const appConfig = getBusinessAppConfig(business.offers);
+  const hasGallery = appConfig.sections.gallery && gallery.length > 0;
 
   /* When a user clicks Book on the Home tab, switch to Book tab with that service preselected */
   function openBookingForService(service: any) {
@@ -45,7 +47,7 @@ export function BusinessAppShell({ business, services, hours, initialTab = 'home
     <>
       <main
         className="relative min-h-[100dvh] text-white overflow-x-hidden"
-        style={{ paddingBottom: 'calc(88px + env(safe-area-inset-bottom))' }}
+        style={{ paddingBottom: 'calc(116px + env(safe-area-inset-bottom))' }}
       >
         {/* Content */}
         <div className="relative">
@@ -53,9 +55,11 @@ export function BusinessAppShell({ business, services, hours, initialTab = 'home
             <BusinessHome
               business={business}
               services={services}
+              hours={hours}
               onBookService={openBookingForService}
               onOpenGallery={() => setTab('gallery')}
               hasGallery={hasGallery}
+              appConfig={appConfig}
             />
           )}
           {tab === 'book' && (
@@ -67,7 +71,7 @@ export function BusinessAppShell({ business, services, hours, initialTab = 'home
             />
           )}
           {tab === 'gallery' && <BusinessGallery business={business} />}
-          {tab === 'about' && <BusinessAbout business={business} hours={hours} />}
+          {tab === 'about' && <BusinessAbout business={business} hours={hours} appConfig={appConfig} />}
         </div>
       </main>
 
@@ -89,17 +93,20 @@ export function BusinessAppShell({ business, services, hours, initialTab = 'home
           dock. Rendered outside <main> so position: fixed always anchors to
           the viewport regardless of any transform/overflow on page content. */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-50"
-        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        className="pointer-events-none fixed bottom-0 left-0 right-0 z-50 px-4"
+        style={{ paddingBottom: 'calc(12px + env(safe-area-inset-bottom))' }}
       >
         <div
-          className="mx-auto max-w-md backdrop-blur-2xl"
+          className="pointer-events-auto mx-auto max-w-md rounded-[30px] backdrop-blur-2xl"
           style={{
-            background: 'rgba(0,0,0,0.65)',
-            borderTop: '0.5px solid rgba(255,255,255,0.08)',
+            background:
+              'linear-gradient(180deg, rgba(31,31,36,0.88) 0%, rgba(12,12,15,0.88) 100%)',
+            border: '0.5px solid rgba(255,255,255,0.12)',
+            boxShadow:
+              '0 1px 0 rgba(255,255,255,0.10) inset, 0 18px 46px rgba(0,0,0,0.58), 0 4px 12px rgba(0,0,0,0.36)',
           }}
         >
-          <div className="flex items-center justify-around px-2 py-2">
+          <div className="flex items-center justify-around px-3 py-2.5">
             {visibleTabs.map((t) => {
               const active = tab === t.id;
               const Icon = t.icon;

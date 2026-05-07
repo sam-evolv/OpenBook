@@ -14,8 +14,10 @@ export interface TileProps {
   name: string;
   /** Canonical palette slug. Falls back to default if invalid. */
   colour: TileColourSlug | string | null | undefined;
-  /** Pre-processed monochrome white logo URL. Optional. */
+  /** Logo URL. Can be a raw mark or a finished OpenBook icon. */
   logoUrl?: string | null;
+  /** True when logoUrl is already a full processed app icon. */
+  logoIsProcessedIcon?: boolean;
   /**
    * Optional fixed size in CSS pixels. When omitted, the tile uses
    * responsive viewport-relative sizing (`min(calc(25vw - 20px), 96px)`)
@@ -50,6 +52,7 @@ export function Tile({
   name,
   colour,
   logoUrl,
+  logoIsProcessedIcon = false,
   size,
   status,
   onTap,
@@ -143,7 +146,7 @@ export function Tile({
     borderRadius: radius,
     padding: 0,
     border: 'none',
-    background: tileGradient(tileColour),
+    background: logoUrl && logoIsProcessedIcon ? '#0B0B0D' : tileGradient(tileColour),
     boxShadow:
       'inset 0 1px 0 rgba(255,255,255,0.45), inset 0 -1px 0 rgba(0,0,0,0.28), inset 0 0 0 0.5px rgba(255,255,255,0.15), 0 2px 8px rgba(0,0,0,0.4)',
     cursor: 'pointer',
@@ -187,21 +190,22 @@ export function Tile({
         onPointerLeave={handlePointerCancel}
         style={buttonStyle}
       >
-        {/* Grain overlay — adds the "this is glass, not flat CSS" texture. */}
-        <span
-          aria-hidden
-          style={{
-            position: 'absolute',
-            inset: 0,
-            borderRadius: radius,
-            opacity: 0.35,
-            mixBlendMode: 'overlay',
-            backgroundImage:
-              "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='5'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
-            backgroundSize: '80px 80px',
-            pointerEvents: 'none',
-          }}
-        />
+        {!logoIsProcessedIcon && (
+          <span
+            aria-hidden
+            style={{
+              position: 'absolute',
+              inset: 0,
+              borderRadius: radius,
+              opacity: 0.35,
+              mixBlendMode: 'overlay',
+              backgroundImage:
+                "url(\"data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='80' height='80'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='5'/><feColorMatrix values='0 0 0 0 1  0 0 0 0 1  0 0 0 0 1  0 0 0 0.6 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>\")",
+              backgroundSize: '80px 80px',
+              pointerEvents: 'none',
+            }}
+          />
+        )}
 
         {/* Centre content: logo or monogram. */}
         <span
@@ -220,10 +224,10 @@ export function Tile({
               src={logoUrl}
               alt=""
               style={{
-                width: logoDimension,
-                height: logoDimension,
-                objectFit: 'contain',
-                filter: `drop-shadow(0 1px 2px ${dropShadowColour})`,
+                width: logoIsProcessedIcon ? '100%' : logoDimension,
+                height: logoIsProcessedIcon ? '100%' : logoDimension,
+                objectFit: logoIsProcessedIcon ? 'cover' : 'contain',
+                filter: logoIsProcessedIcon ? 'none' : `drop-shadow(0 1px 2px ${dropShadowColour})`,
                 pointerEvents: 'none',
                 userSelect: 'none',
               }}
@@ -271,20 +275,27 @@ export function Tile({
       {!hideLabel && (
         <span
           style={{
-            // 11px keeps things compact; the wider maxWidth and CSS-only
-            // ellipsis let names like "Evolv Performance" land on
-            // "Evolv Perform…" instead of the cramped "Evolv Perfo…".
+            // Keep labels inside their icon column. The screenshot-level
+            // issue was long business names borrowing space from neighbours,
+            // so labels can wrap to two compact lines but never grow wider
+            // than the tile itself.
             fontSize: 11,
+            lineHeight: 1.12,
             color: 'var(--ob-text-1, rgba(255,255,255,0.9))',
             fontWeight: 500,
             maxWidth:
               typeof size === 'number'
-                ? size + 28
-                : `calc(${sizeBase} + 28px)`,
+                ? size + 4
+                : `calc(${sizeBase} + 4px)`,
+            minHeight: 25,
             textAlign: 'center',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
+            display: '-webkit-box',
+            WebkitLineClamp: 2,
+            WebkitBoxOrient: 'vertical',
+            wordBreak: 'normal',
+            overflowWrap: 'normal',
             letterSpacing: '-0.01em',
           }}
         >
