@@ -94,6 +94,15 @@ function getStripePromise(pk: string, connectedAccountId?: string | null): Promi
   return cached;
 }
 
+// Module-scope fallback used by the <Elements> wrapper on free/confirmed
+// paths. ReadyView calls useStripe()/useElements() unconditionally, so it
+// must always render inside an <Elements> tree even when the form will
+// never actually charge a card. Initialised once.
+const FALLBACK_STRIPE_PROMISE: Promise<Stripe | null> = process.env
+  .NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+  : Promise.resolve(null);
+
 export default function CheckoutClient(props: Props) {
   if (props.mode === 'expired') {
     return <ExpiredView token={props.token} businessName={props.expiredBusinessName} />;
@@ -109,29 +118,12 @@ export default function CheckoutClient(props: Props) {
     ['--accent-fg' as string]: pickAccentForeground(accent),
   };
 
-  const stripeReady =
-    !bundle.is_free &&
+  const isPayable =
     Boolean(bundle.stripe_publishable_key) &&
     Boolean(bundle.business.stripe_account_id) &&
     bundle.business.stripe_charges_enabled;
 
-  // For free bookings we don't even mount Elements — there's no card surface
-  // to render and Stripe.js shouldn't be loaded at all.
-  if (props.mode === 'confirmed' || bundle.is_free) {
-    return (
-      <main className="ob-checkout" style={themeStyle}>
-        <Header business={bundle.business} />
-        {props.mode === 'confirmed' ? (
-          <ConfirmedView bundle={bundle} />
-        ) : (
-          <ReadyView bundle={bundle} stripe={null} />
-        )}
-        <Footer businessName={bundle.business.name} />
-      </main>
-    );
-  }
-
-  if (!stripeReady) {
+  if (!bundle.is_free && !isPayable) {
     return (
       <main className="ob-checkout" style={themeStyle}>
         <Header business={bundle.business} />
@@ -141,10 +133,10 @@ export default function CheckoutClient(props: Props) {
     );
   }
 
-  const stripePromise = getStripePromise(
-    bundle.stripe_publishable_key!,
-    bundle.business.stripe_account_id,
-  );
+  const stripePromise =
+    !bundle.is_free && isPayable
+      ? getStripePromise(bundle.stripe_publishable_key!, bundle.business.stripe_account_id)
+      : FALLBACK_STRIPE_PROMISE;
 
   return (
     <main className="ob-checkout" style={themeStyle}>
@@ -159,7 +151,11 @@ export default function CheckoutClient(props: Props) {
           },
         }}
       >
-        <ReadyView bundle={bundle} stripe={null} />
+        {props.mode === 'confirmed' ? (
+          <ConfirmedView bundle={bundle} />
+        ) : (
+          <ReadyView bundle={bundle} />
+        )}
       </Elements>
       <Footer businessName={bundle.business.name} />
     </main>
@@ -212,7 +208,7 @@ function NotPayableView({ businessName }: { businessName: string }) {
 // Ready state
 // ──────────────────────────────────────────────────────────────────────────
 
-function ReadyView({ bundle }: { bundle: CheckoutBundle; stripe: null }) {
+function ReadyView({ bundle }: { bundle: CheckoutBundle }) {
   const stripe = useStripe();
   const elements = useElements();
 
@@ -391,9 +387,12 @@ function ReadyView({ bundle }: { bundle: CheckoutBundle; stripe: null }) {
 
   const isProcessing = phase === 'processing' || phase === 'awaiting_webhook';
   const formValid = name.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-  const ctaLabel = bundle.is_free
-    ? 'Confirm Booking'
-    : `Confirm and Pay €${(bundle.service.price_cents / 100).toFixed(2)}`;
+  const stripeLoading = !bundle.is_free && !stripe;
+  const ctaLabel = stripeLoading
+    ? 'Loading payment form…'
+    : bundle.is_free
+      ? 'Confirm Booking'
+      : `Confirm and Pay €${(bundle.service.price_cents / 100).toFixed(2)}`;
 
   return (
     <form className="ob-card" onSubmit={onSubmitCard}>
@@ -461,7 +460,7 @@ function ReadyView({ bundle }: { bundle: CheckoutBundle; stripe: null }) {
         <button
           type="submit"
           className="ob-cta"
-          disabled={!formValid || isProcessing}
+          disabled={!formValid || isProcessing || stripeLoading}
           aria-busy={isProcessing || undefined}
         >
           {isProcessing ? <Spinner /> : null}
