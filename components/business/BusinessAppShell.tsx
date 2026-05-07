@@ -31,12 +31,17 @@ export function BusinessAppShell({ business: initialBusiness, services, hours, i
   const [business, setBusiness] = useState<any>(initialBusiness);
 
   // Listen for live edits posted from the dashboard "My App" studio iframe
-  // parent. Same-origin only; ignores anything else.
+  // parent. The dashboard runs on a sibling subdomain (e.g. dash.openbook.ie
+  // iframing app.openbook.ie), so we trust only the origin the parent
+  // declared via the studioOrigin query param it set on this iframe's URL.
   useEffect(() => {
     if (typeof window === 'undefined' || window.parent === window) return;
 
+    const studioOrigin = new URL(window.location.href).searchParams.get('studioOrigin');
+    if (!studioOrigin) return;
+
     const onMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
+      if (event.origin !== studioOrigin) return;
       const data = event.data;
       if (!data || typeof data !== 'object' || data.type !== STUDIO_PREVIEW_MESSAGE) return;
       const patch = data.patch as Record<string, unknown> | undefined;
@@ -52,7 +57,7 @@ export function BusinessAppShell({ business: initialBusiness, services, hours, i
 
     window.addEventListener('message', onMessage);
     // Tell the parent we're ready to receive the current draft.
-    window.parent.postMessage({ type: 'openbook:studio-preview-ready' }, window.location.origin);
+    window.parent.postMessage({ type: 'openbook:studio-preview-ready' }, studioOrigin);
     return () => window.removeEventListener('message', onMessage);
   }, []);
 

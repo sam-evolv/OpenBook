@@ -98,10 +98,20 @@ export function MyAppClient({
   );
   const heroSrc = form.hero_image_url ?? form.cover_image_url ?? form.gallery_urls[0] ?? null;
   const logoSrc = form.processed_icon_url ?? form.logo_url;
-  const livePreviewSrc = useMemo(
-    () => `${publicUrl}?dashboardPreview=${previewVersion}`,
-    [publicUrl, previewVersion],
-  );
+  const previewIframeOrigin = useMemo(() => {
+    try {
+      return new URL(publicUrl).origin;
+    } catch {
+      return null;
+    }
+  }, [publicUrl]);
+  const livePreviewSrc = useMemo(() => {
+    const params = new URLSearchParams({ dashboardPreview: String(previewVersion) });
+    if (typeof window !== 'undefined') {
+      params.set('studioOrigin', window.location.origin);
+    }
+    return `${publicUrl}?${params.toString()}`;
+  }, [publicUrl, previewVersion]);
   const previewIframeRef = useRef<HTMLIFrameElement | null>(null);
 
   // Build the patch we send to the preview iframe. Memoised so the postMessage
@@ -137,29 +147,29 @@ export function MyAppClient({
   // re-renders without waiting for a save.
   useEffect(() => {
     const iframe = previewIframeRef.current;
-    if (!iframe || !iframe.contentWindow || typeof window === 'undefined') return;
+    if (!iframe || !iframe.contentWindow || !previewIframeOrigin) return;
     iframe.contentWindow.postMessage(
       { type: 'openbook:studio-preview', patch: previewPatch, appConfig },
-      window.location.origin,
+      previewIframeOrigin,
     );
-  }, [previewPatch, appConfig]);
+  }, [previewPatch, appConfig, previewIframeOrigin]);
 
   // Re-send the latest draft whenever the iframe (re)loads, so a hard reload
   // after Save still reflects any pending edits the user typed since.
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === 'undefined' || !previewIframeOrigin) return;
     const onMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
+      if (event.origin !== previewIframeOrigin) return;
       if (event.data?.type !== 'openbook:studio-preview-ready') return;
       const iframe = previewIframeRef.current;
       iframe?.contentWindow?.postMessage(
         { type: 'openbook:studio-preview', patch: previewPatch, appConfig },
-        window.location.origin,
+        previewIframeOrigin,
       );
     };
     window.addEventListener('message', onMessage);
     return () => window.removeEventListener('message', onMessage);
-  }, [previewPatch, appConfig]);
+  }, [previewPatch, appConfig, previewIframeOrigin]);
   const description = form.about_long ?? '';
   const readiness = getReadiness({
     name: form.name,
