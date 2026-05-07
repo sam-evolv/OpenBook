@@ -1375,6 +1375,8 @@ The mappings below are the ones discovered while implementing `get_business_info
 | `source_assistant` | `source_assistant` | Added in Migration C. |
 | `polling_token_hash` | `polling_token_hash` | Added in Migration C. |
 | `outcome` | `outcome` | Added in Migration C. |
+| `customer_id` | `customer_id` | **Now nullable** (PR 112). MCP at v1 is anonymous (Section 10.1) — a hold isn't owned by anyone until the checkout page captures email/phone and backfills the row. A check constraint (`bookings_customer_id_required_for_non_mcp`) enforces that only `source = 'mcp'` rows may have `customer_id IS NULL`; web/whatsapp/dashboard bookings still require it. |
+| `hold_expires_at` | `hold_expires_at` | Pre-existing column used by the AI booking flow's `_sweep_expired_holds()`. MCP-created `pending_payment` bookings set this so the same sweeper expires stale rows consistently. |
 
 ### `reviews`
 
