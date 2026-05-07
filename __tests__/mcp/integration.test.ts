@@ -84,15 +84,14 @@ describe('POST /api/mcp', () => {
   });
 
   it('dispatches tools/call with valid args to the stub handler', async () => {
-    // get_promoted_inventory remains a stub in this PR
-    // (check_booking_status / join_waitlist now have real handlers).
+    // record_post_booking_feedback is the only remaining stub.
     const { json } = await callJson({
       jsonrpc: '2.0',
       id: 3,
       method: 'tools/call',
       params: {
-        name: 'get_promoted_inventory',
-        arguments: { limit: 5 },
+        name: 'record_post_booking_feedback',
+        arguments: { booking_id: '11111111-1111-1111-1111-111111111111' },
       },
     });
     expect(json.result).toEqual({ error: 'not_implemented' });
