@@ -1,21 +1,25 @@
 import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
+import { cookies, headers } from 'next/headers';
 
 /**
  * Server-side Supabase client. Uses the modern getAll/setAll cookie API
  * (the deprecated get/set/remove chunks the auth token across multiple
- * calls and can corrupt sessions). Cookies are scoped to .openbook.ie
- * in production so the session is shared between app.* and dash.*.
+ * calls and can corrupt sessions). On real openbook.ie hosts, cookies are
+ * scoped to .openbook.ie so the session is shared between app.* and dash.*.
+ * On Vercel preview hosts, they must stay host-only or the browser rejects
+ * them and OAuth appears to bounce back to login.
  */
 export function createSupabaseServerClient() {
   const cookieStore = cookies();
+  const host = headers().get('host') ?? '';
   const isProduction = process.env.NODE_ENV === 'production';
+  const useCrossSubdomain = isProduction && host.endsWith('openbook.ie');
 
   return createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
-      cookieOptions: isProduction ? { domain: '.openbook.ie' } : undefined,
+      cookieOptions: useCrossSubdomain ? { domain: '.openbook.ie' } : undefined,
       cookies: {
         getAll() {
           return cookieStore.getAll();
@@ -23,7 +27,7 @@ export function createSupabaseServerClient() {
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) => {
-              const opts = isProduction
+              const opts = useCrossSubdomain
                 ? { ...options, domain: '.openbook.ie' }
                 : options;
               cookieStore.set({ name, value, ...opts });
