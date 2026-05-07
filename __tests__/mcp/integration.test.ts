@@ -84,12 +84,23 @@ describe('POST /api/mcp', () => {
   });
 
   it('dispatches tools/call with valid args to the stub handler', async () => {
-    // check_booking_status remains a stub in this PR.
+    // join_waitlist remains a stub in this PR
+    // (check_booking_status now has a real handler — see PR #N).
     const { json } = await callJson({
       jsonrpc: '2.0',
       id: 3,
       method: 'tools/call',
-      params: { name: 'check_booking_status', arguments: { polling_token: 'abc' } },
+      params: {
+        name: 'join_waitlist',
+        arguments: {
+          slug: 'evolv',
+          preferred_window: {
+            starts_iso: '2030-01-01T10:00:00Z',
+            ends_iso: '2030-01-01T12:00:00Z',
+          },
+          contact: { email: 'a@b.com' },
+        },
+      },
     });
     expect(json.result).toEqual({ error: 'not_implemented' });
   });

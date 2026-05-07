@@ -1,5 +1,6 @@
 // Postgres-backed rate limiter for the MCP endpoint.
 // Per docs/mcp-server-spec.md section 5.1: 60 req/min/IP, 1000 req/hr/origin.
+// Per docs/mcp-server-spec.md section 5.6: 30 calls per polling token.
 //
 // Each check fires one RPC against `increment_mcp_rate_limit`, which atomically
 // upserts the bucket row and returns the new count. We FAIL OPEN on any DB
@@ -9,8 +10,10 @@ import { supabaseAdmin } from '../supabase';
 
 const IP_LIMIT_PER_MINUTE = 60;
 const ORIGIN_LIMIT_PER_HOUR = 1000;
+const POLLING_LIMIT_PER_TOKEN = 30;
 const MINUTE_MS = 60_000;
 const HOUR_MS = 3_600_000;
+const TWO_HOUR_MS = 2 * HOUR_MS;
 
 export type RateLimitResult = {
   allowed: boolean;
@@ -60,6 +63,34 @@ export async function checkRateLimit(args: {
     return { allowed: true };
   } catch (err) {
     console.error('[mcp.rate-limit] failing open due to error:', err);
+    return { allowed: true };
+  }
+}
+
+// Per-polling-token limit for check_booking_status. Bucket window is 2
+// hours, aligned to 2-hour ticks of wall-clock time, matching the polling
+// token's TTL. Note the alignment caveat: a token issued near a boundary
+// could see up to 2× the limit across its lifetime (30 in the current
+// window + 30 after the boundary). Acceptable for v1 — it's the same
+// approximation the existing IP/origin limits use, and the goal here is
+// blocking pathological loops, not exact accounting.
+export async function checkPollingTokenRateLimit(
+  bookingId: string,
+): Promise<RateLimitResult> {
+  if (!bookingId) return { allowed: true };
+  try {
+    const now = Date.now();
+    const windowIndex = Math.floor(now / TWO_HOUR_MS);
+    const windowStart = new Date(windowIndex * TWO_HOUR_MS);
+    const bucket = `polling:${bookingId}:${windowIndex}`;
+    const count = await bumpBucket(bucket, windowStart);
+    if (count > POLLING_LIMIT_PER_TOKEN) {
+      const retryAfter = Math.ceil((windowStart.getTime() + TWO_HOUR_MS - now) / 1000);
+      return { allowed: false, retryAfter, reason: 'polling_per_token' };
+    }
+    return { allowed: true };
+  } catch (err) {
+    console.error('[mcp.rate-limit] polling check failing open:', err);
     return { allowed: true };
   }
 }
