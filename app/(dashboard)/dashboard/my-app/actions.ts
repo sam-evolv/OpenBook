@@ -3,6 +3,11 @@
 import { revalidatePath } from 'next/cache';
 import { createSupabaseServerClient, getCurrentOwner } from '@/lib/supabase-server';
 import { isValidTileColour } from '@/lib/tile-palette';
+import {
+  type BusinessAppConfig,
+  getBusinessAppConfig,
+  mergeBusinessAppConfig,
+} from '@/lib/business-app-config';
 
 export interface MyAppProfilePayload {
   name: string;
@@ -10,6 +15,7 @@ export interface MyAppProfilePayload {
   about_long: string | null;
   city: string | null;
   primary_colour: string | null;
+  appConfig: BusinessAppConfig;
 }
 
 export async function saveMyAppProfile(payload: MyAppProfilePayload) {
@@ -19,7 +25,7 @@ export async function saveMyAppProfile(payload: MyAppProfilePayload) {
   const sb = createSupabaseServerClient();
   const { data: business } = await sb
     .from('businesses')
-    .select('id, slug')
+    .select('id, slug, offers')
     .eq('owner_id', owner.id)
     .eq('is_live', true)
     .maybeSingle();
@@ -31,6 +37,11 @@ export async function saveMyAppProfile(payload: MyAppProfilePayload) {
       ? payload.primary_colour
       : null;
 
+  const previousOffers = (business as { offers: unknown }).offers;
+  const appConfig = getBusinessAppConfig({
+    openbook_app_config: payload.appConfig,
+  });
+
   const { error } = await sb
     .from('businesses')
     .update({
@@ -39,6 +50,7 @@ export async function saveMyAppProfile(payload: MyAppProfilePayload) {
       about_long: payload.about_long,
       city: payload.city,
       primary_colour,
+      offers: mergeBusinessAppConfig(previousOffers, appConfig),
     })
     .eq('id', (business as { id: string }).id);
 

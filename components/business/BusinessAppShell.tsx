@@ -8,6 +8,7 @@ import { BusinessBook } from './BusinessBook';
 import { BusinessGallery } from './BusinessGallery';
 import { BusinessAbout } from './BusinessAbout';
 import { getTileColour } from '@/lib/tile-palette';
+import { getBusinessAppConfig } from '@/lib/business-app-config';
 
 export type BusinessTab = 'home' | 'book' | 'gallery' | 'about';
 
@@ -25,7 +26,8 @@ export function BusinessAppShell({ business, services, hours, initialTab = 'home
 
   const primary = getTileColour(business.primary_colour).mid;
   const gallery = business.gallery_urls ?? [];
-  const hasGallery = gallery.length > 0;
+  const appConfig = getBusinessAppConfig(business.offers);
+  const hasGallery = appConfig.sections.gallery && gallery.length > 0;
 
   /* When a user clicks Book on the Home tab, switch to Book tab with that service preselected */
   function openBookingForService(service: any) {
@@ -57,6 +59,7 @@ export function BusinessAppShell({ business, services, hours, initialTab = 'home
               onBookService={openBookingForService}
               onOpenGallery={() => setTab('gallery')}
               hasGallery={hasGallery}
+              appConfig={appConfig}
             />
           )}
           {tab === 'book' && (
@@ -68,7 +71,7 @@ export function BusinessAppShell({ business, services, hours, initialTab = 'home
             />
           )}
           {tab === 'gallery' && <BusinessGallery business={business} />}
-          {tab === 'about' && <BusinessAbout business={business} hours={hours} />}
+          {tab === 'about' && <BusinessAbout business={business} hours={hours} appConfig={appConfig} />}
         </div>
       </main>
 

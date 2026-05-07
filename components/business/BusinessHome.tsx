@@ -5,6 +5,7 @@ import { Clock, ChevronRight, Sparkles, Star, MapPin, ImageIcon, CircleCheck } f
 import { getBusinessOpenness, type BusinessHourRow } from '@/lib/business-hours';
 import { heroForBusiness } from '@/lib/categories';
 import { getTileColour } from '@/lib/tile-palette';
+import type { BusinessAppConfig } from '@/lib/business-app-config';
 
 interface Props {
   business: any;
@@ -13,9 +14,10 @@ interface Props {
   onBookService: (s: any) => void;
   onOpenGallery: () => void;
   hasGallery: boolean;
+  appConfig: BusinessAppConfig;
 }
 
-export function BusinessHome({ business, services, hours, onBookService, onOpenGallery, hasGallery }: Props) {
+export function BusinessHome({ business, services, hours, onBookService, onOpenGallery, hasGallery, appConfig }: Props) {
   const primary = getTileColour(business.primary_colour).mid;
   const gallery: string[] = business.gallery_urls ?? [];
   const uploadedHeroSrc: string | null =
@@ -23,9 +25,17 @@ export function BusinessHome({ business, services, hours, onBookService, onOpenG
   const heroSrc = uploadedHeroSrc ?? heroForBusiness(business.slug ?? business.id ?? business.name, business.category);
   const openness = getBusinessOpenness(hours, business.business_closures ?? []);
 
-  const cheapest = services.length === 0
-    ? null
-    : services.reduce((min, s) => (s.price_cents < min.price_cents ? s : min), services[0]);
+  const featuredService =
+    services.find((s) => s.id === appConfig.featuredServiceId) ??
+    (services.length === 0 ? null : services[0]);
+  const useHeroImage = appConfig.heroStyle !== 'logo-led';
+  const heroIsClean = appConfig.heroStyle === 'clean';
+  const heroHeightClass =
+    appConfig.heroStyle === 'gallery-first'
+      ? 'min-h-[58svh]'
+      : appConfig.heroStyle === 'logo-led'
+        ? 'min-h-[54svh]'
+        : 'min-h-[70svh]';
 
   const [scrollY, setScrollY] = useState(0);
   useEffect(() => {
@@ -41,7 +51,7 @@ export function BusinessHome({ business, services, hours, onBookService, onOpenG
           otherwise paint over siblings on iOS Safari). max-h caps the hero
           on tall desktop viewports so the name + CTA stay above the fold. */}
       <div
-        className="relative w-full min-h-[70svh] max-h-[780px] overflow-hidden isolate ob-hero-enter"
+        className={`relative w-full ${heroHeightClass} max-h-[780px] overflow-hidden isolate ob-hero-enter`}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
@@ -51,8 +61,9 @@ export function BusinessHome({ business, services, hours, onBookService, onOpenG
           style={{
             transform: `translateY(${scrollY * 0.5}px) scale(1.1)`,
             zIndex: 0,
-            opacity: uploadedHeroSrc ? 1 : 0.58,
-            filter: uploadedHeroSrc ? 'none' : 'saturate(0.82) contrast(1.08)',
+            opacity: uploadedHeroSrc && useHeroImage ? 1 : 0.52,
+            filter: uploadedHeroSrc && useHeroImage ? 'none' : 'saturate(0.82) contrast(1.08)',
+            objectPosition: `${appConfig.heroFocalPoint.x}% ${appConfig.heroFocalPoint.y}%`,
           }}
         />
 
@@ -81,7 +92,9 @@ export function BusinessHome({ business, services, hours, onBookService, onOpenG
           className="absolute inset-0 z-10 pointer-events-none"
           style={{
             background:
-              'linear-gradient(180deg, rgba(0,0,0,0.16) 0%, rgba(0,0,0,0.08) 24%, rgba(0,0,0,0.66) 68%, rgba(0,0,0,0.98) 100%)',
+              heroIsClean
+                ? 'linear-gradient(180deg, rgba(0,0,0,0.04) 0%, rgba(0,0,0,0.10) 26%, rgba(0,0,0,0.54) 70%, rgba(0,0,0,0.94) 100%)'
+                : 'linear-gradient(180deg, rgba(0,0,0,0.16) 0%, rgba(0,0,0,0.08) 24%, rgba(0,0,0,0.66) 68%, rgba(0,0,0,0.98) 100%)',
           }}
         />
 
@@ -125,10 +138,10 @@ export function BusinessHome({ business, services, hours, onBookService, onOpenG
               {business.tagline}
             </p>
           )}
-          {cheapest && (
+          {featuredService && (
             <div className="mt-5 flex items-center gap-3">
               <button
-                onClick={() => onBookService(cheapest)}
+                onClick={() => onBookService(featuredService)}
                 className="flex h-12 flex-1 items-center justify-center rounded-full px-6 text-[14px] font-semibold tracking-tight text-black transition-transform active:scale-[0.97]"
                 style={{
                   background:
@@ -136,9 +149,9 @@ export function BusinessHome({ business, services, hours, onBookService, onOpenG
                   boxShadow:
                     '0 1px 0 rgba(255,255,255,0.4) inset, 0 6px 16px rgba(212,175,55,0.35), 0 2px 6px rgba(0,0,0,0.35)',
                 }}
-                aria-label={`Book ${cheapest.name}`}
+                aria-label={`Book ${featuredService.name}`}
               >
-                Book from {cheapest.price_cents === 0 ? 'Free' : `€${(cheapest.price_cents / 100).toFixed(0)}`}
+                {appConfig.ctaLabel}
               </button>
               {hasGallery && (
                 <button
@@ -154,7 +167,7 @@ export function BusinessHome({ business, services, hours, onBookService, onOpenG
         </div>
       </div>
 
-      <AtAGlance business={business} services={services} primary={primary} />
+      <AtAGlance business={business} services={services} primary={primary} featuredService={featuredService} />
       <StorefrontSignal business={business} openness={openness} primary={primary} />
 
       {/* Services list */}
@@ -285,7 +298,7 @@ export function BusinessHome({ business, services, hours, onBookService, onOpenG
       )}
 
       {/* About snippet */}
-      {business.about_long && (
+      {appConfig.sections.about && business.about_long && (
         <div
           className="px-5 pb-14 animate-reveal-up"
           style={{ animationDelay: '800ms', animationDuration: '500ms', animationFillMode: 'both' }}
@@ -420,23 +433,23 @@ function AtAGlance({
   business,
   services,
   primary,
+  featuredService,
 }: {
   business: any;
   services: any[];
   primary: string;
+  featuredService: any | null;
 }) {
-  const cheapest = services.length
-    ? services.reduce((min, s) => (s.price_cents < min.price_cents ? s : min), services[0])
-    : null;
-  const firstDuration = services[0]?.duration_minutes ?? null;
+  const service = featuredService ?? services[0] ?? null;
+  const firstDuration = service?.duration_minutes ?? null;
   const items = [
     business.category
       ? { label: 'Style', value: String(business.category).replace(/_/g, ' ') }
       : null,
-    cheapest
+    service
       ? {
           label: 'From',
-          value: cheapest.price_cents === 0 ? 'Free' : `€${(cheapest.price_cents / 100).toFixed(0)}`,
+          value: service.price_cents === 0 ? 'Free' : `€${(service.price_cents / 100).toFixed(0)}`,
         }
       : null,
     firstDuration ? { label: 'Time', value: formatDuration(firstDuration) } : null,

@@ -2,15 +2,17 @@
 
 import { Phone, Globe, MapPin, Instagram, Clock, Sparkles } from 'lucide-react';
 import { getTileColour } from '@/lib/tile-palette';
+import type { BusinessAppConfig } from '@/lib/business-app-config';
 
 interface Props {
   business: any;
   hours: any[];
+  appConfig: BusinessAppConfig;
 }
 
 const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
-export function BusinessAbout({ business, hours }: Props) {
+export function BusinessAbout({ business, hours, appConfig }: Props) {
   const primary = getTileColour(business.primary_colour).mid;
   const socials = business.socials ?? {};
 
@@ -48,7 +50,7 @@ export function BusinessAbout({ business, hours }: Props) {
       </div>
 
       {/* Long description */}
-      {business.about_long && (
+      {appConfig.sections.about && business.about_long && (
         <section
           className="mb-8 rounded-[26px] px-5 py-5"
           style={{
@@ -73,7 +75,7 @@ export function BusinessAbout({ business, hours }: Props) {
         </section>
       )}
 
-      {!business.about_long && (
+      {appConfig.sections.about && !business.about_long && (
         <section
           className="mb-8 rounded-[26px] px-5 py-8 text-center"
           style={{
@@ -90,7 +92,7 @@ export function BusinessAbout({ business, hours }: Props) {
       )}
 
       {/* Hours */}
-      {orderedHours.length > 0 && (
+      {appConfig.sections.hours && orderedHours.length > 0 && (
         <section className="mb-8">
           <div className="flex items-center gap-2 mb-3">
             <Clock
@@ -147,7 +149,7 @@ export function BusinessAbout({ business, hours }: Props) {
       )}
 
       {/* Contact */}
-      {(business.phone || business.website || business.address_line || socials.instagram) && (
+      {appConfig.sections.contact && (business.phone || business.website || business.address_line || socials.instagram) && (
         <section className="mb-8">
           <p
             className="text-[11px] font-semibold tracking-[0.14em] uppercase mb-3"
