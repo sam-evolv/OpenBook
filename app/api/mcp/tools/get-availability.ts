@@ -223,5 +223,29 @@ export const getAvailabilityHandler: ToolHandler = async (input) => {
     };
   }
 
+  // Lazy-fire drain for the waitlist notification queue. The
+  // /api/cron/notify-waitlist endpoint exists for Vercel Pro projects,
+  // but Hobby caps crons at 1/day — so we drain a tiny batch here
+  // on every availability check. Fire-and-forget: must NOT affect the
+  // response or its latency. See lib/mcp/process-waitlist-notifications.ts
+  // for the trade-off (notifications fire seconds after a slot frees up
+  // during busy periods, up to ~30 minutes during quiet ones).
+  void drainWaitlistQueueLazily();
+
   return validation.data;
 };
+
+async function drainWaitlistQueueLazily(): Promise<void> {
+  try {
+    // Lazy import so the processor module (and its Resend transitive)
+    // only loads when the handler actually fires — keeps the cold-start
+    // cost off the availability path.
+    const { processWaitlistNotifications } = await import(
+      '../../../../lib/mcp/process-waitlist-notifications'
+    );
+    await processWaitlistNotifications({ limit: 5 });
+  } catch (err) {
+    // Never let a queue-drain error affect availability. Log and move on.
+    console.error('[mcp.get_availability] lazy waitlist drain failed', err);
+  }
+}
