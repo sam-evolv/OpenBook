@@ -4,6 +4,7 @@ Track of every PR shipped against docs/mcp-server-spec.md.
 Keep entries short. One line per PR. Newest at top.
 
 ## PRs
+- PR #N: Lazy-fire waitlist notifications via get_availability (no Vercel Pro required)
 - PR #N: Tool 6 — join_waitlist + waitlist notification cron
 - PR #N: Tool 5 — check_booking_status implementation
 - PR #N: Fix — wrap CheckoutClient in Stripe Elements provider

@@ -62,6 +62,17 @@ vi.mock('../../lib/supabase', () => ({
   }),
 }));
 
+// The handler dynamic-imports the waitlist processor as a fire-and-forget
+// drain at the end of the request. Mock it so the test stays hermetic
+// (no Resend, no token signing) and so we can assert it was invoked.
+type DrainSummary = { processed: number; sent: number; failed: number; skipped: number };
+const drainMock = vi.fn<(args: { limit: number }) => Promise<DrainSummary>>(
+  async () => ({ processed: 0, sent: 0, failed: 0, skipped: 0 }),
+);
+vi.mock('../../lib/mcp/process-waitlist-notifications', () => ({
+  processWaitlistNotifications: (args: { limit: number }) => drainMock(args),
+}));
+
 const ctx = { sourceAssistant: 'other', sourceIp: null, requestId: 'req-1' };
 const { getAvailabilityHandler } = await import('../../app/api/mcp/tools/get-availability');
 
@@ -81,6 +92,8 @@ beforeEach(() => {
   rpcResultsByDate = new Map();
   setRpcDefault([]);
   rpcCalls.length = 0;
+  drainMock.mockClear();
+  drainMock.mockResolvedValue({ processed: 0, sent: 0, failed: 0, skipped: 0 });
 });
 
 describe('getAvailabilityHandler', () => {
@@ -251,5 +264,39 @@ describe('getAvailabilityHandler', () => {
       ctx,
     )) as { error?: { code: string } };
     expect(out.error?.code).toBe('RESPONSE_VALIDATION_FAILED');
+  });
+
+  // ── Lazy-fire waitlist drain ──────────────────────────────────────────
+  // The handler kicks off processWaitlistNotifications({ limit: 5 }) right
+  // before returning. It is fire-and-forget (the handler does not await),
+  // so we wait a microtask tick after the handler returns before asserting
+  // the mock was called.
+  it('fires processWaitlistNotifications fire-and-forget (limit 5) after returning', async () => {
+    setRpcForDate('2026-05-08', [
+      { slot_start: '2026-05-08T08:00:00.000Z', slot_end: '2026-05-08T09:00:00.000Z' },
+    ]);
+    const out = (await getAvailabilityHandler(
+      { slug: 'evolv-performance', service_id: SERVICE.id, date_from: '2026-05-08', date_to: '2026-05-08' },
+      ctx,
+    )) as { slots: unknown[] };
+    expect(out.slots).toHaveLength(1);
+
+    // Yield so the dynamic import + drain promise can resolve.
+    await new Promise((r) => setImmediate(r));
+    expect(drainMock).toHaveBeenCalledWith({ limit: 5 });
+  });
+
+  it('a thrown drain does NOT affect the availability response', async () => {
+    drainMock.mockRejectedValueOnce(new Error('boom'));
+    setRpcForDate('2026-05-08', [
+      { slot_start: '2026-05-08T08:00:00.000Z', slot_end: '2026-05-08T09:00:00.000Z' },
+    ]);
+    const out = (await getAvailabilityHandler(
+      { slug: 'evolv-performance', service_id: SERVICE.id, date_from: '2026-05-08', date_to: '2026-05-08' },
+      ctx,
+    )) as { slots?: unknown[]; error?: unknown };
+    expect(out.slots).toHaveLength(1);
+    expect(out.error).toBeUndefined();
+    await new Promise((r) => setImmediate(r));
   });
 });

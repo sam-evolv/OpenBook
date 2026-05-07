@@ -1,12 +1,6 @@
 {
   "framework": "nextjs",
   "regions": ["dub1"],
-  "crons": [
-    {
-      "path": "/api/cron/notify-waitlist",
-      "schedule": "* * * * *"
-    }
-  ],
   "headers": [
     {
       "source": "/(.*)",
