@@ -234,7 +234,11 @@ export const checkBookingStatusOutput = z.object({
       address_for_directions: z.string(),
       business_phone: z.string().optional(),
       cancellation_policy: z.string().optional(),
-      confirmation_email_sent_to: z.string(),
+      // Optional defensively: a confirmed booking should always have a
+      // customer_id (the /c/[token] checkout backfills it before the
+      // PaymentIntent is created), but if a row is somehow confirmed
+      // without one we omit this field rather than emit an empty string.
+      confirmation_email_sent_to: z.string().optional(),
     })
     .optional(),
   next_step_for_user: z.string().optional(),
