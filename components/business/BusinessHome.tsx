@@ -406,6 +406,7 @@ function HeroMeta({ business }: { business: any }) {
 
 function BusinessAvatar({ business, primary }: { business: any; primary: string }) {
   const logo = business.processed_icon_url ?? business.logo_url ?? null;
+  const isProcessedIcon = Boolean(business.processed_icon_url);
   const initial = business.name?.trim()?.[0]?.toUpperCase() ?? 'O';
   return (
     <div
@@ -418,7 +419,11 @@ function BusinessAvatar({ business, primary }: { business: any; primary: string 
     >
       {logo ? (
         /* eslint-disable-next-line @next/next/no-img-element */
-        <img src={logo} alt="" className="h-[58%] w-[58%] object-contain drop-shadow" />
+        <img
+          src={logo}
+          alt=""
+          className={isProcessedIcon ? 'h-full w-full object-cover' : 'h-[58%] w-[58%] object-contain drop-shadow'}
+        />
       ) : (
         <span className="font-serif text-[36px] font-semibold leading-none text-white drop-shadow">
           {initial}

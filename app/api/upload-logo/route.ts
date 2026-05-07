@@ -18,6 +18,8 @@ export const maxDuration = 30;
  *   - cachedLogoPath (optional) — when regenerating with a new bg,
  *     client passes the previously-uploaded logo path so we don't
  *     re-upload the same raw file.
+ *   - cachedLogoUrl (optional) — public logo URL fallback when the
+ *     storage path is not available to the client.
  */
 
 const FINAL_SIZE = 1024;
@@ -40,6 +42,7 @@ export async function POST(req: NextRequest) {
   const file = formData.get('file') as File | null;
   const backgroundInput = (formData.get('background') as string) ?? 'auto';
   const cachedLogoPath = formData.get('cachedLogoPath') as string | null;
+  const cachedLogoUrl = formData.get('cachedLogoUrl') as string | null;
 
   if (!businessId) {
     return NextResponse.json({ error: 'Missing businessId' }, { status: 400 });
@@ -63,10 +66,17 @@ export async function POST(req: NextRequest) {
     if (file) {
       rawBuffer = Buffer.from(await file.arrayBuffer());
       logoPath = `${business.id}/logo-${Date.now()}.png`;
-    } else if (cachedLogoPath) {
+    } else if (cachedLogoPath || cachedLogoUrl) {
+      const resolvedLogoPath = cachedLogoPath ?? storagePathFromPublicLogoUrl(cachedLogoUrl);
+      if (!resolvedLogoPath) {
+        return NextResponse.json(
+          { error: 'Could not reload your logo. Please re-upload it.' },
+          { status: 400 }
+        );
+      }
       const { data: downloadedBuffer, error: dlErr } = await sb.storage
         .from('logos')
-        .download(cachedLogoPath);
+        .download(resolvedLogoPath);
       if (dlErr || !downloadedBuffer) {
         return NextResponse.json(
           { error: 'Could not reload your logo. Please re-upload it.' },
@@ -74,7 +84,7 @@ export async function POST(req: NextRequest) {
         );
       }
       rawBuffer = Buffer.from(await downloadedBuffer.arrayBuffer());
-      logoPath = cachedLogoPath;
+      logoPath = resolvedLogoPath;
     } else {
       return NextResponse.json(
         { error: 'No file provided and no cached logo to recompose' },
@@ -226,6 +236,19 @@ function resolveBackground(args: {
   const lum = relativeLuminance(r, g, b);
   // If logo is light, black bg gives contrast. If logo is dark, white bg gives contrast.
   return lum > 0.5 ? '#080808' : '#FFFFFF';
+}
+
+function storagePathFromPublicLogoUrl(url: string | null): string | null {
+  if (!url) return null;
+  try {
+    const pathname = new URL(url).pathname;
+    const marker = '/logos/';
+    const index = pathname.indexOf(marker);
+    if (index === -1) return null;
+    return decodeURIComponent(pathname.slice(index + marker.length));
+  } catch {
+    return null;
+  }
 }
 
 async function stripBackground(buffer: Buffer): Promise<Buffer> {

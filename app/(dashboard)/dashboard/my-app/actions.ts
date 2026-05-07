@@ -15,6 +15,8 @@ export interface MyAppProfilePayload {
   about_long: string | null;
   city: string | null;
   primary_colour: string | null;
+  logo_url: string | null;
+  processed_icon_url: string | null;
   appConfig: BusinessAppConfig;
 }
 
@@ -50,6 +52,8 @@ export async function saveMyAppProfile(payload: MyAppProfilePayload) {
       about_long: payload.about_long,
       city: payload.city,
       primary_colour,
+      logo_url: payload.logo_url,
+      processed_icon_url: payload.processed_icon_url,
       offers: mergeBusinessAppConfig(previousOffers, appConfig),
     })
     .eq('id', (business as { id: string }).id);

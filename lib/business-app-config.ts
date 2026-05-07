@@ -1,6 +1,6 @@
 export type HeroStyle = 'cinematic' | 'clean' | 'logo-led' | 'gallery-first';
 export type AppIconStyle = 'glossy' | 'flat' | 'dark-glass' | 'gold';
-export type PreviewDevice = 'iphone' | 'android' | 'compact';
+export type PreviewDevice = 'iphone' | 'android';
 
 export interface BusinessAppConfig {
   heroStyle: HeroStyle;

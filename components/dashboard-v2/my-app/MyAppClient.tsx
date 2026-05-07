@@ -10,7 +10,6 @@ import {
   MonitorSmartphone,
   Palette,
   Smartphone,
-  Sparkles,
   Trash2,
   Upload,
 } from 'lucide-react';
@@ -22,9 +21,7 @@ import { saveMyAppProfile } from '@/app/(dashboard)/dashboard/my-app/actions';
 import {
   DEFAULT_TILE_COLOUR,
   TILE_PALETTE,
-  TILE_PALETTE_MAP,
   type TileColourSlug,
-  getTileColour,
   isValidTileColour,
 } from '@/lib/tile-palette';
 import { cn } from '@/lib/utils';
@@ -78,16 +75,19 @@ export function MyAppClient({
   const [status, setStatus] = useState<'idle' | 'saved' | 'error'>('idle');
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState<'hero' | 'gallery' | null>(null);
+  const [logoUploading, setLogoUploading] = useState(false);
+  const [logoPath, setLogoPath] = useState<string | null>(null);
   const [deleting, setDeleting] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [previewVersion, setPreviewVersion] = useState(0);
   const [isPending, startTransition] = useTransition();
   const heroInputRef = useRef<HTMLInputElement | null>(null);
   const galleryInputRef = useRef<HTMLInputElement | null>(null);
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
 
   const colour: TileColourSlug = isValidTileColour(form.primary_colour)
     ? form.primary_colour
     : DEFAULT_TILE_COLOUR;
-  const palette = getTileColour(colour);
   const publicUrl = useMemo(
     () => publicBusinessUrl(form.slug, typeof window === 'undefined' ? undefined : window.location.origin),
     [form.slug],
@@ -98,9 +98,11 @@ export function MyAppClient({
   );
   const heroSrc = form.hero_image_url ?? form.cover_image_url ?? form.gallery_urls[0] ?? null;
   const logoSrc = form.processed_icon_url ?? form.logo_url;
+  const livePreviewSrc = useMemo(
+    () => `${publicUrl}?dashboardPreview=${previewVersion}`,
+    [publicUrl, previewVersion],
+  );
   const description = form.about_long ?? '';
-  const featuredService =
-    services.find((s) => s.id === appConfig.featuredServiceId) ?? services[0] ?? null;
   const readiness = getReadiness({
     name: form.name,
     tagline: form.tagline,
@@ -142,11 +144,14 @@ export function MyAppClient({
         about_long: form.about_long,
         city: form.city,
         primary_colour: form.primary_colour,
+        logo_url: form.logo_url,
+        processed_icon_url: form.processed_icon_url,
         appConfig,
       });
       if (res.ok) {
         setDirty(false);
         setStatus('saved');
+        setPreviewVersion((version) => version + 1);
       } else {
         setStatus('error');
         setError(res.error);
@@ -191,6 +196,73 @@ export function MyAppClient({
       setUploading(null);
     }
   }
+
+  async function uploadLogo(file: File) {
+    if (!file.type.startsWith('image/')) {
+      setError('Please choose an image file.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setError('Logo file too large. Max 5MB.');
+      return;
+    }
+
+    setLogoUploading(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.append('businessId', form.id);
+      fd.append('file', file);
+      fd.append('background', iconStyleToLogoBackground(appConfig.appIconStyle, colour));
+      const res = await fetch('/api/upload-logo', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? 'Upload failed');
+      setLogoPath(data.logoPath ?? null);
+      setForm((f) => ({
+        ...f,
+        logo_url: data.logoUrl,
+        processed_icon_url: data.iconUrl,
+      }));
+      setDirty(true);
+      setStatus('idle');
+    } catch (err: any) {
+      setError(err?.message ?? 'Logo upload failed. Try another image.');
+    } finally {
+      setLogoUploading(false);
+    }
+  }
+
+  async function regenerateLogoIcon(appIconStyle: AppIconStyle) {
+    if (!form.logo_url && !logoPath) return;
+    setLogoUploading(true);
+    setError(null);
+    try {
+      const fd = new FormData();
+      fd.append('businessId', form.id);
+      fd.append('background', iconStyleToLogoBackground(appIconStyle, colour));
+      if (logoPath) {
+        fd.append('cachedLogoPath', logoPath);
+      } else if (form.logo_url) {
+        fd.append('cachedLogoUrl', form.logo_url);
+      }
+      const res = await fetch('/api/upload-logo', { method: 'POST', body: fd });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data?.error ?? 'Could not regenerate icon');
+      setLogoPath(data.logoPath ?? logoPath);
+      setForm((f) => ({ ...f, processed_icon_url: data.iconUrl }));
+      setDirty(true);
+      setStatus('idle');
+    } catch (err: any) {
+      setError(err?.message ?? 'Could not update logo treatment.');
+    } finally {
+      setLogoUploading(false);
+    }
+  }
+
+  const changeAppIconStyle = (appIconStyle: AppIconStyle) => {
+    updateAppConfig({ appIconStyle });
+    if (form.logo_url || logoPath) void regenerateLogoIcon(appIconStyle);
+  };
 
   async function deleteImage(kind: 'hero' | 'gallery', index?: number) {
     const key = kind === 'hero' ? 'hero' : `gallery-${index}`;
@@ -357,16 +429,25 @@ export function MyAppClient({
                   value={appConfig.heroStyle}
                   onChange={(heroStyle) => updateAppConfig({ heroStyle: heroStyle as HeroStyle })}
                 />
-                <PresetGroup
-                  title="App icon"
-                  options={[
-                    { value: 'glossy', label: 'Glossy', description: 'iPhone home-screen feel' },
-                    { value: 'flat', label: 'Flat', description: 'Cleaner brand tile' },
-                    { value: 'dark-glass', label: 'Dark glass', description: 'Premium and subtle' },
-                    { value: 'gold', label: 'Gold', description: 'OpenBook signature' },
-                  ]}
-                  value={appConfig.appIconStyle}
-                  onChange={(appIconStyle) => updateAppConfig({ appIconStyle: appIconStyle as AppIconStyle })}
+                <LogoStudio
+                  rawLogo={form.logo_url}
+                  processedIcon={form.processed_icon_url}
+                  businessName={form.name}
+                  appIconStyle={appConfig.appIconStyle}
+                  uploading={logoUploading}
+                  onUpload={() => logoInputRef.current?.click()}
+                  onStyleChange={changeAppIconStyle}
+                />
+                <input
+                  ref={logoInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    e.target.value = '';
+                    if (file) void uploadLogo(file);
+                  }}
                 />
               </div>
 
@@ -636,36 +717,32 @@ export function MyAppClient({
               Preview
             </div>
             <div className="flex rounded-lg border border-paper-border bg-paper-surface p-0.5 dark:border-ink-border dark:bg-ink-surface">
-              {(['iphone', 'android', 'compact'] as const).map((device) => (
+              {(['iphone', 'android'] as const).map((device) => (
                 <button
                   key={device}
                   type="button"
                   onClick={() => setPreviewDevice(device)}
                   className={cn(
-                    'rounded-md px-2.5 py-1 text-[11px] font-medium capitalize transition',
+                    'rounded-md px-2.5 py-1 text-[11px] font-medium transition',
                     previewDevice === device
                       ? 'bg-gold text-black'
                       : 'text-paper-text-3 hover:text-paper-text-1 dark:text-ink-text-3 dark:hover:text-ink-text-1',
                   )}
                 >
-                  {device}
+                  {device === 'iphone' ? 'iPhone' : 'Android'}
                 </button>
               ))}
             </div>
           </div>
-          <AppPreview
-            name={form.name}
-            tagline={form.tagline}
-            city={form.city}
-            category={form.category}
-            heroSrc={heroSrc}
-            logoSrc={logoSrc}
-            gallery={form.gallery_urls}
-            palette={palette}
-            config={appConfig}
-            featuredService={featuredService}
+          <LiveAppPreview
+            src={livePreviewSrc}
             previewDevice={previewDevice}
           />
+          {dirty && (
+            <p className="mt-3 rounded-xl border border-gold-border bg-gold-soft px-3 py-2 text-[11.5px] leading-snug text-paper-text-2 dark:text-ink-text-2">
+              Save changes to refresh the live app preview.
+            </p>
+          )}
         </aside>
       </div>
     </>
@@ -757,6 +834,115 @@ function PresetGroup({
   );
 }
 
+function LogoStudio({
+  rawLogo,
+  processedIcon,
+  businessName,
+  appIconStyle,
+  uploading,
+  onUpload,
+  onStyleChange,
+}: {
+  rawLogo: string | null;
+  processedIcon: string | null;
+  businessName: string;
+  appIconStyle: AppIconStyle;
+  uploading: boolean;
+  onUpload: () => void;
+  onStyleChange: (style: AppIconStyle) => void;
+}) {
+  const initial = businessName.trim().charAt(0).toUpperCase() || 'O';
+  const styles: Array<{ value: AppIconStyle; label: string }> = [
+    { value: 'glossy', label: 'Auto' },
+    { value: 'gold', label: 'Gold' },
+    { value: 'dark-glass', label: 'Black' },
+    { value: 'flat', label: 'White' },
+  ];
+
+  return (
+    <div>
+      <div className="mb-2 text-[11.5px] font-medium text-paper-text-2 dark:text-ink-text-2">
+        Logo and app tile
+      </div>
+      <div className="rounded-xl border border-paper-border bg-paper-surface p-4 dark:border-ink-border dark:bg-ink-surface">
+        <div className="grid grid-cols-[minmax(0,1fr)_96px] gap-4">
+          <div>
+            <div className="flex flex-wrap gap-1.5">
+              {styles.map((style) => {
+                const active = appIconStyle === style.value;
+                return (
+                  <button
+                    key={style.value}
+                    type="button"
+                    onClick={() => onStyleChange(style.value)}
+                    disabled={uploading}
+                    className={cn(
+                      'rounded-full border px-2.5 py-1 text-[11.5px] font-medium transition',
+                      active
+                        ? 'border-gold-border bg-gold-soft text-paper-text-1 dark:text-ink-text-1'
+                        : 'border-paper-border bg-paper-surface2 text-paper-text-3 hover:text-paper-text-1 dark:border-ink-border dark:bg-ink-surface2 dark:text-ink-text-3 dark:hover:text-ink-text-1',
+                    )}
+                  >
+                    {style.label}
+                  </button>
+                );
+              })}
+            </div>
+            <p className="mt-2 text-[11.5px] leading-snug text-paper-text-3 dark:text-ink-text-3">
+              Upload any logo. OpenBook trims it, improves contrast, and turns it into an app-style tile.
+            </p>
+            <Button
+              className="mt-3"
+              variant="secondary"
+              icon={uploading ? <Loader2 className="animate-spin" size={13} /> : <Upload size={13} />}
+              onClick={onUpload}
+              disabled={uploading}
+            >
+              {processedIcon ? 'Replace logo' : 'Upload logo'}
+            </Button>
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <div className="relative h-24 w-24 overflow-hidden rounded-[24px] border border-white/10 bg-black shadow-[0_16px_34px_rgba(0,0,0,0.36),inset_0_1px_0_rgba(255,255,255,0.18)]">
+              {processedIcon ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={processedIcon} alt="" className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-[#F8DE83] via-[#D4AF37] to-[#8A641D] font-serif text-[42px] text-black">
+                  {initial}
+                </div>
+              )}
+              {uploading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-black/45">
+                  <Loader2 className="h-5 w-5 animate-spin text-white" />
+                </div>
+              )}
+            </div>
+            <span className="text-[10.5px] font-semibold uppercase tracking-[0.08em] text-gold">
+              App tile
+            </span>
+          </div>
+        </div>
+        {rawLogo && (
+          <div className="mt-4 flex items-center gap-3 rounded-lg border border-paper-border bg-paper-bg/60 p-3 dark:border-ink-border dark:bg-ink-bg/40">
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-white p-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={rawLogo} alt="" className="max-h-full max-w-full object-contain" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-[12.5px] font-medium text-paper-text-1 dark:text-ink-text-1">
+                Source logo
+              </p>
+              <p className="mt-0.5 text-[11.5px] text-paper-text-3 dark:text-ink-text-3">
+                Preserved separately from the generated app tile.
+              </p>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function ToggleRow({
   label,
   checked,
@@ -840,170 +1026,51 @@ function FocalPointPicker({
   );
 }
 
-function AppPreview({
-  name,
-  tagline,
-  city,
-  category,
-  heroSrc,
-  logoSrc,
-  gallery,
-  palette,
-  config,
-  featuredService,
+function LiveAppPreview({
+  src,
   previewDevice,
 }: {
-  name: string;
-  tagline: string | null;
-  city: string | null;
-  category: string | null;
-  heroSrc: string | null;
-  logoSrc: string | null;
-  gallery: string[];
-  palette: (typeof TILE_PALETTE_MAP)[TileColourSlug];
-  config: BusinessAppConfig;
-  featuredService: ServiceRow | null;
+  src: string;
   previewDevice: PreviewDevice;
 }) {
-  const isClean = config.heroStyle === 'clean';
-  const isLogoLed = config.heroStyle === 'logo-led';
-  const showGallery = config.sections.gallery && gallery.length > 0;
-  const shellWidth =
-    previewDevice === 'compact' ? 'max-w-[320px]' : previewDevice === 'android' ? 'max-w-[360px]' : 'max-w-[380px]';
-  const heroHeight = config.heroStyle === 'gallery-first' ? 275 : isLogoLed ? 250 : 330;
-  const iconStyle = iconStyleFor(config.appIconStyle, palette);
+  const size =
+    previewDevice === 'android'
+      ? { width: 360, height: 720, radius: 30 }
+      : { width: 390, height: 844, radius: 44 };
 
   return (
-    <div className={cn('rounded-[34px] border border-paper-borderStrong bg-paper-surface p-3 shadow-card-light dark:border-ink-borderStrong dark:bg-ink-surface dark:shadow-card-dark', shellWidth)}>
-      <div className="overflow-hidden rounded-[28px] bg-black text-white shadow-[inset_0_0_0_1px_rgba(255,255,255,0.08)]">
-        <div className="relative min-h-[620px]">
-          <div className="relative overflow-hidden" style={{ height: heroHeight }}>
-            {heroSrc && !isLogoLed ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={heroSrc}
-                alt=""
-                className="h-full w-full object-cover"
-                style={{ objectPosition: `${config.heroFocalPoint.x}% ${config.heroFocalPoint.y}%` }}
-              />
-            ) : (
-              <div
-                className="h-full w-full"
-                style={{
-                  background: `radial-gradient(circle at 50% 28%, ${palette.mid}88, transparent 38%), linear-gradient(150deg, #171717 0%, #050505 100%)`,
-                }}
-              />
-            )}
-            <div
-              className={cn(
-                'absolute inset-0',
-                isClean
-                  ? 'bg-[linear-gradient(180deg,rgba(0,0,0,0.02)_0%,rgba(0,0,0,0.18)_42%,rgba(0,0,0,0.82)_100%)]'
-                  : 'bg-[linear-gradient(180deg,rgba(0,0,0,0.08)_0%,rgba(0,0,0,0.30)_48%,rgba(0,0,0,0.96)_100%)]',
-              )}
-            />
-            <div className="absolute bottom-0 left-0 right-0 p-5">
-              <div className="mb-3 flex items-end gap-3">
-                <div
-                  className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl border border-white/15 text-[30px] font-bold shadow-[0_16px_38px_rgba(0,0,0,0.45)]"
-                  style={iconStyle}
-                >
-                  {logoSrc ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img src={logoSrc} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    name.charAt(0).toUpperCase()
-                  )}
-                </div>
-                <div className="min-w-0 pb-1">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/58">
-                    Private booking app
-                  </div>
-                  <div className="mt-1 truncate text-[12px] text-white/70">
-                    {[category, city].filter(Boolean).join(' · ') || 'Book direct'}
-                  </div>
-                </div>
-              </div>
-              <h3 className="font-serif text-[34px] font-semibold leading-[0.95] tracking-tight">
-                {name || 'Your business'}
-              </h3>
-              {tagline && <p className="mt-2 text-[13px] leading-snug text-white/78">{tagline}</p>}
-            </div>
-          </div>
-
-          <div className="space-y-5 px-5 py-6">
-            <div className="grid grid-cols-3 gap-2">
-              {['Style', 'From', 'Time'].map((label, i) => (
-                <div key={label} className="rounded-2xl bg-white/[0.075] px-3 py-3 text-center">
-                  <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-white/38">
-                    {label}
-                  </div>
-                  <div className="mt-1 truncate text-[12px] font-semibold" style={{ color: palette.mid }}>
-                    {i === 0 ? category || 'Service' : i === 1 ? servicePrice(featuredService) : serviceDuration(featuredService)}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {showGallery && (
-              <div>
-                <div className="mb-3 flex items-center justify-between">
-                  <div className="text-[10px] font-semibold uppercase tracking-[0.16em] text-white/45">
-                    Gallery
-                  </div>
-                  <Sparkles className="h-4 w-4" style={{ color: palette.mid }} />
-                </div>
-                <div className={cn('grid gap-2', config.heroStyle === 'gallery-first' ? 'grid-cols-4' : 'grid-cols-3')}>
-                  {gallery.slice(0, config.heroStyle === 'gallery-first' ? 4 : 3).map((src) => (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img key={src} src={src} alt="" className="aspect-square rounded-xl object-cover" />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div className="rounded-full px-5 py-3 text-center text-[13px] font-semibold text-black" style={{ background: `linear-gradient(180deg, ${palette.light}, ${palette.mid})` }}>
-              {config.ctaLabel}
-            </div>
-          </div>
-        </div>
+    <div
+      className="mx-auto border border-paper-borderStrong bg-paper-surface p-3 shadow-card-light dark:border-ink-borderStrong dark:bg-ink-surface dark:shadow-card-dark"
+      style={{
+        width: size.width,
+        maxWidth: '100%',
+        borderRadius: size.radius + 10,
+      }}
+    >
+      <div
+        className="relative overflow-hidden bg-black shadow-[inset_0_0_0_1px_rgba(255,255,255,0.10)]"
+        style={{
+          height: size.height,
+          maxHeight: 'calc(100dvh - 190px)',
+          borderRadius: size.radius,
+        }}
+      >
+        <iframe
+          key={src}
+          src={src}
+          title="Live customer app preview"
+          className="h-full w-full border-0 bg-black"
+        />
       </div>
     </div>
   );
 }
 
-function iconStyleFor(style: AppIconStyle, palette: (typeof TILE_PALETTE_MAP)[TileColourSlug]) {
-  if (style === 'flat') return { background: palette.mid, color: '#111' };
-  if (style === 'dark-glass') {
-    return {
-      background: 'linear-gradient(180deg, rgba(42,42,48,0.96), rgba(8,8,12,0.96))',
-      color: '#fff',
-    };
-  }
-  if (style === 'gold') {
-    return {
-      background: 'linear-gradient(135deg, #F8DE83, #D4AF37 52%, #8A641D)',
-      color: '#111',
-    };
-  }
-  return {
-    background: `radial-gradient(circle at 30% 18%, #fff8 0%, transparent 24%), linear-gradient(135deg, ${palette.light}, ${palette.mid} 52%, ${palette.dark})`,
-    color: '#111',
-  };
-}
-
-function servicePrice(service: ServiceRow | null): string {
-  if (!service) return 'Free';
-  return service.price_cents === 0 ? 'Free' : `€${(service.price_cents / 100).toFixed(0)}`;
-}
-
-function serviceDuration(service: ServiceRow | null): string {
-  if (!service) return '1h';
-  const minutes = service.duration_minutes;
-  if (minutes < 60) return `${minutes}m`;
-  const hours = Math.floor(minutes / 60);
-  const rest = minutes % 60;
-  return rest ? `${hours}h ${rest}m` : `${hours}h`;
+function iconStyleToLogoBackground(style: AppIconStyle, colour: TileColourSlug): string {
+  if (style === 'dark-glass') return 'black';
+  if (style === 'flat') return 'white';
+  if (style === 'gold') return 'primary';
+  return colour === 'gold' ? 'auto' : 'primary';
 }
 
 function getReadiness(input: {
