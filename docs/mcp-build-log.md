@@ -4,6 +4,7 @@ Track of every PR shipped against docs/mcp-server-spec.md.
 Keep entries short. One line per PR. Newest at top.
 
 ## PRs
+- PR #N: Tool 2 — get_availability implementation
 - PR #N: Docs — Appendix D documenting db ↔ spec column mappings
 - PR #N: Tool 1 — get_business_info implementation
 - PR #N: MCP scaffolding 5b — rate limiting, logging, middleware, tests
