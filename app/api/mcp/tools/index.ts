@@ -7,6 +7,7 @@ import { getAvailabilityHandler } from './get-availability';
 import { searchBusinessesHandler } from './search-businesses';
 import { holdAndCheckoutHandler } from './hold-and-checkout';
 import { checkBookingStatusHandler } from './check-booking-status';
+import { joinWaitlistHandler } from './join-waitlist';
 
 export type ToolContext = {
   sourceAssistant: string;
@@ -24,7 +25,7 @@ export const TOOL_HANDLERS: Record<string, ToolHandler> = {
   get_availability: getAvailabilityHandler,
   hold_and_checkout: holdAndCheckoutHandler,
   check_booking_status: checkBookingStatusHandler,
-  join_waitlist: notImplemented,
+  join_waitlist: joinWaitlistHandler,
   get_promoted_inventory: notImplemented,
   record_post_booking_feedback: notImplemented,
 };
