@@ -25,7 +25,47 @@ const ctx = { sourceAssistant: 'other', sourceIp: null, requestId: 'req-1' };
 
 const { getBusinessInfoHandler } = await import('../../app/api/mcp/tools/get-business-info');
 
-const baseRow = () => ({
+type Row = {
+  id?: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  about_long: string | null;
+  category: string;
+  address: string | null;
+  address_line: string | null;
+  city: string | null;
+  space_description: string | null;
+  amenities: string[] | null;
+  accessibility_notes: string | null;
+  parking_info: string | null;
+  nearest_landmark: string | null;
+  public_transport_info: string | null;
+  website: string | null;
+  phone: string | null;
+  is_live: boolean;
+  business_hours: Array<{
+    day_of_week: number;
+    open_time: string | null;
+    close_time: string | null;
+    is_open: boolean;
+    is_closed: boolean;
+  }>;
+  business_closures: Array<{ date: string; name: string | null }>;
+  services: Array<{
+    id: string;
+    name: string;
+    description: string | null;
+    duration_minutes: number;
+    price_cents: number;
+    sort_order: number | null;
+    is_active: boolean;
+  }>;
+  business_media: Array<{ id: string; url: string; caption: string | null; kind: string; sort_order: number | null }>;
+  reviews: Array<{ rating: number; comment: string | null; created_at: string | null }>;
+};
+
+const baseRow = (): Row => ({
   id: '11111111-1111-1111-1111-111111111111',
   slug: 'evolv-performance',
   name: 'Evolv Performance',
