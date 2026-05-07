@@ -1319,6 +1319,8 @@ The mappings below are the ones discovered while implementing `get_business_info
 | `address.line_1` | `address_line` (fallback: `address`) | |
 | `address.line_2` | — | Not stored. Omitted from output when not in db. |
 | `address.city` | `city` | Same name. |
+| `short_description` | `tagline` (fallback: `description`) | Optional in the wire schema. Tool handlers truncate at the last word boundary ≤140 chars and append `…` if truncating; omit the field when neither column has content. Discovered in PR 111 (`search_businesses`). |
+| (recency proxy) | `created_at` | The spec's `RecencyScore` (Section 6) is sourced from `businesses.created_at` until `updated_at` columns land on `businesses` / `services` / `business_hours`. Decision documented in PR 111; weight is 0.05 so the impact is bounded. |
 | `address.county` | — | Not stored. Returned as `""` for now to keep the wire shape stable; populate when the column lands. |
 | `address.eircode` | — | Not stored. Omitted from output. |
 | `website_url` | `website` | |

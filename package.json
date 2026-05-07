@@ -17,6 +17,7 @@
     "@react-email/render": "^2.0.8",
     "@supabase/ssr": "^0.10.2",
     "@supabase/supabase-js": "^2.103.2",
+    "chrono-node": "^2.9.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
     "geist": "^1.7.0",
