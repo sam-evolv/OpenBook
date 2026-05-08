@@ -60,17 +60,22 @@ const cardStyle: CSSProperties = {
   width: '100%',
 };
 
+// Visually distinct from but harmonious with the success-state's "Add to
+// Calendar" / "Get Directions" buttons: same shape, but a muted-gold border
+// and gold text mark it as the conversion CTA. Solid gold is reserved for
+// the primary "Confirm Booking" CTA on the ready state.
 const buttonStyle: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
   justifyContent: 'center',
   gap: 8,
   width: '100%',
+  minHeight: 52,
   padding: '14px 16px',
-  borderRadius: 10,
+  borderRadius: 14,
   background: 'var(--ob-co-surface-elev)',
-  border: '1px solid var(--ob-co-border-quiet)',
-  color: 'var(--ob-co-text-1)',
+  border: '1px solid var(--ob-co-gold-lo)',
+  color: 'var(--ob-co-gold)',
   fontFamily: 'var(--font-geist-sans, system-ui, sans-serif)',
   fontWeight: 500,
   fontSize: 15,
@@ -112,7 +117,13 @@ export default function BridgeCard({ sourceAssistant }: Props) {
       </p>
       {variant.buttonLabel && variant.buttonHref ? (
         <div style={{ marginTop: 16 }}>
-          <a href={variant.buttonHref} target="_blank" rel="noreferrer" style={buttonStyle}>
+          {/* Same-tab navigation: returning to the assistant should feel like
+              a hand-off, not a new browser tab on top of OpenBook. */}
+          <a
+            href={variant.buttonHref}
+            aria-label={`${variant.buttonLabel} to continue your conversation`}
+            style={buttonStyle}
+          >
             <ArrowUpRight size={16} color="var(--ob-co-gold)" aria-hidden />
             <span>{variant.buttonLabel}</span>
           </a>
