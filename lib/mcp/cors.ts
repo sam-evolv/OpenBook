@@ -6,7 +6,7 @@
 // Gemini can talk to us.
 
 const ALLOWED_HEADERS = 'Content-Type, Authorization, MCP-Protocol-Version';
-const ALLOWED_METHODS = 'POST, OPTIONS';
+const DEFAULT_METHODS = 'POST, OPTIONS';
 const EXPOSED_HEADERS = 'MCP-Protocol-Version';
 const MAX_AGE = '86400';
 
@@ -20,11 +20,11 @@ export function corsHeaders(origin: string | null): Record<string, string> {
   return headers;
 }
 
-export function preflightResponse(origin: string | null): Response {
+export function preflightResponse(origin: string | null, methods: string = DEFAULT_METHODS): Response {
   const allowOrigin = origin ?? '*';
   const headers: Record<string, string> = {
     'Access-Control-Allow-Origin': allowOrigin,
-    'Access-Control-Allow-Methods': ALLOWED_METHODS,
+    'Access-Control-Allow-Methods': methods,
     'Access-Control-Allow-Headers': ALLOWED_HEADERS,
     'Access-Control-Max-Age': MAX_AGE,
   };
