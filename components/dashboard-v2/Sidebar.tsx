@@ -59,6 +59,7 @@ const PLAN_LABEL: Record<SidebarPlan, string> = {
 
 interface SidebarProps {
   businessName?: string;
+  businessLogoUrl?: string | null;
   userName?: string;
   userInitials?: string;
   plan?: SidebarPlan;
@@ -69,6 +70,7 @@ interface SidebarProps {
 
 export function Sidebar({
   businessName = 'Your business',
+  businessLogoUrl = null,
   userName = 'You',
   userInitials = 'YO',
   plan = 'free',
@@ -105,9 +107,17 @@ export function Sidebar({
       )}
     >
       <div className="flex items-center gap-3 p-5">
-        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br from-gold to-gold-muted text-[15px] font-semibold text-white shadow-[0_0_0_1px_rgba(212,175,55,0.25)]">
-          {businessName[0]}
-        </div>
+        {businessLogoUrl ? (
+          <img
+            src={businessLogoUrl}
+            alt={businessName}
+            className="h-10 w-10 shrink-0 rounded-[10px] object-cover"
+          />
+        ) : (
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br from-gold to-gold-muted text-[15px] font-semibold text-white shadow-[0_0_0_1px_rgba(212,175,55,0.25)]">
+            {businessName[0]}
+          </div>
+        )}
         <div className="min-w-0 flex-1">
           <div className="truncate text-[16px] font-semibold leading-tight text-paper-text-1 dark:text-ink-text-1">
             {businessName}
@@ -128,14 +138,14 @@ export function Sidebar({
               className={cn(
                 'group relative flex items-center gap-3 px-[14px] py-[12px] transition-colors duration-150 ease-out',
                 isActive
-                  ? 'bg-paper-surface3 text-gold dark:bg-ink-surface3 font-medium'
+                  ? 'bg-gold-soft text-gold font-medium'
                   : 'text-paper-text-2 dark:text-ink-text-2 hover:bg-paper-surface dark:hover:bg-ink-surface hover:text-paper-text-1 dark:hover:text-ink-text-1',
               )}
             >
               {isActive && (
                 <span
                   aria-hidden
-                  className="absolute left-0 top-0 bottom-0 w-[3px] rounded-r-sm bg-gold"
+                  className="absolute left-0 top-0 bottom-0 w-[3px] bg-gold"
                 />
               )}
               <Icon
@@ -234,7 +244,7 @@ export function MobileDashboardNav({
   }));
 
   return (
-    <header className="sticky top-0 z-40 border-b border-paper-border bg-paper-bg/95 px-4 py-3 backdrop-blur-xl dark:border-ink-border dark:bg-ink-bg/95 lg:hidden">
+    <header className="sticky top-0 z-40 border-b border-paper-border bg-paper-bg/95 px-4 py-3 backdrop-blur-xl dark:border-ink-border dark:bg-ink-bg/95 xl:hidden">
       <div className="flex items-center gap-3">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-gold to-gold-muted text-[14px] font-bold text-black">
           {businessName[0]}
