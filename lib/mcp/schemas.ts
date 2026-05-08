@@ -59,7 +59,6 @@ const sampleSlot = z.object({
 export const searchBusinessesOutput = z.object({
   results: z.array(
     z.object({
-      business_id: z.string().uuid(),
       slug: z.string(),
       name: z.string(),
       category: z.string(),
@@ -285,7 +284,6 @@ export const getPromotedInventoryInput = z.object({
 export const getPromotedInventoryOutput = z.object({
   results: z.array(
     z.object({
-      business_id: z.string().uuid(),
       slug: z.string(),
       name: z.string(),
       category: z.string(),

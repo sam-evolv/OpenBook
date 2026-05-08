@@ -4,6 +4,7 @@ Track of every PR shipped against docs/mcp-server-spec.md.
 Keep entries short. One line per PR. Newest at top.
 
 ## PRs
+- PR #N: Strip internal UUIDs from search/promoted response shapes
 - PR #N: Add MCP tool annotations (directory submission requirement)
 - PR #N: Add updated_at columns + re-enable RecencyScore
 - PR #N: Tool 8 — record_post_booking_feedback (final tool!)

@@ -553,7 +553,6 @@ export const searchBusinessesHandler: ToolHandler = async (input, ctx: ToolConte
     const shortDesc = deriveShortDescription({ tagline: cand.tagline, description: cand.description });
 
     const result: Record<string, unknown> = {
-      business_id: cand.id,
       slug: cand.slug,
       name: cand.name,
       category: cand.category ?? '',
@@ -579,7 +578,7 @@ export const searchBusinessesHandler: ToolHandler = async (input, ctx: ToolConte
     parsedWhen: window.from,
     customerContext: customer_context ?? null,
     resultCount: results.length,
-    resultBusinessIds: results.map((r) => r.business_id as string),
+    resultBusinessIds: ranked.map((r) => r.business.id as string),
   });
 
   // We allow extra fields when the score-breakdown flag is on, so only run the

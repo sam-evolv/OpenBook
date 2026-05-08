@@ -281,12 +281,11 @@ Rationale: read-only against our schema, but `openWorldHint: true` because the h
 ```
 
 
-**Output schema.**
+**Output schema.** Consumers identify businesses by `slug` — internal UUIDs are not exposed.
 
 ```typescript
 {
   results: Array<{
-    business_id: string;
     slug: string;
     name: string;
     category: string;
@@ -659,12 +658,11 @@ Rationale: pure Supabase reads against `mcp_promoted_slots` plus the existing `g
 ```
 
 
-**Output schema.**
+**Output schema.** Consumers identify businesses by `slug` — internal UUIDs are not exposed.
 
 ```typescript
 {
   results: Array<{
-    business_id: string;
     slug: string;
     name: string;
     category: string;
