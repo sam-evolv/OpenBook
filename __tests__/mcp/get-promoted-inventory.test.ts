@@ -110,12 +110,25 @@ function row(overrides: Partial<Record<string, unknown>> = {}): Record<string, u
 }
 
 // Make the rpc say the slot IS available (anti-stale check passes).
+//
+// The handler groups candidates that share (business_id, service_id, day)
+// into ONE rpc call and matches each row's slot_start against the returned
+// slot list. So when several test rows share that tuple, this helper must
+// ACCUMULATE their slot_starts under the same key — not overwrite. Earlier
+// versions of this helper used `Map.set` unconditionally, which silently
+// dropped all-but-the-last row on shared-key cases and caused the
+// "happy path > returns grouped results" and "flash_sale rows include
+// discount_percent" tests to under-count slots.
 function markAvailable(rows: Array<Record<string, unknown>>) {
   for (const r of rows) {
     const key = `${r.business_id}::${r.service_id}::${dayKey(r.slot_start as string)}`;
-    rpcCallsByKey.set(key, [
-      { slot_start: new Date(r.slot_start as string).toISOString(), slot_end: r.slot_end as string },
-    ]);
+    const slot = {
+      slot_start: new Date(r.slot_start as string).toISOString(),
+      slot_end: r.slot_end as string,
+    };
+    const existing = rpcCallsByKey.get(key);
+    if (existing) existing.push(slot);
+    else rpcCallsByKey.set(key, [slot]);
   }
 }
 
