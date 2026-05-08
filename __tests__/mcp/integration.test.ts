@@ -60,8 +60,11 @@ describe('POST /api/mcp', () => {
   it('returns server info on initialize', async () => {
     const { json } = await callJson({ jsonrpc: '2.0', id: 1, method: 'initialize' });
     const result = json.result as Record<string, unknown>;
-    expect(result.name).toBe('OpenBook');
-    expect(result.version).toBe('1.0.0');
+    const serverInfo = result.serverInfo as Record<string, unknown>;
+    expect(serverInfo.name).toBe('OpenBook');
+    expect(serverInfo.version).toBe('1.0.0');
+    expect(result.name).toBeUndefined();
+    expect(result.version).toBeUndefined();
     expect(result.protocolVersion).toBe('2025-06-18');
   });
 
