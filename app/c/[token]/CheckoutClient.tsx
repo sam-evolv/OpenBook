@@ -26,6 +26,9 @@ import Countdown from './components/Countdown';
 import PaymentBlock from './components/PaymentBlock';
 import ConfirmCTA from './components/ConfirmCTA';
 import { Field, PhoneField, TextAreaField } from './components/Field';
+import BridgeCard, { type AssistantSource } from './components/BridgeCard';
+import { pickContextualLine } from '@/lib/checkout/contextual-lines';
+import { categoryIconFor } from '@/lib/checkout/category-icons';
 
 export type CustomerHints = {
   name: string | null;
@@ -65,6 +68,7 @@ export type CheckoutBundle = {
     price_cents: number;
   };
   customer_hints: CustomerHints;
+  source_assistant: string | null;
   is_free: boolean;
   is_promoted: boolean;
   original_price_cents: number | null;
@@ -604,8 +608,34 @@ function PreFillPill() {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// Confirmed state (UNCHANGED from previous design — PR 2 will redesign it)
+// Confirmed state — name+time-aware headline, contextual line, action row,
+// and the assistant bridge card.
 // ──────────────────────────────────────────────────────────────────────────
+
+function firstNameOf(full: string | null): string | null {
+  if (!full) return null;
+  const trimmed = full.trim().split(/\s+/)[0];
+  return trimmed && trimmed.length > 0 ? trimmed : null;
+}
+
+function pickConfirmedHeadline(startIso: string, firstName: string | null): string {
+  const startMs = new Date(startIso).getTime();
+  const nowMs = Date.now();
+  const diffMs = startMs - nowMs;
+  const oneHour = 60 * 60 * 1000;
+  const oneDay = 24 * oneHour;
+  const trailing = firstName ? `, ${firstName}` : '';
+  if (diffMs > oneDay) return `Booking confirmed${trailing}.`;
+  if (diffMs > oneHour) return `You're set${trailing}.`;
+  return `All set${trailing}.`;
+}
+
+function normaliseAssistant(raw: string | null | undefined): AssistantSource {
+  if (!raw) return null;
+  const v = raw.toLowerCase();
+  if (v === 'chatgpt' || v === 'claude' || v === 'gemini' || v === 'siri') return v;
+  return 'other';
+}
 
 function ConfirmedView({
   bundle,
@@ -622,58 +652,97 @@ function ConfirmedView({
     ? `sms:${bundle.business.phone.replace(/\s+/g, '')}`
     : null;
 
+  const firstName = firstNameOf(bundle.customer_hints.name);
+  const headline = pickConfirmedHeadline(bundle.booking.starts_at, firstName);
+  const contextualLine = pickContextualLine(bookingId, bundle.business.category);
+  const Icon = categoryIconFor(bundle.business.category);
+
   return (
-    <section
-      style={{
-        background: 'var(--ob-co-surface)',
-        border: '1px solid var(--ob-co-border-quiet)',
-        borderRadius: 12,
-        padding: 32,
-        textAlign: 'center',
-      }}
-    >
-      <div
-        aria-hidden
+    <div style={{ display: 'grid', gap: 24 }}>
+      <section
         style={{
-          width: 64,
-          height: 64,
-          borderRadius: 32,
-          background: 'var(--ob-co-gold)',
-          color: '#080808',
-          display: 'grid',
-          placeItems: 'center',
-          margin: '0 auto 16px',
-          fontSize: 32,
-          fontWeight: 700,
+          background: 'var(--ob-co-surface)',
+          border: '1px solid var(--ob-co-border-quiet)',
+          borderRadius: 12,
+          padding: 32,
+          textAlign: 'center',
         }}
       >
-        ✓
-      </div>
-      <h1 style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>You&apos;re booked</h1>
-      <p style={{ marginTop: 8, fontSize: 17, color: 'var(--ob-co-text-2)' }}>
-        {bundle.service.name} with {bundle.business.name}
-        <br />
-        {bundle.formatted.date_human}.
-      </p>
-      <p style={{ marginTop: 4, fontSize: 13, color: 'var(--ob-co-text-3)' }}>
-        Reference: {bookingId.slice(0, 8)}
-      </p>
-      <div style={{ marginTop: 24, display: 'grid', gap: 10 }}>
-        <SecondaryLink href={`/api/c/${bundle.token}/ics`} download>
-          Add to Calendar
-        </SecondaryLink>
-        {mapsUrl ? (
-          <SecondaryLink href={mapsUrl} target="_blank" rel="noreferrer">
-            Get Directions
+        <div
+          aria-hidden
+          style={{
+            width: 64,
+            height: 64,
+            borderRadius: 32,
+            background: 'var(--ob-co-gold)',
+            color: '#080808',
+            display: 'grid',
+            placeItems: 'center',
+            margin: '0 auto 16px',
+            fontSize: 32,
+            fontWeight: 700,
+          }}
+        >
+          ✓
+        </div>
+        <h1
+          suppressHydrationWarning
+          style={{
+            fontFamily: 'var(--font-geist-sans, system-ui, sans-serif)',
+            fontWeight: 600,
+            fontSize: 'clamp(28px, 6vw, 32px)',
+            lineHeight: 1.2,
+            letterSpacing: '-0.01em',
+            margin: 0,
+            color: 'var(--ob-co-text-1)',
+          }}
+        >
+          {headline}
+        </h1>
+        <p
+          style={{
+            margin: 0,
+            marginTop: 12,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            fontFamily: 'var(--font-geist-sans, system-ui, sans-serif)',
+            fontStyle: 'italic',
+            fontWeight: 400,
+            fontSize: 16,
+            color: 'var(--ob-co-text-2)',
+          }}
+        >
+          <Icon size={18} color="var(--ob-co-gold)" aria-hidden />
+          <span>{contextualLine}</span>
+        </p>
+        <p style={{ marginTop: 16, fontSize: 17, color: 'var(--ob-co-text-2)' }}>
+          {bundle.service.name} with {bundle.business.name}
+          <br />
+          {bundle.formatted.date_human}.
+        </p>
+        <p style={{ marginTop: 4, fontSize: 13, color: 'var(--ob-co-text-3)' }}>
+          Reference: {bookingId.slice(0, 8)}
+        </p>
+        <div style={{ marginTop: 24, display: 'grid', gap: 10 }}>
+          <SecondaryLink href={`/api/c/${bundle.token}/ics`} download>
+            Add to Calendar
           </SecondaryLink>
-        ) : null}
-        {messageUrl ? (
-          <SecondaryLink href={messageUrl}>
-            Message {bundle.business.name.split(' ')[0]}
-          </SecondaryLink>
-        ) : null}
-      </div>
-    </section>
+          {mapsUrl ? (
+            <SecondaryLink href={mapsUrl} target="_blank" rel="noreferrer">
+              Get Directions
+            </SecondaryLink>
+          ) : null}
+          {messageUrl ? (
+            <SecondaryLink href={messageUrl}>
+              Message {bundle.business.name.split(' ')[0]}
+            </SecondaryLink>
+          ) : null}
+        </div>
+      </section>
+      <BridgeCard sourceAssistant={normaliseAssistant(bundle.source_assistant)} />
+    </div>
   );
 }
 
