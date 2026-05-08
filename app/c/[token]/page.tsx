@@ -10,7 +10,7 @@ export const dynamic = 'force-dynamic';
 
 type PageProps = { params: { token: string } };
 
-const FALLBACK_ACCENT = '#0F172A';
+const FALLBACK_ACCENT = '#D4AF37';
 
 type HoldRow = {
   id: string;
@@ -30,6 +30,8 @@ type HoldRow = {
       id: string;
       name: string;
       slug: string;
+      category: string | null;
+      tagline: string | null;
       primary_colour: string | null;
       logo_url: string | null;
       address: string | null;
@@ -47,6 +49,10 @@ type HoldRow = {
     } | null;
   } | null;
 };
+
+function capFirst(s: string): string {
+  return s.length === 0 ? s : s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 async function loadBundle(token: string): Promise<
   | { kind: 'expired'; reason: string; businessName?: string }
@@ -66,7 +72,7 @@ async function loadBundle(token: string): Promise<
       bookings:booking_id (
         id, status, notes, starts_at, ends_at, price_cents,
         businesses:business_id (
-          id, name, slug, primary_colour, logo_url,
+          id, name, slug, category, tagline, primary_colour, logo_url,
           address, address_line, city, phone,
           stripe_account_id, stripe_charges_enabled
         ),
@@ -92,10 +98,45 @@ async function loadBundle(token: string): Promise<
   const expiresAtMs = new Date(data.expires_at).getTime();
   const isCancelled = booking.status === 'cancelled' || booking.status === 'expired';
 
+  // Best-effort lookup of an active promoted slot matching this booking.
+  // The hold flow doesn't currently pin a promoted_slot id on the booking,
+  // so we infer by (business_id, service_id, slot_start). If it isn't a
+  // promoted slot, we fall through silently.
+  let isPromoted = false;
+  let originalPriceCents: number | null = null;
+  try {
+    const { data: promo } = await supabaseAdmin()
+      .from('mcp_promoted_slots')
+      .select('original_price_eur, promoted_price_eur, is_active')
+      .eq('business_id', business.id)
+      .eq('service_id', service.id)
+      .eq('slot_start', booking.starts_at)
+      .eq('is_active', true)
+      .maybeSingle();
+    if (promo && Number(promo.promoted_price_eur) < Number(promo.original_price_eur)) {
+      isPromoted = true;
+      originalPriceCents = Math.round(Number(promo.original_price_eur) * 100);
+    }
+  } catch {
+    // Promoted slots are an enrichment, never block render on lookup failure.
+  }
+
   const hints = (data.customer_hints ?? {}) as Record<string, unknown>;
+  const startsAtDate = new Date(booking.starts_at);
+  // start_voice is the same warm phrasing the assistant said over voice.
+  // Capitalised so it reads well as a heading on the page.
+  const startVoice = capFirst(humaniseDateTime(startsAtDate));
+
   const bundle: CheckoutBundle = {
     token,
-    hold: { id: data.id, expires_at: data.expires_at },
+    hold: {
+      id: data.id,
+      expires_at: data.expires_at,
+      // Server timestamp at render. Client uses this for the first-paint
+      // countdown so SSR and CSR agree on initial copy and React doesn't
+      // throw a hydration mismatch (fixes the #422/#425 console errors).
+      server_now: new Date(now).toISOString(),
+    },
     booking: {
       id: booking.id,
       status: booking.status,
@@ -107,6 +148,8 @@ async function loadBundle(token: string): Promise<
       id: business.id,
       name: business.name,
       slug: business.slug,
+      category: business.category,
+      tagline: business.tagline,
       primary_colour: business.primary_colour ?? FALLBACK_ACCENT,
       logo_url: business.logo_url,
       address: business.address ?? business.address_line ?? null,
@@ -128,9 +171,12 @@ async function loadBundle(token: string): Promise<
       notes: typeof hints.notes === 'string' ? hints.notes : null,
     },
     is_free: service.price_cents === 0,
+    is_promoted: isPromoted,
+    original_price_cents: originalPriceCents,
+    start_voice: startVoice,
     formatted: {
-      date_human: humaniseDateTime(new Date(booking.starts_at)),
-      date_compact: formatCompactDublin(new Date(booking.starts_at)),
+      date_human: humaniseDateTime(startsAtDate),
+      date_compact: formatCompactDublin(startsAtDate),
       end_compact: formatCompactDublin(new Date(booking.ends_at)),
     },
     stripe_publishable_key: process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? null,
@@ -152,7 +198,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   return {
     title: `Confirm your booking — ${b.business.name}`,
     description: `${b.service.name} on ${b.formatted.date_compact}`,
-    themeColor: b.business.primary_colour ?? FALLBACK_ACCENT,
+    themeColor: '#080808',
     viewport: { width: 'device-width', initialScale: 1, viewportFit: 'cover' },
   };
 }
