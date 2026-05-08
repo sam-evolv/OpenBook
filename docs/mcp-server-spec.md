@@ -259,6 +259,8 @@ This section is the canonical contract. Every field, type, and behaviour describ
 - `readOnlyHint: true`
 - `destructiveHint: false`
 - `openWorldHint: true`
+
+Rationale: read-only against our schema, but `openWorldHint: true` because the handler calls OpenAI for intent classification (cached, but still external). Reviewers should expect the tool to make outbound LLM requests.
 **Input schema.**
 
 ```typescript
@@ -337,7 +339,9 @@ This section is the canonical contract. Every field, type, and behaviour describ
 **MCP annotations.**
 - `readOnlyHint: true`
 - `destructiveHint: false`
-- `openWorldHint: true`
+- `openWorldHint: false`
+
+Rationale: a pure Supabase read of business + service + reviews. No external calls; the response cannot mutate any state.
 **Input schema.**
 
 ```typescript
@@ -404,7 +408,9 @@ The `space` enrichment depends on the business having uploaded the relevant cont
 **MCP annotations.**
 - `readOnlyHint: true`
 - `destructiveHint: false`
-- `openWorldHint: true`
+- `openWorldHint: false`
+
+Rationale: pure Supabase reads (the canonical `get_availability_for_ai` RPC plus a promoted-overlay query). The lazy-fire waitlist drain at the end of the handler is a side-effect the caller does not see in the response, so the tool remains read-only from the caller's perspective.
 **Input schema.**
 
 ```typescript
@@ -452,8 +458,10 @@ Reuses the existing `availability` calculation function from the consumer app (`
 > Hold a specific slot for 10 minutes and generate a one-tap checkout link the user opens in their browser to complete payment. Use after the user has chosen a specific slot. Always pass `customer_hints` with everything relevant from the conversation — name, email, phone if shared, special requirements, accessibility needs — so the checkout page can pre-fill and the business can prepare.
 **MCP annotations.**
 - `readOnlyHint: false`
-- `destructiveHint: false`        (the hold can be released; no permanent destructive effect)
+- `destructiveHint: true`
 - `openWorldHint: true`
+
+Rationale: creates `bookings` and `mcp_holds` rows and returns a signed `/c/[token]` URL pointing at a Stripe Connect checkout. Earlier drafts of this spec marked `destructiveHint: false` on the basis that the hold can be released, but for directory-submission classification we treat any user-visible booking write as destructive — undoing it requires a separate user action and the URL itself reaches Stripe (an external payment provider), which is also why `openWorldHint` is true.
 **Input schema.**
 
 ```typescript
@@ -524,7 +532,9 @@ Reuses the existing `availability` calculation function from the consumer app (`
 **MCP annotations.**
 - `readOnlyHint: true`
 - `destructiveHint: false`
-- `openWorldHint: false`        (status check, no external state change)
+- `openWorldHint: false`
+
+Rationale: pure Supabase reads (booking + customer email when confirmed). The rate-limiter writes to `mcp_rate_limit` but that's an internal accounting table, not user-visible state — the tool's response cannot mutate booking or customer state.
 **Input schema.**
 
 ```typescript
@@ -581,7 +591,9 @@ This is the single biggest UX advantage of being on assistant platforms. It cost
 **MCP annotations.**
 - `readOnlyHint: false`
 - `destructiveHint: false`
-- `openWorldHint: true`
+- `openWorldHint: false`
+
+Rationale: inserts an `mcp_waitlist` row, but the row is reversible (re-submission overwrites; rows naturally expire). PR #118 deferred SMS to v1.1, so the handler itself makes no external calls — email delivery is decoupled into the cron / lazy-fire processor and runs against a separate request. From this tool's call, no third-party service is touched.
 **Input schema.**
 
 ```typescript
@@ -631,7 +643,9 @@ This is the single biggest UX advantage of being on assistant platforms. It cost
 **MCP annotations.**
 - `readOnlyHint: true`
 - `destructiveHint: false`
-- `openWorldHint: true`
+- `openWorldHint: false`
+
+Rationale: pure Supabase reads against `mcp_promoted_slots` plus the existing `get_availability_for_ai` RPC for the anti-stale check. The simplified ranker on this tool intentionally skips the OpenAI intent-classifier (see PR #122), so no external calls are made.
 **Input schema.**
 
 ```typescript
@@ -693,7 +707,9 @@ A business owner who fills three quiet slots on a Tuesday afternoon does so with
 **MCP annotations.**
 - `readOnlyHint: false`
 - `destructiveHint: false`
-- `openWorldHint: true`
+- `openWorldHint: false`
+
+Rationale: writes a `booking_feedback` row (upserted on `booking_id`, so re-submission is a clean revision) plus a guarded `bookings.outcome` UPDATE. Reversible by re-calling the same tool. No external services — feedback never auto-publishes.
 **Input schema.**
 
 ```typescript
