@@ -47,9 +47,8 @@ const TOOL_INPUT_SCHEMAS: Record<string, z.ZodTypeAny> = {
 const SUPPORTED_PROTOCOL_VERSIONS = ['2024-11-05', '2025-03-26', '2025-06-18'] as const;
 const LATEST_PROTOCOL_VERSION = '2025-06-18';
 
-const SERVER_INFO_BASE = {
-  name: 'OpenBook',
-  version: '1.0.0',
+const INITIALIZE_RESULT_BASE = {
+  serverInfo: { name: 'OpenBook', version: '1.0.0' },
   capabilities: { tools: {} },
 };
 
@@ -116,7 +115,7 @@ export async function POST(request: Request): Promise<Response> {
   try {
     if (method === 'initialize') {
       return jsonResponse(
-        successResponse(id, { ...SERVER_INFO_BASE, protocolVersion: negotiateProtocolVersion(params) }),
+        successResponse(id, { ...INITIALIZE_RESULT_BASE, protocolVersion: negotiateProtocolVersion(params) }),
         cors,
       );
     }
