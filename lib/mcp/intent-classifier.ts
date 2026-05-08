@@ -162,8 +162,17 @@ async function callOpenAi(args: {
     if (typeof raw !== 'string' || raw.length === 0) {
       throw new Error('classifier: empty response');
     }
-    const parsed = JSON.parse(raw) as IntentClassification;
-    return parsed;
+    const parsed = JSON.parse(raw) as Partial<IntentClassification>;
+    if (
+      typeof parsed.category !== 'string' ||
+      !Array.isArray(parsed.subcategories) ||
+      !Array.isArray(parsed.vibe) ||
+      !Array.isArray(parsed.constraint_keywords) ||
+      typeof parsed.confidence !== 'number'
+    ) {
+      throw new Error('classifier: malformed JSON shape');
+    }
+    return parsed as IntentClassification;
   } finally {
     clearTimeout(timer);
   }
