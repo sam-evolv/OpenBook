@@ -19,6 +19,7 @@ type HoldRow = {
   start_at: string;
   end_at: string;
   customer_hints: Record<string, unknown> | null;
+  source_assistant: string | null;
   bookings: {
     id: string;
     status: string | null;
@@ -55,20 +56,26 @@ function capFirst(s: string): string {
 }
 
 async function loadBundle(token: string): Promise<
-  | { kind: 'expired'; reason: string; businessName?: string }
+  | { kind: 'expired'; reason: string; businessName?: string; sourceAssistant: string | null }
   | { kind: 'confirmed'; bundle: CheckoutBundle }
   | { kind: 'ready'; bundle: CheckoutBundle }
   | null
 > {
   const payload = await verifyHoldToken(token);
-  if (!payload) return { kind: 'expired', reason: 'invalid_or_expired_token' };
+  // For an expired/invalid JWT we still try to surface source_assistant by
+  // looking up the hold by hold_id from the unverified body. Read-only and
+  // best-effort.
+  if (!payload) {
+    const sourceAssistant = await lookupSourceAssistantFromExpiredToken(token);
+    return { kind: 'expired', reason: 'invalid_or_expired_token', sourceAssistant };
+  }
 
   // Single round-trip: hold → booking → business + service.
   const { data, error } = await supabaseAdmin()
     .from('mcp_holds')
     .select(
       `
-      id, status, expires_at, start_at, end_at, customer_hints,
+      id, status, expires_at, start_at, end_at, customer_hints, source_assistant,
       bookings:booking_id (
         id, status, notes, starts_at, ends_at, price_cents,
         businesses:business_id (
@@ -88,7 +95,7 @@ async function loadBundle(token: string): Promise<
     return null;
   }
   if (!data || !data.bookings || !data.bookings.businesses || !data.bookings.services) {
-    return { kind: 'expired', reason: 'hold_not_found' };
+    return { kind: 'expired', reason: 'hold_not_found', sourceAssistant: null };
   }
 
   const booking = data.bookings;
@@ -170,6 +177,7 @@ async function loadBundle(token: string): Promise<
       phone: typeof hints.phone === 'string' ? hints.phone : null,
       notes: typeof hints.notes === 'string' ? hints.notes : null,
     },
+    source_assistant: data.source_assistant ?? null,
     is_free: service.price_cents === 0,
     is_promoted: isPromoted,
     original_price_cents: originalPriceCents,
@@ -184,9 +192,41 @@ async function loadBundle(token: string): Promise<
 
   if (booking.status === 'confirmed') return { kind: 'confirmed', bundle };
   if (isCancelled || data.status !== 'pending' || expiresAtMs <= now) {
-    return { kind: 'expired', reason: 'hold_expired', businessName: business.name };
+    return {
+      kind: 'expired',
+      reason: 'hold_expired',
+      businessName: business.name,
+      sourceAssistant: data.source_assistant ?? null,
+    };
   }
   return { kind: 'ready', bundle };
+}
+
+async function lookupSourceAssistantFromExpiredToken(token: string): Promise<string | null> {
+  // Decode the JWT body (no signature verification). Strictly read-only —
+  // we only use this hint to choose which assistant to link the user back
+  // to from the expired-state UI.
+  let holdId: string | null = null;
+  try {
+    const parts = token.split('.');
+    if (parts.length === 3) {
+      const body = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
+      if (typeof body.hold_id === 'string') holdId = body.hold_id;
+    }
+  } catch {
+    return null;
+  }
+  if (!holdId) return null;
+  try {
+    const { data } = await supabaseAdmin()
+      .from('mcp_holds')
+      .select('source_assistant')
+      .eq('id', holdId)
+      .maybeSingle<{ source_assistant: string | null }>();
+    return data?.source_assistant ?? null;
+  } catch {
+    return null;
+  }
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
@@ -210,13 +250,11 @@ export default async function CheckoutPage({ params }: PageProps) {
   if (result.kind === 'expired') {
     return (
       <CheckoutClient
-        // Render the client in expired-only mode. It fetches alternatives
-        // from /api/c/[token]/alternatives — the route allows expired
-        // tokens for exactly this recovery flow.
         mode="expired"
         token={params.token}
         expiredReason={result.reason}
         expiredBusinessName={result.businessName ?? null}
+        expiredSourceAssistant={result.sourceAssistant}
       />
     );
   }

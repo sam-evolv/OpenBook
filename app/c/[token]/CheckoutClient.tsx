@@ -26,6 +26,9 @@ import Countdown from './components/Countdown';
 import PaymentBlock from './components/PaymentBlock';
 import ConfirmCTA from './components/ConfirmCTA';
 import { Field, PhoneField, TextAreaField } from './components/Field';
+import SuccessState from './components/SuccessState';
+import BridgeCard, { type AssistantSource } from './components/BridgeCard';
+import { ExpiredState, SlotTakenState } from './components/EdgeStates';
 
 export type CustomerHints = {
   name: string | null;
@@ -65,6 +68,7 @@ export type CheckoutBundle = {
     price_cents: number;
   };
   customer_hints: CustomerHints;
+  source_assistant: string | null;
   is_free: boolean;
   is_promoted: boolean;
   original_price_cents: number | null;
@@ -84,14 +88,23 @@ type Props =
       bundle: CheckoutBundle;
       expiredReason?: never;
       expiredBusinessName?: never;
+      expiredSourceAssistant?: never;
     }
   | {
       mode: 'expired';
       token: string;
       expiredReason: string;
       expiredBusinessName: string | null;
+      expiredSourceAssistant: string | null;
       bundle?: never;
     };
+
+function normaliseAssistant(raw: string | null | undefined): AssistantSource {
+  if (!raw) return null;
+  const v = raw.toLowerCase();
+  if (v === 'chatgpt' || v === 'claude' || v === 'gemini' || v === 'siri') return v;
+  return 'other';
+}
 
 const STRIPE_CACHE = new Map<string, Promise<Stripe | null>>();
 function getStripePromise(pk: string, connectedAccountId?: string | null): Promise<Stripe | null> {
@@ -132,7 +145,11 @@ const STRIPE_APPEARANCE: NonNullable<StripeElementsOptions['appearance']> = {
 
 export default function CheckoutClient(props: Props) {
   if (props.mode === 'expired') {
-    return <ExpiredView token={props.token} businessName={props.expiredBusinessName} />;
+    return (
+      <ExpiredShell>
+        <ExpiredState sourceAssistant={normaliseAssistant(props.expiredSourceAssistant)} />
+      </ExpiredShell>
+    );
   }
 
   const { bundle } = props;
@@ -165,15 +182,15 @@ export default function CheckoutClient(props: Props) {
       };
 
   return (
-    <PageShell bundle={bundle}>
-      <Elements stripe={stripePromise} options={elementsOptions}>
-        {props.mode === 'confirmed' ? (
+    <Elements stripe={stripePromise} options={elementsOptions}>
+      {props.mode === 'confirmed' ? (
+        <PageShell bundle={bundle} topBarRight={<ConfirmedPill />}>
           <ConfirmedView bundle={bundle} />
-        ) : (
-          <ReadyView bundle={bundle} />
-        )}
-      </Elements>
-    </PageShell>
+        </PageShell>
+      ) : (
+        <ReadyView bundle={bundle} />
+      )}
+    </Elements>
   );
 }
 
@@ -181,7 +198,15 @@ export default function CheckoutClient(props: Props) {
 // Page shell — top bar, hero, animated main column, footer.
 // ──────────────────────────────────────────────────────────────────────────
 
-function PageShell({ bundle, children }: { bundle: CheckoutBundle; children: ReactNode }) {
+function PageShell({
+  bundle,
+  children,
+  topBarRight,
+}: {
+  bundle: CheckoutBundle;
+  children: ReactNode;
+  topBarRight?: ReactNode;
+}) {
   return (
     <main
       style={{
@@ -194,10 +219,12 @@ function PageShell({ bundle, children }: { bundle: CheckoutBundle; children: Rea
       }}
     >
       <TopBar>
-        <Countdown
-          expiresAt={bundle.hold.expires_at}
-          serverNow={bundle.hold.server_now}
-        />
+        {topBarRight ?? (
+          <Countdown
+            expiresAt={bundle.hold.expires_at}
+            serverNow={bundle.hold.server_now}
+          />
+        )}
       </TopBar>
       <div className="ob-co-page-enter">
         <Hero business={bundle.business} />
@@ -215,6 +242,51 @@ function PageShell({ bundle, children }: { bundle: CheckoutBundle; children: Rea
         <Footer businessName={bundle.business.name} />
       </div>
     </main>
+  );
+}
+
+function ExpiredShell({ children }: { children: ReactNode }) {
+  return (
+    <main
+      style={{
+        minHeight: '100dvh',
+        background: 'var(--ob-co-bg)',
+        color: 'var(--ob-co-text-1)',
+        fontFamily: 'var(--font-geist-sans, system-ui, sans-serif)',
+        fontSize: 16,
+        lineHeight: 1.5,
+      }}
+    >
+      <TopBar />
+      <div className="ob-co-page-enter">{children}</div>
+    </main>
+  );
+}
+
+function ConfirmedPill() {
+  return (
+    <span
+      style={{
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: 8,
+        fontFamily: 'var(--font-geist-sans, system-ui, sans-serif)',
+        fontWeight: 500,
+        fontSize: 12,
+        color: 'var(--ob-co-gold)',
+      }}
+    >
+      <span
+        aria-hidden
+        style={{
+          width: 8,
+          height: 8,
+          borderRadius: 4,
+          background: 'var(--ob-co-confirm-green)',
+        }}
+      />
+      Confirmed
+    </span>
   );
 }
 
@@ -291,10 +363,29 @@ function ReadyView({ bundle }: { bundle: CheckoutBundle }) {
 
   const [emailError, setEmailError] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Phases:
+  //   ready                — initial form
+  //   processing           — confirm in-flight (one attempt)
+  //   awaiting_webhook     — payment succeeded, polling /finalise
+  //   retrying             — confirm failed, auto-retry running
+  //   network_failed       — all auto-retries exhausted; "Try again." surface
+  //   slot_taken           — server returned SLOT_UNAVAILABLE
+  //   transitioning        — booking confirmed, briefly co-rendering form fade-out + success
+  //   confirmed            — success state only
+  //   declined             — payment failed cleanly
   const [phase, setPhase] = useState<
-    'ready' | 'processing' | 'awaiting_webhook' | 'confirmed' | 'declined'
+    | 'ready'
+    | 'processing'
+    | 'awaiting_webhook'
+    | 'retrying'
+    | 'network_failed'
+    | 'slot_taken'
+    | 'transitioning'
+    | 'confirmed'
+    | 'declined'
   >('ready');
   const [confirmedBookingId, setConfirmedBookingId] = useState<string | null>(null);
+  const [retryAttempt, setRetryAttempt] = useState(0);
 
   const [paymentRequest, setPaymentRequest] = useState<StripePaymentRequest | null>(null);
   const [walletAvailable, setWalletAvailable] = useState(false);
@@ -334,10 +425,18 @@ function ReadyView({ bundle }: { bundle: CheckoutBundle }) {
           phone: customerPhone,
           notes,
         });
-        if (intent.kind === 'free' || intent.kind === 'error') {
+        if (intent.kind !== 'paid') {
           ev.complete('fail');
           if (intent.kind === 'error') setSubmitError(intent.message);
-          setPhase('ready');
+          if (intent.kind === 'slot_taken') setPhase('slot_taken');
+          else if (intent.kind === 'network_failed') setPhase('network_failed');
+          else if (intent.kind === 'free') {
+            // Wallets shouldn't trigger the free path, but if it happens
+            // we still want to surface the success state.
+            flipToConfirmed(intent.booking_id);
+          } else {
+            setPhase('ready');
+          }
           return;
         }
         const { error: confirmErr, paymentIntent } = await stripe.confirmCardPayment(
@@ -359,7 +458,8 @@ function ReadyView({ bundle }: { bundle: CheckoutBundle }) {
         const final = await waitForFinalisation(bundle.token, paymentIntent?.id);
         if (final.confirmed) {
           setConfirmedBookingId(final.booking_id);
-          setPhase('confirmed');
+          setPhase('transitioning');
+          setTimeout(() => setPhase('confirmed'), 250);
         } else {
           setSubmitError('Payment received but confirmation is delayed. Refresh in a moment.');
           setPhase('declined');
@@ -386,6 +486,13 @@ function ReadyView({ bundle }: { bundle: CheckoutBundle }) {
     return true;
   };
 
+  const flipToConfirmed = (bookingId: string) => {
+    setConfirmedBookingId(bookingId);
+    // Brief co-render so the form fades out while the success block fades in.
+    setPhase('transitioning');
+    setTimeout(() => setPhase('confirmed'), 250);
+  };
+
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setSubmitError(null);
@@ -394,10 +501,24 @@ function ReadyView({ bundle }: { bundle: CheckoutBundle }) {
 
     if (bundle.is_free) {
       setPhase('processing');
-      const intent = await createIntent(bundle.token, { name, email, phone, notes });
+      const intent = await createIntentWithRetry(
+        bundle.token,
+        { name, email, phone, notes },
+        (attempt) => {
+          setRetryAttempt(attempt);
+          if (attempt > 0) setPhase('retrying');
+        },
+      );
       if (intent.kind === 'free') {
-        setConfirmedBookingId(intent.booking_id);
-        setPhase('confirmed');
+        flipToConfirmed(intent.booking_id);
+        return;
+      }
+      if (intent.kind === 'slot_taken') {
+        setPhase('slot_taken');
+        return;
+      }
+      if (intent.kind === 'network_failed') {
+        setPhase('network_failed');
         return;
       }
       setSubmitError(intent.kind === 'error' ? intent.message : 'Could not confirm booking.');
@@ -420,15 +541,29 @@ function ReadyView({ bundle }: { bundle: CheckoutBundle }) {
       return;
     }
 
-    const intent = await createIntent(bundle.token, { name, email, phone, notes });
+    const intent = await createIntentWithRetry(
+      bundle.token,
+      { name, email, phone, notes },
+      (attempt) => {
+        setRetryAttempt(attempt);
+        if (attempt > 0) setPhase('retrying');
+      },
+    );
     if (intent.kind === 'error') {
       setSubmitError(intent.message);
       setPhase('ready');
       return;
     }
+    if (intent.kind === 'slot_taken') {
+      setPhase('slot_taken');
+      return;
+    }
+    if (intent.kind === 'network_failed') {
+      setPhase('network_failed');
+      return;
+    }
     if (intent.kind === 'free') {
-      setConfirmedBookingId(intent.booking_id);
-      setPhase('confirmed');
+      flipToConfirmed(intent.booking_id);
       return;
     }
 
@@ -461,104 +596,204 @@ function ReadyView({ bundle }: { bundle: CheckoutBundle }) {
     setPhase('awaiting_webhook');
     const final = await waitForFinalisation(bundle.token, paymentIntent.id);
     if (final.confirmed) {
-      setConfirmedBookingId(final.booking_id);
-      setPhase('confirmed');
+      flipToConfirmed(final.booking_id);
     } else {
       setSubmitError('Payment received but confirmation is delayed. Refresh in a moment.');
       setPhase('declined');
     }
   };
 
-  if (phase === 'confirmed') {
-    return <ConfirmedView bundle={bundle} bookingIdOverride={confirmedBookingId ?? undefined} />;
+  // Slot-taken edge state — full-width, no booking summary card.
+  if (phase === 'slot_taken') {
+    return (
+      <ExpiredShell>
+        <SlotTakenState
+          token={bundle.token}
+          sourceAssistant={normaliseAssistant(bundle.source_assistant)}
+        />
+      </ExpiredShell>
+    );
   }
 
-  const isProcessing = phase === 'processing' || phase === 'awaiting_webhook';
+  // Confirmed — render the success block + bridge card. Top-bar pill replaces
+  // the countdown.
+  if (phase === 'confirmed') {
+    return (
+      <PageShell bundle={bundle} topBarRight={<ConfirmedPill />}>
+        <ConfirmedView bundle={bundle} bookingIdOverride={confirmedBookingId ?? undefined} />
+      </PageShell>
+    );
+  }
+
+  const isProcessing =
+    phase === 'processing' || phase === 'awaiting_webhook' || phase === 'retrying';
   const formValid = name.trim().length > 0 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   const stripeLoading = !bundle.is_free && !stripe;
 
-  return (
-    <form onSubmit={onSubmit} style={{ display: 'grid', gap: 32 }}>
-      <BookingSummary
-        serviceName={bundle.service.name}
-        startVoice={bundle.start_voice}
-        durationMinutes={bundle.service.duration_minutes}
-        city={bundle.business.city}
-        isFree={bundle.is_free}
-        priceCents={bundle.service.price_cents}
-        isPromoted={bundle.is_promoted}
-        originalPriceCents={bundle.original_price_cents}
-        accent={bundle.business.primary_colour}
-      />
-
-      <fieldset
-        disabled={isProcessing}
-        style={{ border: 0, padding: 0, margin: 0, display: 'grid', gap: 16 }}
-      >
-        {anyPrefilled ? <PreFillPill /> : null}
-
-        <Field
-          label="Email"
-          type="email"
-          required
-          autoComplete="email"
-          inputMode="email"
-          value={email}
-          onChange={(v) => {
-            setEmail(v);
-            if (emailError) validateEmail(v);
-          }}
-          onBlur={() => validateEmail(email)}
-          error={emailError}
-        />
-        <Field
-          label="Name"
-          required
-          autoComplete="name"
-          value={name}
-          onChange={setName}
-        />
-        <PhoneField
-          value={phone}
-          onChange={setPhone}
-          initiallyVisible={Boolean(bundle.customer_hints.phone)}
-        />
-        <TextAreaField
-          label="Anything we should know? — optional"
-          value={notes}
-          onChange={setNotes}
-          rows={3}
-          placeholder=""
-        />
-
-        {!bundle.is_free ? (
-          <PaymentBlock paymentRequest={paymentRequest} walletAvailable={walletAvailable} />
-        ) : null}
-
-        {submitError ? (
-          <div
-            role="alert"
-            style={{
-              color: 'var(--ob-co-danger)',
-              fontSize: 14,
-              padding: '12px 16px',
-              background: 'rgba(232, 75, 75, 0.08)',
-              border: '1px solid rgba(232, 75, 75, 0.25)',
-              borderRadius: 8,
-            }}
-          >
-            {submitError}
+  // Transitioning — co-render the form (fade-out class) and the success
+  // block beneath it so the success block's entrance feels like a reveal,
+  // not an abrupt swap.
+  if (phase === 'transitioning') {
+    return (
+      <PageShell bundle={bundle} topBarRight={<ConfirmedPill />}>
+        <div style={{ display: 'grid', gap: 32 }}>
+          <BookingSummary
+            serviceName={bundle.service.name}
+            startVoice={bundle.start_voice}
+            durationMinutes={bundle.service.duration_minutes}
+            city={bundle.business.city}
+            isFree={bundle.is_free}
+            priceCents={bundle.service.price_cents}
+            isPromoted={bundle.is_promoted}
+            originalPriceCents={bundle.original_price_cents}
+            accent={bundle.business.primary_colour}
+          />
+          <div className="ob-co-form-fade-out" aria-hidden style={{ minHeight: 0 }}>
+            {/* The form is being torn down; suppress interaction. */}
+            <ConfirmCTA
+              isFree={bundle.is_free}
+              priceCents={bundle.service.price_cents}
+              isProcessing
+              disabled
+            />
           </div>
-        ) : null}
+          <SuccessState
+            bookingId={confirmedBookingId ?? bundle.booking.id}
+            startIso={bundle.booking.starts_at}
+            endIso={bundle.booking.ends_at}
+            serviceName={bundle.service.name}
+            customerName={bundle.customer_hints.name}
+            category={bundle.business.category}
+            businessName={bundle.business.name}
+            businessAddress={bundle.business.address}
+            businessPhone={bundle.business.phone}
+          />
+          <BridgeCard sourceAssistant={normaliseAssistant(bundle.source_assistant)} />
+        </div>
+      </PageShell>
+    );
+  }
 
-        <ConfirmCTA
+  const isNetworkFailed = phase === 'network_failed';
+  const showRetrySlowHint = phase === 'retrying' && retryAttempt >= 2;
+
+  return (
+    <PageShell bundle={bundle}>
+      <form onSubmit={onSubmit} style={{ display: 'grid', gap: 32 }}>
+        <BookingSummary
+          serviceName={bundle.service.name}
+          startVoice={bundle.start_voice}
+          durationMinutes={bundle.service.duration_minutes}
+          city={bundle.business.city}
           isFree={bundle.is_free}
           priceCents={bundle.service.price_cents}
-          isProcessing={isProcessing}
-          disabled={!formValid || stripeLoading}
+          isPromoted={bundle.is_promoted}
+          originalPriceCents={bundle.original_price_cents}
+          accent={bundle.business.primary_colour}
         />
-      </fieldset>
-    </form>
+
+        <fieldset
+          disabled={isProcessing}
+          style={{ border: 0, padding: 0, margin: 0, display: 'grid', gap: 16 }}
+        >
+          {anyPrefilled ? <PreFillPill /> : null}
+
+          <Field
+            label="Email"
+            type="email"
+            required
+            autoComplete="email"
+            inputMode="email"
+            value={email}
+            onChange={(v) => {
+              setEmail(v);
+              if (emailError) validateEmail(v);
+            }}
+            onBlur={() => validateEmail(email)}
+            error={emailError}
+          />
+          <Field
+            label="Name"
+            required
+            autoComplete="name"
+            value={name}
+            onChange={setName}
+          />
+          <PhoneField
+            value={phone}
+            onChange={setPhone}
+            initiallyVisible={Boolean(bundle.customer_hints.phone)}
+          />
+          <TextAreaField
+            label="Anything we should know? — optional"
+            value={notes}
+            onChange={setNotes}
+            rows={3}
+            placeholder=""
+          />
+
+          {!bundle.is_free ? (
+            <PaymentBlock paymentRequest={paymentRequest} walletAvailable={walletAvailable} />
+          ) : null}
+
+          {submitError ? (
+            <div
+              role="alert"
+              style={{
+                color: 'var(--ob-co-danger)',
+                fontSize: 14,
+                padding: '12px 16px',
+                background: 'rgba(232, 75, 75, 0.08)',
+                border: '1px solid rgba(232, 75, 75, 0.25)',
+                borderRadius: 8,
+              }}
+            >
+              {submitError}
+            </div>
+          ) : null}
+
+          {isNetworkFailed ? (
+            <p
+              role="status"
+              style={{
+                margin: 0,
+                fontFamily: 'var(--font-geist-sans, system-ui, sans-serif)',
+                fontWeight: 500,
+                fontSize: 15,
+                color: 'var(--ob-co-text-2)',
+                textAlign: 'center',
+              }}
+            >
+              We couldn&apos;t confirm that booking. Your slot is still held — tap to try again.
+            </p>
+          ) : null}
+
+          <ConfirmCTA
+            isFree={bundle.is_free}
+            priceCents={bundle.service.price_cents}
+            isProcessing={isProcessing}
+            disabled={!formValid || stripeLoading}
+            tryAgain={isNetworkFailed}
+          />
+
+          {showRetrySlowHint ? (
+            <p
+              style={{
+                margin: 0,
+                marginTop: -8,
+                fontFamily: 'var(--font-geist-sans, system-ui, sans-serif)',
+                fontWeight: 400,
+                fontSize: 13,
+                color: 'var(--ob-co-text-3)',
+                textAlign: 'center',
+              }}
+            >
+              Network slow — still trying…
+            </p>
+          ) : null}
+        </fieldset>
+      </form>
+    </PageShell>
   );
 }
 
@@ -604,7 +839,7 @@ function PreFillPill() {
 }
 
 // ──────────────────────────────────────────────────────────────────────────
-// Confirmed state (UNCHANGED from previous design — PR 2 will redesign it)
+// Confirmed state — success block + bridge card (PR 2)
 // ──────────────────────────────────────────────────────────────────────────
 
 function ConfirmedView({
@@ -615,207 +850,32 @@ function ConfirmedView({
   bookingIdOverride?: string;
 }) {
   const bookingId = bookingIdOverride ?? bundle.booking.id;
-  const mapsUrl = bundle.business.address
-    ? `https://maps.google.com/?q=${encodeURIComponent(`${bundle.business.name} ${bundle.business.address}`)}`
-    : null;
-  const messageUrl = bundle.business.phone
-    ? `sms:${bundle.business.phone.replace(/\s+/g, '')}`
-    : null;
-
   return (
-    <section
-      style={{
-        background: 'var(--ob-co-surface)',
-        border: '1px solid var(--ob-co-border-quiet)',
-        borderRadius: 12,
-        padding: 32,
-        textAlign: 'center',
-      }}
-    >
-      <div
-        aria-hidden
-        style={{
-          width: 64,
-          height: 64,
-          borderRadius: 32,
-          background: 'var(--ob-co-gold)',
-          color: '#080808',
-          display: 'grid',
-          placeItems: 'center',
-          margin: '0 auto 16px',
-          fontSize: 32,
-          fontWeight: 700,
-        }}
-      >
-        ✓
-      </div>
-      <h1 style={{ fontSize: 24, fontWeight: 600, margin: 0 }}>You&apos;re booked</h1>
-      <p style={{ marginTop: 8, fontSize: 17, color: 'var(--ob-co-text-2)' }}>
-        {bundle.service.name} with {bundle.business.name}
-        <br />
-        {bundle.formatted.date_human}.
-      </p>
-      <p style={{ marginTop: 4, fontSize: 13, color: 'var(--ob-co-text-3)' }}>
-        Reference: {bookingId.slice(0, 8)}
-      </p>
-      <div style={{ marginTop: 24, display: 'grid', gap: 10 }}>
-        <SecondaryLink href={`/api/c/${bundle.token}/ics`} download>
-          Add to Calendar
-        </SecondaryLink>
-        {mapsUrl ? (
-          <SecondaryLink href={mapsUrl} target="_blank" rel="noreferrer">
-            Get Directions
-          </SecondaryLink>
-        ) : null}
-        {messageUrl ? (
-          <SecondaryLink href={messageUrl}>
-            Message {bundle.business.name.split(' ')[0]}
-          </SecondaryLink>
-        ) : null}
-      </div>
-    </section>
-  );
-}
-
-function SecondaryLink({
-  href,
-  children,
-  target,
-  rel,
-  download,
-}: {
-  href: string;
-  children: ReactNode;
-  target?: string;
-  rel?: string;
-  download?: boolean;
-}) {
-  return (
-    <a
-      href={href}
-      target={target}
-      rel={rel}
-      download={download || undefined}
-      style={{
-        textDecoration: 'none',
-        color: 'var(--ob-co-text-1)',
-        padding: '14px',
-        borderRadius: 12,
-        border: '1px solid var(--ob-co-border-quiet)',
-        background: 'var(--ob-co-surface-elev)',
-        fontWeight: 500,
-        textAlign: 'center',
-        fontSize: 15,
-      }}
-    >
-      {children}
-    </a>
-  );
-}
-
-// ──────────────────────────────────────────────────────────────────────────
-// Expired state — kept for PR 2 redesign; minimally re-skinned to dark.
-// ──────────────────────────────────────────────────────────────────────────
-
-type Alternative = {
-  start_iso: string;
-  start_human: string;
-  start_compact: string;
-  rebook_url: string;
-};
-
-function ExpiredView({
-  token,
-  businessName,
-}: {
-  token: string;
-  businessName: string | null;
-}) {
-  const [alts, setAlts] = useState<Alternative[] | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    let abort = false;
-    fetch(`/api/c/${token}/alternatives`)
-      .then(async (res) => {
-        if (!res.ok) throw new Error('alternatives_failed');
-        const json = (await res.json()) as { alternatives: Alternative[] };
-        if (!abort) setAlts(json.alternatives ?? []);
-      })
-      .catch(() => {
-        if (!abort) setError("We couldn't load other times — try the business page directly.");
-      });
-    return () => {
-      abort = true;
-    };
-  }, [token]);
-
-  return (
-    <main
-      style={{
-        minHeight: '100dvh',
-        background: 'var(--ob-co-bg)',
-        color: 'var(--ob-co-text-1)',
-        fontFamily: 'var(--font-geist-sans, system-ui, sans-serif)',
-      }}
-    >
-      <TopBar />
-      <section
-        style={{
-          maxWidth: 520,
-          margin: '0 auto',
-          padding: '48px 24px',
-        }}
-      >
-        <h1 style={{ fontSize: 22, fontWeight: 600, margin: 0 }}>That slot&apos;s gone</h1>
-        {businessName ? (
-          <p style={{ marginTop: 8, color: 'var(--ob-co-text-2)' }}>
-            Here are three more times from {businessName}:
-          </p>
-        ) : (
-          <p style={{ marginTop: 8, color: 'var(--ob-co-text-2)' }}>
-            Here are some other times:
-          </p>
-        )}
-        {alts === null && !error ? (
-          <div className="ob-co-skeleton" style={{ height: 56, marginTop: 16 }} />
-        ) : null}
-        {error ? <p style={{ color: 'var(--ob-co-danger)' }}>{error}</p> : null}
-        {alts ? (
-          alts.length > 0 ? (
-            <ul style={{ listStyle: 'none', padding: 0, margin: '16px 0 0', display: 'grid', gap: 10 }}>
-              {alts.map((a) => (
-                <li key={a.start_iso}>
-                  <a
-                    href={a.rebook_url}
-                    style={{
-                      display: 'flex',
-                      justifyContent: 'space-between',
-                      alignItems: 'center',
-                      padding: 16,
-                      borderRadius: 12,
-                      border: '1px solid var(--ob-co-border-quiet)',
-                      background: 'var(--ob-co-surface-elev)',
-                      textDecoration: 'none',
-                      color: 'var(--ob-co-text-1)',
-                    }}
-                  >
-                    <span style={{ fontWeight: 500 }}>{a.start_human}</span>
-                    <span style={{ fontSize: 13, color: 'var(--ob-co-text-3)' }}>
-                      {a.start_compact}
-                    </span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p style={{ color: 'var(--ob-co-text-2)' }}>
-              No nearby times — try the business&apos;s page for the full calendar.
-            </p>
-          )
-        ) : null}
-      </section>
-    </main>
+    <div style={{ display: 'grid', gap: 24 }}>
+      <BookingSummary
+        serviceName={bundle.service.name}
+        startVoice={bundle.start_voice}
+        durationMinutes={bundle.service.duration_minutes}
+        city={bundle.business.city}
+        isFree={bundle.is_free}
+        priceCents={bundle.service.price_cents}
+        isPromoted={bundle.is_promoted}
+        originalPriceCents={bundle.original_price_cents}
+        accent={bundle.business.primary_colour}
+      />
+      <SuccessState
+        bookingId={bookingId}
+        startIso={bundle.booking.starts_at}
+        endIso={bundle.booking.ends_at}
+        serviceName={bundle.service.name}
+        customerName={bundle.customer_hints.name}
+        category={bundle.business.category}
+        businessName={bundle.business.name}
+        businessAddress={bundle.business.address}
+        businessPhone={bundle.business.phone}
+      />
+      <BridgeCard sourceAssistant={normaliseAssistant(bundle.source_assistant)} />
+    </div>
   );
 }
 
@@ -826,7 +886,36 @@ function ExpiredView({
 type CreateIntentResult =
   | { kind: 'paid'; client_secret: string; payment_intent_id: string }
   | { kind: 'free'; booking_id: string }
+  | { kind: 'slot_taken' }
+  | { kind: 'network_failed' }
   | { kind: 'error'; message: string };
+
+// Retry wrapper. Network errors retry up to 3 times with exponential backoff
+// (1s, 2s, 4s). Non-network errors short-circuit immediately. Server-side
+// 410 (hold expired / unavailable) maps to slot_taken so the UI can offer
+// alternatives instead of a generic "couldn't confirm" toast.
+async function createIntentWithRetry(
+  token: string,
+  body: { name: string; email: string; phone: string; notes: string },
+  onAttempt: (attempt: number) => void,
+): Promise<CreateIntentResult> {
+  const delays = [1000, 2000, 4000];
+  let lastNetworkError = false;
+  for (let attempt = 0; attempt <= delays.length; attempt += 1) {
+    onAttempt(attempt);
+    const result = await createIntent(token, body);
+    if (result.kind !== 'error') return result;
+    if (result.kind === 'error' && result.message === '__slot_taken__') {
+      return { kind: 'slot_taken' };
+    }
+    lastNetworkError = result.message === '__network_error__';
+    if (!lastNetworkError) return result;
+    if (attempt < delays.length) {
+      await sleep(delays[attempt]);
+    }
+  }
+  return lastNetworkError ? { kind: 'network_failed' } : { kind: 'error', message: 'Unable to confirm booking.' };
+}
 
 async function createIntent(
   token: string,
@@ -840,7 +929,14 @@ async function createIntent(
     });
     const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
     if (!res.ok) {
-      return { kind: 'error', message: typeof json.error === 'string' ? json.error : 'Could not start checkout.' };
+      // 410: hold expired / unavailable — surface the slot-taken state.
+      if (res.status === 410) return { kind: 'error', message: '__slot_taken__' };
+      // 5xx: treat as a network-class failure so the retry wrapper kicks in.
+      if (res.status >= 500) return { kind: 'error', message: '__network_error__' };
+      return {
+        kind: 'error',
+        message: typeof json.error === 'string' ? json.error : 'Could not start checkout.',
+      };
     }
     if (json.is_free === true && typeof json.booking_id === 'string') {
       return { kind: 'free', booking_id: json.booking_id };
@@ -854,7 +950,7 @@ async function createIntent(
     }
     return { kind: 'error', message: 'Unexpected server response.' };
   } catch {
-    return { kind: 'error', message: 'Network error — check your connection and retry.' };
+    return { kind: 'error', message: '__network_error__' };
   }
 }
 

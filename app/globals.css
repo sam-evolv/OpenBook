@@ -333,6 +333,10 @@ body {
   --ob-co-warn-amber:      #E4A85C;
   --ob-co-danger:          #E84B4B;
 
+  /* Success-state additions (PR 2) */
+  --ob-co-confirm-amber:   #E8A33E;  /* slot-taken hero, calmer than danger */
+  --ob-co-confirm-green:   #5BB07B;  /* "Confirmed" pill dot */
+
   --ob-co-ease-out:        cubic-bezier(0.16, 1, 0.3, 1);
 }
 
@@ -363,4 +367,59 @@ body {
 }
 @media (prefers-reduced-motion: reduce) {
   .ob-co-skeleton { animation: none; opacity: 0.6; }
+}
+
+/* ─── Success-state motion (PR 2) ──────────────────────────────────────── */
+
+/* Form/payment block fade-out when the booking confirms. */
+.ob-co-form-fade-out {
+  animation: ob-co-form-fade-out 200ms var(--ob-co-ease-out) forwards;
+  pointer-events: none;
+}
+@keyframes ob-co-form-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+
+/* Success block entrance — fade + 8px lift. Starts 100ms after the form
+   has fully faded out (300ms total delay from the confirm event). */
+.ob-co-success-enter {
+  animation: ob-co-success-enter 400ms var(--ob-co-ease-out) 300ms both;
+}
+@keyframes ob-co-success-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* The 56px gold mark. Soft scale pulse from 0.85→1, lands sequentially
+   AFTER the success block fade-in finishes (~700ms in). */
+.ob-co-success-mark {
+  animation: ob-co-success-mark 300ms var(--ob-co-ease-out) 700ms both;
+  transform-origin: center;
+}
+@keyframes ob-co-success-mark {
+  from { transform: scale(0.85); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+/* Bridge card entrance, 600ms after the success block has settled. */
+.ob-co-bridge-enter {
+  animation: ob-co-bridge-enter 400ms var(--ob-co-ease-out) 1300ms both;
+}
+@keyframes ob-co-bridge-enter {
+  0%   { opacity: 0;    transform: translateY(8px); }
+  60%  { opacity: 0.85; transform: translateY(2px); }
+  100% { opacity: 1;    transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ob-co-form-fade-out,
+  .ob-co-success-enter,
+  .ob-co-success-mark,
+  .ob-co-bridge-enter { animation: none; }
+}
+
+/* Success-state action row: vertical on mobile, horizontal on desktop. */
+@media (min-width: 520px) {
+  .ob-co-success-actions { grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)) !important; }
 }

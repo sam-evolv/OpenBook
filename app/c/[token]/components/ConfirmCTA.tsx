@@ -7,6 +7,7 @@ type Props = {
   priceCents: number;
   isProcessing: boolean;
   disabled: boolean;
+  tryAgain?: boolean;
 };
 
 function formatEuros(cents: number): string {
@@ -41,16 +42,18 @@ const baseStyle: CSSProperties = {
 //   - Press:    scale 0.98 for 50ms (handled via :active).
 //   - Loading:  gold-shadow + spinner + "Confirming…"; loading takes
 //               precedence over the standard disabled styling.
-export default function ConfirmCTA({ isFree, priceCents, isProcessing, disabled }: Props) {
-  const label = isFree
-    ? 'Confirm Booking'
-    : (
-      <>
-        Pay {formatEuros(priceCents)}
-        <span style={{ color: 'rgba(8,8,8,0.55)', margin: '0 4px' }}>·</span>
-        Confirm
-      </>
-    );
+export default function ConfirmCTA({ isFree, priceCents, isProcessing, disabled, tryAgain }: Props) {
+  const label = tryAgain
+    ? 'Try again.'
+    : isFree
+      ? 'Confirm Booking'
+      : (
+        <>
+          Pay {formatEuros(priceCents)}
+          <span style={{ color: 'rgba(8,8,8,0.55)', margin: '0 4px' }}>·</span>
+          Confirm
+        </>
+      );
 
   const style: CSSProperties = isProcessing
     ? { ...baseStyle, background: 'var(--ob-co-gold-lo)', cursor: 'progress' }
