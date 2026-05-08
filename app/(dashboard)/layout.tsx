@@ -16,6 +16,7 @@ interface BusinessContext {
   id: string;
   name: string;
   plan: string | null;
+  logo_url: string | null;
 }
 
 function normalisePlan(raw: string | null | undefined): SidebarPlan {
@@ -66,7 +67,7 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { owner, business } = await requireCurrentBusiness<BusinessContext>(
-    'id, name, plan',
+    'id, name, plan, logo_url',
   );
 
   const themeCookie = cookies().get('theme')?.value;
@@ -82,7 +83,7 @@ export default async function DashboardLayout({
       initialMode={theme}
       className={`${GeistSans.variable} ${GeistMono.variable} font-sans min-h-[100dvh] bg-paper-bg text-paper-text-1 dark:bg-ink-bg dark:text-ink-text-1`}
     >
-      <div className="flex min-h-[100dvh] flex-col lg:flex-row">
+      <div className="flex min-h-[100dvh] flex-col xl:flex-row">
         <MobileDashboardNav
           businessName={business.name}
           unreadMessagesCount={unreadMessagesCount}
@@ -90,12 +91,13 @@ export default async function DashboardLayout({
         />
         <Sidebar
           businessName={business.name}
+          businessLogoUrl={business.logo_url}
           userName={ownerName}
           userInitials={initials}
           plan={normalisePlan(business.plan)}
           unreadMessagesCount={unreadMessagesCount}
           upcomingBookingsCount={0}
-          className="hidden lg:flex"
+          className="hidden xl:flex"
         />
         <main className="flex-1 min-w-0 overflow-y-auto">{children}</main>
       </div>
