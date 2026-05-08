@@ -65,6 +65,60 @@ describe('POST /api/mcp', () => {
     expect(result.protocolVersion).toBe('2025-06-18');
   });
 
+  it('echoes the client protocolVersion when supported', async () => {
+    const { json } = await callJson({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'initialize',
+      params: { protocolVersion: '2024-11-05', capabilities: {}, clientInfo: { name: 'claude.ai', version: '1.0' } },
+    });
+    const result = json.result as Record<string, unknown>;
+    expect(result.protocolVersion).toBe('2024-11-05');
+  });
+
+  it('falls back to latest protocolVersion when client sends an unknown one', async () => {
+    const { json } = await callJson({
+      jsonrpc: '2.0',
+      id: 1,
+      method: 'initialize',
+      params: { protocolVersion: '1999-01-01' },
+    });
+    const result = json.result as Record<string, unknown>;
+    expect(result.protocolVersion).toBe('2025-06-18');
+  });
+
+  it('reflects the request origin on POST responses', async () => {
+    const { res } = await callJson(
+      { jsonrpc: '2.0', id: 1, method: 'initialize' },
+      { origin: 'https://claude.ai' },
+    );
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('https://claude.ai');
+    expect(res.headers.get('Access-Control-Expose-Headers')).toBe('MCP-Protocol-Version');
+    expect(res.headers.get('Vary')).toBe('Origin');
+  });
+
+  it('falls back to * when no Origin header is present', async () => {
+    const { res } = await callJson({ jsonrpc: '2.0', id: 1, method: 'initialize' });
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('*');
+  });
+
+  it('handles OPTIONS preflight with 204 and proper headers', async () => {
+    const { OPTIONS } = await import('../../app/api/mcp/route');
+    const res = await OPTIONS(
+      new Request('http://mcp.openbook.ie/api/mcp', {
+        method: 'OPTIONS',
+        headers: { origin: 'https://claude.ai', 'access-control-request-method': 'POST' },
+      }),
+    );
+    expect(res.status).toBe(204);
+    expect(res.headers.get('Access-Control-Allow-Origin')).toBe('https://claude.ai');
+    expect(res.headers.get('Access-Control-Allow-Methods')).toBe('POST, OPTIONS');
+    expect(res.headers.get('Access-Control-Allow-Headers')).toBe(
+      'Content-Type, Authorization, MCP-Protocol-Version',
+    );
+    expect(res.headers.get('Access-Control-Max-Age')).toBe('86400');
+  });
+
   it('returns 8 tools with correct snake_case names on tools/list', async () => {
     const { json } = await callJson({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
     const tools = (json.result as { tools: Array<{ name: string }> }).tools;
