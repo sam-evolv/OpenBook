@@ -203,10 +203,12 @@ describe('searchBusinessesHandler', () => {
       data: [
         candidateFixture({
           id: cheapId,
+          slug: 'cheap-biz',
           services: [{ id: uuid('ccc1'), name: 'cheap', duration_minutes: 60, price_cents: 4000, is_active: true, sort_order: 0 }],
         }),
         candidateFixture({
           id: priceyId,
+          slug: 'pricey-biz',
           services: [{ id: uuid('ddd1'), name: 'pricey', duration_minutes: 60, price_cents: 9000, is_active: true, sort_order: 0 }],
         }),
       ],
@@ -217,9 +219,13 @@ describe('searchBusinessesHandler', () => {
     const out = (await searchBusinessesHandler(
       { intent: 'pt', price_max_eur: 50 },
       ctx,
-    )) as { results: Array<{ business_id: string }> };
+    )) as { results: Array<Record<string, unknown>> };
 
-    expect(out.results.map((r) => r.business_id)).toEqual([cheapId]);
+    expect(out.results.map((r) => r.slug)).toEqual(['cheap-biz']);
+    for (const r of out.results) {
+      expect(r).not.toHaveProperty('business_id');
+      expect(r.slug).toBeDefined();
+    }
   });
 
   it('promoted overlay: matching slot gets discount_percent', async () => {

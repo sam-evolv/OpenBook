@@ -329,8 +329,12 @@ describe('get_promoted_inventory — limit + ranking', () => {
     candidatesResult = { data: [small, big], error: null };
     markAvailable([small, big]);
     const out = (await getPromotedInventoryHandler({}, ctx)) as Record<string, unknown>;
-    const results = out.results as Array<{ business_id: string }>;
-    expect(results[0].business_id).toBe(BIZ_B.id);
+    const results = out.results as Array<Record<string, unknown>>;
+    expect(results[0].slug).toBe(BIZ_B.slug);
+    for (const r of results) {
+      expect(r).not.toHaveProperty('business_id');
+      expect(r.slug).toBeDefined();
+    }
   });
 });
 

@@ -315,7 +315,6 @@ export const getPromotedInventoryHandler: ToolHandler = async (input, ctx: ToolC
   const results = trimmed.map((g) => {
     g.slots.sort((a, b) => a.candidate.slot_start.localeCompare(b.candidate.slot_start));
     return {
-      business_id: g.business.id,
       slug: g.business.slug,
       name: g.business.name,
       category: g.business.category,
@@ -370,7 +369,7 @@ export const getPromotedInventoryHandler: ToolHandler = async (input, ctx: ToolC
     parsedWhen: parsedWhen?.from ?? null,
     customerContext: null,
     resultCount: results.length,
-    resultBusinessIds: results.map((r) => r.business_id),
+    resultBusinessIds: trimmed.map((g) => g.business.id),
   });
 
   return validation.data;
