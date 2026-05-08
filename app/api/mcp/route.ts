@@ -20,6 +20,7 @@ import { TOOL_MANIFEST } from '../../../lib/mcp/manifest';
 import { detectSourceAssistant } from '../../../lib/mcp/source-assistant';
 import { checkRateLimit } from '../../../lib/mcp/rate-limit';
 import { logToolCall } from '../../../lib/mcp/logging';
+import { corsHeaders, preflightResponse } from '../../../lib/mcp/cors';
 import { TOOL_HANDLERS, type ToolContext } from './tools';
 import {
   searchBusinessesInput,
@@ -43,18 +44,32 @@ const TOOL_INPUT_SCHEMAS: Record<string, z.ZodTypeAny> = {
   record_post_booking_feedback: recordPostBookingFeedbackInput,
 };
 
-const SERVER_INFO = {
+const SUPPORTED_PROTOCOL_VERSIONS = ['2024-11-05', '2025-03-26', '2025-06-18'] as const;
+const LATEST_PROTOCOL_VERSION = '2025-06-18';
+
+const SERVER_INFO_BASE = {
   name: 'OpenBook',
   version: '1.0.0',
-  protocolVersion: '2025-06-18',
   capabilities: { tools: {} },
 };
+
+function negotiateProtocolVersion(params: unknown): string {
+  const requested = (params as { protocolVersion?: unknown } | undefined)?.protocolVersion;
+  if (typeof requested === 'string' && (SUPPORTED_PROTOCOL_VERSIONS as readonly string[]).includes(requested)) {
+    return requested;
+  }
+  return LATEST_PROTOCOL_VERSION;
+}
 
 function jsonResponse(payload: JsonRpcResponse, extraHeaders?: Record<string, string>): Response {
   return new Response(JSON.stringify(payload), {
     status: 200,
     headers: { 'Content-Type': 'application/json', ...(extraHeaders ?? {}) },
   });
+}
+
+export async function OPTIONS(request: Request): Promise<Response> {
+  return preflightResponse(request.headers.get('origin'));
 }
 
 function extractIp(headers: Headers): string | null {
@@ -68,22 +83,24 @@ function extractIp(headers: Headers): string | null {
 }
 
 export async function POST(request: Request): Promise<Response> {
+  const origin = request.headers.get('origin');
+  const cors = corsHeaders(origin);
+
   let body: unknown;
   try {
     body = await request.json();
   } catch {
-    return jsonResponse(errorResponse(null, PARSE_ERROR, 'Parse error'));
+    return jsonResponse(errorResponse(null, PARSE_ERROR, 'Parse error'), cors);
   }
 
   const parsed = parseRequest(body);
   if (!parsed.ok) {
-    return jsonResponse(parsed.response);
+    return jsonResponse(parsed.response, cors);
   }
   const { id, method, params } = parsed.request;
 
   const sourceAssistant = detectSourceAssistant(request.headers);
   const sourceIp = extractIp(request.headers);
-  const origin = request.headers.get('origin');
   const requestId = request.headers.get('x-request-id') ?? crypto.randomUUID();
   const ctx: ToolContext = { sourceAssistant, sourceIp, requestId };
 
@@ -92,17 +109,20 @@ export async function POST(request: Request): Promise<Response> {
     const retryAfter = rl.retryAfter ?? 60;
     return jsonResponse(
       errorResponse(id, RATE_LIMITED, 'rate limited', { retryAfter, reason: rl.reason }),
-      { 'Retry-After': String(retryAfter) },
+      { ...cors, 'Retry-After': String(retryAfter) },
     );
   }
 
   try {
     if (method === 'initialize') {
-      return jsonResponse(successResponse(id, SERVER_INFO));
+      return jsonResponse(
+        successResponse(id, { ...SERVER_INFO_BASE, protocolVersion: negotiateProtocolVersion(params) }),
+        cors,
+      );
     }
 
     if (method === 'tools/list') {
-      return jsonResponse(successResponse(id, { tools: TOOL_MANIFEST }));
+      return jsonResponse(successResponse(id, { tools: TOOL_MANIFEST }), cors);
     }
 
     if (method === 'tools/call') {
@@ -111,7 +131,7 @@ export async function POST(request: Request): Promise<Response> {
       const args = callParams?.arguments;
 
       if (!name || !(name in TOOL_HANDLERS)) {
-        return jsonResponse(errorResponse(id, METHOD_NOT_FOUND, `Unknown tool: ${name ?? '(missing)'}`));
+        return jsonResponse(errorResponse(id, METHOD_NOT_FOUND, `Unknown tool: ${name ?? '(missing)'}`), cors);
       }
 
       const schema = TOOL_INPUT_SCHEMAS[name];
@@ -119,6 +139,7 @@ export async function POST(request: Request): Promise<Response> {
       if (!validation.success) {
         return jsonResponse(
           errorResponse(id, INVALID_PARAMS, 'Invalid tool arguments', validation.error.format()),
+          cors,
         );
       }
 
@@ -127,7 +148,7 @@ export async function POST(request: Request): Promise<Response> {
       let toolError: unknown = null;
       try {
         result = await TOOL_HANDLERS[name](validation.data, ctx);
-        return jsonResponse(successResponse(id, result));
+        return jsonResponse(successResponse(id, result), cors);
       } catch (err) {
         toolError = err instanceof Error ? { message: err.message } : err;
         throw err;
@@ -147,9 +168,9 @@ export async function POST(request: Request): Promise<Response> {
       }
     }
 
-    return jsonResponse(errorResponse(id, METHOD_NOT_FOUND, `Unknown method: ${method}`));
+    return jsonResponse(errorResponse(id, METHOD_NOT_FOUND, `Unknown method: ${method}`), cors);
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Internal error';
-    return jsonResponse(errorResponse(id, INTERNAL_ERROR, 'Internal error', message));
+    return jsonResponse(errorResponse(id, INTERNAL_ERROR, 'Internal error', message), cors);
   }
 }
