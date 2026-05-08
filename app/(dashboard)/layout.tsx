@@ -15,7 +15,6 @@ export const dynamic = 'force-dynamic';
 interface BusinessContext {
   id: string;
   name: string;
-  slug: string;
   plan: string | null;
 }
 
@@ -67,7 +66,7 @@ export default async function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { owner, business } = await requireCurrentBusiness<BusinessContext>(
-    'id, name, slug, plan',
+    'id, name, plan',
   );
 
   const themeCookie = cookies().get('theme')?.value;
@@ -91,7 +90,6 @@ export default async function DashboardLayout({
         />
         <Sidebar
           businessName={business.name}
-          businessSlug={business.slug}
           userName={ownerName}
           userInitials={initials}
           plan={normalisePlan(business.plan)}

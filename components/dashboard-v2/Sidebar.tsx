@@ -13,10 +13,8 @@ import {
   Settings,
   Wallet,
   Sparkles,
-  ArrowRight,
   Sun,
   Moon,
-  ChevronDown,
   MonitorSmartphone,
   BadgePercent,
   UserRound,
@@ -24,7 +22,6 @@ import {
 } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
 import { cn } from '@/lib/utils';
-import { publicBusinessDisplayUrl } from '@/lib/public-url';
 
 interface NavItem {
   id: string;
@@ -62,7 +59,6 @@ const PLAN_LABEL: Record<SidebarPlan, string> = {
 
 interface SidebarProps {
   businessName?: string;
-  businessSlug?: string;
   userName?: string;
   userInitials?: string;
   plan?: SidebarPlan;
@@ -73,7 +69,6 @@ interface SidebarProps {
 
 export function Sidebar({
   businessName = 'Your business',
-  businessSlug = 'your-business',
   userName = 'You',
   userInitials = 'YO',
   plan = 'free',
@@ -101,26 +96,28 @@ export function Sidebar({
 
   const planLabel = PLAN_LABEL[plan] ?? PLAN_LABEL.free;
   const isFreePlan = plan === 'free';
-  const displayUrl = publicBusinessDisplayUrl(businessSlug);
 
   return (
-    <aside className={cn("sticky top-0 flex h-screen w-[244px] flex-col border-r bg-paper-bg dark:bg-ink-bg border-paper-border dark:border-ink-border px-3 pt-4 pb-3.5 text-[13.5px]", className)}>
-      <div className="flex items-center gap-2.5 px-2 pb-3.5 mb-2.5 border-b border-paper-border dark:border-ink-border">
-        <div className="flex h-7 w-7 items-center justify-center rounded-md bg-gradient-to-br from-gold to-gold-muted text-[13px] font-bold text-black shadow-[0_0_0_1px_rgba(212,175,55,0.25)]">
+    <aside
+      className={cn(
+        'sticky top-0 flex h-screen w-[244px] flex-col border-r bg-paper-bg dark:bg-ink-bg border-paper-border dark:border-ink-border',
+        className,
+      )}
+    >
+      <div className="flex items-center gap-3 p-5">
+        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[10px] bg-gradient-to-br from-gold to-gold-muted text-[15px] font-semibold text-white shadow-[0_0_0_1px_rgba(212,175,55,0.25)]">
           {businessName[0]}
         </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-[13.5px] font-semibold leading-tight text-paper-text-1 dark:text-ink-text-1 truncate">
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-[16px] font-semibold leading-tight text-paper-text-1 dark:text-ink-text-1">
             {businessName}
           </div>
-          <div className="text-[11.5px] font-mono text-paper-text-3 dark:text-ink-text-3">
-            {displayUrl}
-          </div>
         </div>
-        <ChevronDown size={14} className="text-paper-text-3 dark:text-ink-text-3" />
       </div>
 
-      <nav className="flex-1 flex flex-col gap-0.5 overflow-y-auto">
+      <div className="border-t border-paper-border dark:border-ink-border" />
+
+      <nav className="sidebar-scroll flex flex-1 flex-col gap-[2px] overflow-y-auto py-2">
         {items.map((item) => {
           const Icon = item.icon;
           const isActive = pathname?.startsWith(item.href) ?? false;
@@ -129,25 +126,37 @@ export function Sidebar({
               key={item.id}
               href={item.href}
               className={cn(
-                'relative flex items-center gap-2.5 px-2.5 py-1.5 rounded-md transition-colors',
+                'group relative flex items-center gap-3 px-[14px] py-[12px] transition-colors duration-150 ease-out',
                 isActive
-                  ? 'bg-paper-surface2 dark:bg-ink-surface2 text-paper-text-1 dark:text-ink-text-1 font-medium'
+                  ? 'bg-paper-surface3 text-gold dark:bg-ink-surface3 font-medium'
                   : 'text-paper-text-2 dark:text-ink-text-2 hover:bg-paper-surface dark:hover:bg-ink-surface hover:text-paper-text-1 dark:hover:text-ink-text-1',
               )}
             >
               {isActive && (
-                <span className="absolute -left-3 top-1/2 -translate-y-1/2 h-3.5 w-0.5 rounded-r bg-gold" />
+                <span
+                  aria-hidden
+                  className="absolute left-0 top-0 bottom-0 w-[3px] rounded-r-sm bg-gold"
+                />
               )}
-              <Icon size={15} strokeWidth={isActive ? 2 : 1.75} />
-              <span className="flex-1">{item.label}</span>
+              <Icon
+                size={18}
+                strokeWidth={isActive ? 2 : 1.75}
+                className={cn(
+                  'shrink-0 transition-colors duration-150 ease-out',
+                  isActive
+                    ? 'text-gold'
+                    : 'text-paper-text-3 dark:text-ink-text-3 group-hover:text-paper-text-1 dark:group-hover:text-ink-text-1',
+                )}
+              />
+              <span className="flex-1 text-[14px]">{item.label}</span>
               {item.badge && (
-                <span className="text-[9.5px] font-semibold uppercase tracking-wide text-gold bg-gold-soft border border-gold-border rounded-[3px] px-1.5 py-0.5">
+                <span className="rounded-[3px] border border-gold-border bg-gold-soft px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide text-gold">
                   {item.badge}
                 </span>
               )}
               {item.count !== undefined &&
                 (item.unread ? (
-                  <span className="min-w-[16px] text-center text-[10px] font-semibold tabular-nums text-black bg-gold rounded-[3px] px-1.5 py-0.5">
+                  <span className="min-w-[16px] rounded-[3px] bg-gold px-1.5 py-0.5 text-center text-[10px] font-semibold tabular-nums text-black">
                     {item.count}
                   </span>
                 ) : (
@@ -160,56 +169,43 @@ export function Sidebar({
         })}
       </nav>
 
-      <Link
-        href="/dashboard/intelligence#ai-distribution"
-        className="block rounded-xl border border-gold-border bg-gradient-to-br from-gold-soft to-transparent p-3 mb-2.5 hover:from-gold-soft/70 transition-colors"
-      >
-        <div className="flex items-center gap-1.5 mb-1.5">
-          <Sparkles size={12} className="text-gold" />
-          <span className="text-[10.5px] font-semibold uppercase tracking-[0.4px] text-gold">
-            Live on AI
-          </span>
-        </div>
-        <div className="text-[12px] text-paper-text-2 dark:text-ink-text-2 leading-[1.4]">
-          Queryable on ChatGPT, Claude &amp; Gemini.
-        </div>
-        <div className="flex items-center gap-1 mt-1.5 text-[11.5px] font-medium text-gold">
-          View stats <ArrowRight size={11} />
-        </div>
-      </Link>
+      <div className="border-t border-paper-border dark:border-ink-border" />
 
-      <div className="flex items-center gap-2 pt-2 border-t border-paper-border dark:border-ink-border">
-        <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-paper-surface2 to-paper-borderStrong dark:from-ink-surface2 dark:to-ink-borderStrong text-[10px] font-semibold text-paper-text-1 dark:text-ink-text-1">
-          {userInitials}
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="text-[12px] font-medium text-paper-text-1 dark:text-ink-text-1 truncate">
-            {userName}
+      <div className="flex flex-col gap-3 p-4">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-paper-surface2 to-paper-borderStrong dark:from-ink-surface2 dark:to-ink-borderStrong text-[11px] font-semibold text-paper-text-1 dark:text-ink-text-1">
+            {userInitials}
           </div>
-          <div className="text-[10.5px] text-paper-text-3 dark:text-ink-text-3 truncate">
-            {planLabel}
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-[13px] font-medium text-paper-text-1 dark:text-ink-text-1">
+              {userName}
+            </div>
+            <div className="truncate text-[11px] text-paper-text-3 dark:text-ink-text-3">
+              {planLabel}
+            </div>
           </div>
         </div>
-        {isFreePlan && (
-          <Link
-            href="/dashboard/settings/billing"
-            className="text-[10.5px] font-semibold uppercase tracking-[0.4px] text-black bg-gold hover:bg-gold-muted rounded px-2 py-1 transition-colors"
-          >
-            Upgrade
-          </Link>
-        )}
-        <button
-          onClick={toggle}
-          className="flex items-center justify-center p-1.5 rounded border border-paper-border dark:border-ink-border bg-paper-surface dark:bg-ink-surface hover:bg-paper-surface2 dark:hover:bg-ink-surface2 transition-colors"
-          aria-label={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}
-          title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}
-        >
-          {mode === 'dark' ? (
-            <Sun size={12} className="text-ink-text-2" />
+
+        <div className="flex items-center justify-between">
+          {isFreePlan ? (
+            <Link
+              href="/dashboard/settings/billing"
+              className="rounded-xl bg-gold px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.4px] text-black transition-colors hover:bg-gold-muted"
+            >
+              Upgrade
+            </Link>
           ) : (
-            <Moon size={12} className="text-paper-text-2" />
+            <span />
           )}
-        </button>
+          <button
+            onClick={toggle}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-paper-text-2 transition-colors hover:bg-paper-surface hover:text-paper-text-1 dark:text-ink-text-2 dark:hover:bg-ink-surface dark:hover:text-ink-text-1"
+            aria-label={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}
+            title={`Switch to ${mode === 'dark' ? 'light' : 'dark'} mode`}
+          >
+            {mode === 'dark' ? <Sun size={16} /> : <Moon size={16} />}
+          </button>
+        </div>
       </div>
     </aside>
   );
