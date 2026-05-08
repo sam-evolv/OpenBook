@@ -311,3 +311,56 @@ body {
   from { opacity: 0; transform: translateY(10px); }
   to   { opacity: 1; transform: translateY(0); }
 }
+
+/* ------------------------------------------------------------
+   /c/[token] CHECKOUT — design tokens
+   The post-MCP-handoff checkout page is white-labelled but
+   visually owned by OpenBook. Dark by default; the business's
+   own primary_colour appears only as a single accent strip.
+   ------------------------------------------------------------ */
+:root {
+  --ob-co-bg:              #080808;
+  --ob-co-surface:         #0F0F0F;
+  --ob-co-surface-elev:    #161616;
+  --ob-co-border-quiet:    #1F1F1F;
+  --ob-co-border-active:   #2A2A2A;
+  --ob-co-text-1:          #F5F5F0;
+  --ob-co-text-2:          #A1A1A1;
+  --ob-co-text-3:          #6B6B6B;
+  --ob-co-gold:            #D4AF37;
+  --ob-co-gold-hi:         #E8C76B;
+  --ob-co-gold-lo:         #8B6428;
+  --ob-co-warn-amber:      #E4A85C;
+  --ob-co-danger:          #E84B4B;
+
+  --ob-co-ease-out:        cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.ob-co-page-enter {
+  animation: ob-co-page-enter 400ms var(--ob-co-ease-out) both;
+}
+@keyframes ob-co-page-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ob-co-page-enter { animation: none; }
+}
+
+@keyframes ob-co-spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes ob-co-pulse {
+  0%, 100% { opacity: 0.45; }
+  50%      { opacity: 0.75; }
+}
+.ob-co-skeleton {
+  animation: ob-co-pulse 1.6s var(--ob-co-ease-out) infinite;
+  background: var(--ob-co-surface-elev);
+  border-radius: 8px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ob-co-skeleton { animation: none; opacity: 0.6; }
+}
