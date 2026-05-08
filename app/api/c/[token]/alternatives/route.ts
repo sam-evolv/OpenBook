@@ -48,39 +48,62 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
   }
 
   const sb = supabaseAdmin();
+
+  // Sequential queries — same shape as page.tsx — so we never hit the
+  // Postgrest array-vs-object cardinality ambiguity that the join syntax
+  // can produce when the FK column has no unique constraint.
   const { data: hold } = await sb
     .from('mcp_holds')
-    .select(
-      `
-      id, business_id, service_id,
-      bookings:booking_id ( id, businesses:business_id ( slug ), services:service_id ( id, name, duration_minutes, price_cents ) )
-      `,
-    )
+    .select('id, business_id, service_id, start_at, booking_id')
     .eq('id', holdId)
     .maybeSingle<{
       id: string;
       business_id: string;
       service_id: string;
-      bookings: {
-        id: string;
-        businesses: { slug: string } | null;
-        services: { id: string; name: string; duration_minutes: number; price_cents: number } | null;
-      } | null;
+      start_at: string;
+      booking_id: string | null;
     }>();
 
-  if (!hold || !hold.bookings || !hold.bookings.services || !hold.bookings.businesses) {
+  if (!hold) {
     return NextResponse.json({ alternatives: [] });
   }
-  const service = hold.bookings.services;
-  const slug = hold.bookings.businesses.slug;
 
-  // Fetch availability for each of the next 7 days. Same approach the
-  // hold-and-checkout SLOT_UNAVAILABLE branch uses, kept consistent so the
-  // user sees the same alternatives surface in either expiry route.
-  const today = new Date();
+  const [bizRes, svcRes] = await Promise.all([
+    sb
+      .from('businesses')
+      .select('slug')
+      .eq('id', hold.business_id)
+      .maybeSingle<{ slug: string }>(),
+    sb
+      .from('services')
+      .select('id, name, duration_minutes, price_cents')
+      .eq('id', hold.service_id)
+      .maybeSingle<{ id: string; name: string; duration_minutes: number; price_cents: number }>(),
+  ]);
+
+  if (!bizRes.data || !svcRes.data) {
+    return NextResponse.json({ alternatives: [] });
+  }
+  const slug = bizRes.data.slug;
+  const service = svcRes.data;
+
+  // Anchor the 7-day window on the original hold's start date, NOT today.
+  // A user with a Monday booking that just lost their slot wants
+  // alternatives near Monday, not today. We start one day before the
+  // original slot and walk forward 7 days, which gives us a balanced
+  // window around the user's actual intent.
+  const anchor = new Date(hold.start_at);
+  const startOfAnchorUtc = new Date(anchor.getTime());
+  // Walk back one day, but never earlier than today (so we don't query
+  // dates that have already passed).
+  const todayUtc = new Date();
+  const dayMs = 24 * 60 * 60 * 1000;
+  let cursor = new Date(startOfAnchorUtc.getTime() - dayMs);
+  if (cursor.getTime() < todayUtc.getTime()) cursor = new Date(todayUtc.getTime());
+
   const dates: string[] = [];
   for (let i = 0; i < 7; i += 1) {
-    const d = new Date(today.getTime() + i * 24 * 60 * 60 * 1000);
+    const d = new Date(cursor.getTime() + i * dayMs);
     dates.push(d.toISOString().slice(0, 10));
   }
 
@@ -101,7 +124,16 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
       flat.push(row);
     }
   }
-  flat.sort((a, b) => a.slot_start.localeCompare(b.slot_start));
+  // Sort by proximity to the original hold's start time so the
+  // user sees the closest alternatives first, not the chronologically
+  // earliest ones (which may be hours-from-now slots irrelevant to a
+  // user whose booking was for next Monday).
+  const anchorMs = new Date(hold.start_at).getTime();
+  flat.sort(
+    (a, b) =>
+      Math.abs(new Date(a.slot_start).getTime() - anchorMs) -
+      Math.abs(new Date(b.slot_start).getTime() - anchorMs),
+  );
 
   const alternatives = flat.slice(0, 3).map((s) => {
     const startIso = new Date(s.slot_start).toISOString();

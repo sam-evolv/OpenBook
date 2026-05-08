@@ -6,15 +6,21 @@ beforeAll(() => {
 });
 
 let holdLookup: { data: unknown; error: unknown } = { data: null, error: null };
+let businessLookup: { data: unknown; error: unknown } = { data: null, error: null };
+let serviceLookup: { data: unknown; error: unknown } = { data: null, error: null };
 let availabilityResult: { data: unknown; error: unknown } = { data: [], error: null };
 
 vi.mock('@/lib/supabase', () => ({
   supabaseAdmin: () => ({
-    from: vi.fn(() => {
+    from: vi.fn((table: string) => {
       const chain: Record<string, unknown> = {};
       chain.select = vi.fn(() => chain);
       chain.eq = vi.fn(() => chain);
-      chain.maybeSingle = vi.fn(async () => holdLookup);
+      chain.maybeSingle = vi.fn(async () => {
+        if (table === 'businesses') return businessLookup;
+        if (table === 'services') return serviceLookup;
+        return holdLookup;
+      });
       return chain;
     }),
     rpc: vi.fn(async () => availabilityResult),
@@ -37,12 +43,16 @@ beforeEach(() => {
       id: 'hold-1',
       business_id: 'biz-1',
       service_id: 'svc-1',
-      bookings: {
-        id: 'booking-1',
-        businesses: { slug: 'evolv' },
-        services: { id: 'svc-1', name: 'PT', duration_minutes: 60, price_cents: 6000 },
-      },
+      // start_at anchors the alternatives window. Use 3h from now so it
+      // sits inside the test's "futureIso" availability slots.
+      start_at: futureIso(3 * 3600 * 1000),
+      booking_id: 'booking-1',
     },
+    error: null,
+  };
+  businessLookup = { data: { slug: 'evolv' }, error: null };
+  serviceLookup = {
+    data: { id: 'svc-1', name: 'PT', duration_minutes: 60, price_cents: 6000 },
     error: null,
   };
   availabilityResult = { data: [], error: null };
