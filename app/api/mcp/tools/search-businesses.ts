@@ -50,6 +50,11 @@ type ServiceRow = {
   price_cents: number;
   sort_order: number | null;
   is_active: boolean | null;
+  updated_at: string | null;
+};
+
+type BusinessHoursRow = {
+  updated_at: string | null;
 };
 
 type CandidateRow = {
@@ -65,7 +70,9 @@ type CandidateRow = {
   accessibility_notes: string | null;
   space_description: string | null;
   created_at: string | null;
+  updated_at: string | null;
   services: ServiceRow[] | null;
+  business_hours: BusinessHoursRow[] | null;
   reviews: Array<{ rating: number | null }> | null;
 };
 
@@ -84,6 +91,24 @@ function deriveShortDescription(row: { tagline: string | null; description: stri
     }
   }
   return undefined;
+}
+
+// Most-recent updated_at across the business row, its services, and its
+// business_hours. Feeds the ranker's RecencyScore — see Section 6.2.
+// Returns null when no signal exists; the ranker then floors the score
+// to 0.3 rather than treating "unknown" as fresh.
+function maxUpdatedAt(c: CandidateRow): string | null {
+  const ts: number[] = [];
+  const push = (s: string | null | undefined) => {
+    if (!s) return;
+    const t = new Date(s).getTime();
+    if (!Number.isNaN(t)) ts.push(t);
+  };
+  push(c.updated_at);
+  for (const s of c.services ?? []) push(s.updated_at);
+  for (const h of c.business_hours ?? []) push(h.updated_at);
+  if (ts.length === 0) return null;
+  return new Date(Math.max(...ts)).toISOString();
 }
 
 function locationSummary(row: { city: string | null }): string {
@@ -363,8 +388,10 @@ export const searchBusinessesHandler: ToolHandler = async (input, ctx: ToolConte
     .from('businesses')
     .select(`
       id, slug, name, category, description, about_long, tagline,
-      city, amenities, accessibility_notes, space_description, created_at,
-      services (id, name, duration_minutes, price_cents, sort_order, is_active),
+      city, amenities, accessibility_notes, space_description,
+      created_at, updated_at,
+      services (id, name, duration_minutes, price_cents, sort_order, is_active, updated_at),
+      business_hours (updated_at),
       reviews (rating)
     `)
     .eq('is_live', true)
@@ -460,7 +487,7 @@ export const searchBusinessesHandler: ToolHandler = async (input, ctx: ToolConte
       amenities: candidate.amenities,
       accessibility_notes: candidate.accessibility_notes,
       space_description: candidate.space_description,
-      created_at: candidate.created_at,
+      max_updated_at: maxUpdatedAt(candidate),
       review_count: reviews.count,
       review_average: reviews.average,
       ...fb,

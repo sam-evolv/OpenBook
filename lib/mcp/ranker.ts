@@ -57,9 +57,11 @@ export type BusinessForRanking = {
   amenities?: string[] | null;
   accessibility_notes?: string | null;
   space_description?: string | null;
-  // Recency signal source. Per the user's decision, we use businesses.created_at
-  // as the freshness proxy until updated_at columns land.
-  created_at?: string | null;
+  // Recency signal source — the most recent of business.updated_at,
+  // max(services.updated_at), max(business_hours.updated_at). Populated
+  // by the search_businesses handler from the candidate query rows; the
+  // ranker just reads it. See migration 20260508120000.
+  max_updated_at?: string | null;
   // Review aggregates, pre-computed by the caller from the joined reviews.
   review_count: number;
   review_average: number | null;
@@ -192,13 +194,21 @@ function contextFitScore(b: BusinessForRanking, c: IntentClassification): number
   return clamp01(matched / c.constraint_keywords.length);
 }
 
+// Per spec section 6.2: rewards businesses that updated availability or
+// services in the last 30 days. Combats stale data.
+//   day  0..30 → 1.0
+//   day 30..90 → linear decay 1.0 → 0.3
+//   day  90+   → 0.3 floor
+// Inputs without an updated_at fall to the 0.3 floor — a business with
+// no freshness signal is treated as "long stale" rather than "perfectly
+// fresh" so we never reward unknown state.
 function recencyScore(b: BusinessForRanking, now: Date = new Date()): number {
-  if (!b.created_at) return 0.3;
-  const age = now.getTime() - new Date(b.created_at).getTime();
-  const days = age / (24 * 60 * 60 * 1000);
-  if (days < 30) return 1.0;
-  if (days > 90) return 0.3;
-  // Linear decay 30 → 90 from 1.0 → 0.3.
+  if (!b.max_updated_at) return 0.3;
+  const ts = new Date(b.max_updated_at).getTime();
+  if (Number.isNaN(ts)) return 0.3;
+  const days = (now.getTime() - ts) / (24 * 60 * 60 * 1000);
+  if (days <= 30) return 1.0;
+  if (days >= 90) return 0.3;
   return 1.0 - ((days - 30) / 60) * 0.7;
 }
 
