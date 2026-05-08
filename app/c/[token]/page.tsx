@@ -19,6 +19,7 @@ type HoldRow = {
   start_at: string;
   end_at: string;
   customer_hints: Record<string, unknown> | null;
+  source_assistant: string | null;
   bookings: {
     id: string;
     status: string | null;
@@ -68,7 +69,7 @@ async function loadBundle(token: string): Promise<
     .from('mcp_holds')
     .select(
       `
-      id, status, expires_at, start_at, end_at, customer_hints,
+      id, status, expires_at, start_at, end_at, customer_hints, source_assistant,
       bookings:booking_id (
         id, status, notes, starts_at, ends_at, price_cents,
         businesses:business_id (
@@ -170,6 +171,7 @@ async function loadBundle(token: string): Promise<
       phone: typeof hints.phone === 'string' ? hints.phone : null,
       notes: typeof hints.notes === 'string' ? hints.notes : null,
     },
+    source_assistant: data.source_assistant ?? null,
     is_free: service.price_cents === 0,
     is_promoted: isPromoted,
     original_price_cents: originalPriceCents,

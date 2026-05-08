@@ -364,3 +364,16 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .ob-co-skeleton { animation: none; opacity: 0.6; }
 }
+
+/* Bridge card entrance — 600ms after the success block has settled. */
+.ob-co-bridge-enter {
+  animation: ob-co-bridge-enter 400ms var(--ob-co-ease-out) 600ms both;
+}
+@keyframes ob-co-bridge-enter {
+  0%   { opacity: 0;    transform: translateY(8px); }
+  60%  { opacity: 0.85; transform: translateY(2px); }
+  100% { opacity: 1;    transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ob-co-bridge-enter { animation: none; }
+}
