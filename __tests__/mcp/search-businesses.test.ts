@@ -114,8 +114,22 @@ const candidateFixture = (overrides: Record<string, unknown> = {}) => ({
   accessibility_notes: null,
   space_description: null,
   created_at: new Date(Date.now() - 10 * 86400000).toISOString(),
+  // Section 6.2 RecencyScore source. 10 days back → day-30 plateau → 1.0,
+  // so unrelated tests aren't perturbed by recency variation.
+  updated_at: new Date(Date.now() - 10 * 86400000).toISOString(),
   services: [
-    { id: uuid('bbbb'), name: 'PT', duration_minutes: 60, price_cents: 6000, sort_order: 0, is_active: true },
+    {
+      id: uuid('bbbb'),
+      name: 'PT',
+      duration_minutes: 60,
+      price_cents: 6000,
+      sort_order: 0,
+      is_active: true,
+      updated_at: new Date(Date.now() - 10 * 86400000).toISOString(),
+    },
+  ],
+  business_hours: [
+    { updated_at: new Date(Date.now() - 10 * 86400000).toISOString() },
   ],
   reviews: [],
   ...overrides,

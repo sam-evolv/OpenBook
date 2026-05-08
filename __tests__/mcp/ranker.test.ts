@@ -36,7 +36,9 @@ const baseBusiness = (overrides: Partial<BusinessForRanking> = {}): BusinessForR
   amenities: null,
   accessibility_notes: null,
   space_description: null,
-  created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
+  // Section 6.2 RecencyScore source. 10 days back keeps fixtures inside
+  // the day-30 plateau so unrelated tests aren't perturbed.
+  max_updated_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString(),
   review_count: 0,
   review_average: null,
   feedback_sample_size: 0,
@@ -133,13 +135,55 @@ describe('rankBusinesses', () => {
 
   it('prefers a recently-updated business when other signals are equal', () => {
     const recent = candidate(
-      baseBusiness({ id: 'recent', created_at: new Date(Date.now() - 5 * 86400000).toISOString() }),
+      baseBusiness({ id: 'recent', max_updated_at: new Date(Date.now() - 5 * 86400000).toISOString() }),
     );
     const stale = candidate(
-      baseBusiness({ id: 'stale', created_at: new Date(Date.now() - 200 * 86400000).toISOString() }),
+      baseBusiness({ id: 'stale', max_updated_at: new Date(Date.now() - 200 * 86400000).toISOString() }),
     );
     const out = rankBusinesses([stale, recent], inputBase);
     expect(out[0].business.id).toBe('recent');
+  });
+
+  it('RecencyScore plateau: a business updated 5 days ago and one updated 25 days ago tie on recency', () => {
+    // Both inside the day-30 plateau (1.0). Other signals identical → score
+    // identical → insertion order preserved.
+    const fiveDays = candidate(
+      baseBusiness({ id: 'five', max_updated_at: new Date(Date.now() - 5 * 86400000).toISOString() }),
+    );
+    const twentyFive = candidate(
+      baseBusiness({ id: 'twentyfive', max_updated_at: new Date(Date.now() - 25 * 86400000).toISOString() }),
+    );
+    const out = rankBusinesses([fiveDays, twentyFive], inputBase);
+    expect(out[0].score_breakdown.recency_score).toBeCloseTo(out[1].score_breakdown.recency_score, 10);
+  });
+
+  it('RecencyScore decays linearly between day 30 and day 90 (~0.65 at day 60)', () => {
+    // Score breakdown is recency_raw × w6 (0.05). Day 60 should map to
+    // ~0.65 raw → ~0.0325 weighted.
+    const day60 = candidate(
+      baseBusiness({ id: 'day60', max_updated_at: new Date(Date.now() - 60 * 86400000).toISOString() }),
+    );
+    const out = rankBusinesses([day60], inputBase);
+    const weighted = out[0].score_breakdown.recency_score;
+    const raw = weighted / 0.05;
+    expect(raw).toBeGreaterThan(0.62);
+    expect(raw).toBeLessThan(0.68);
+  });
+
+  it('RecencyScore floors at 0.3 for businesses untouched > 90 days', () => {
+    const ancient = candidate(
+      baseBusiness({ id: 'ancient', max_updated_at: new Date(Date.now() - 365 * 86400000).toISOString() }),
+    );
+    const out = rankBusinesses([ancient], inputBase);
+    const raw = out[0].score_breakdown.recency_score / 0.05;
+    expect(raw).toBeCloseTo(0.3, 5);
+  });
+
+  it('RecencyScore falls to the 0.3 floor when no max_updated_at is provided', () => {
+    const unknown = candidate(baseBusiness({ id: 'unknown', max_updated_at: null }));
+    const out = rankBusinesses([unknown], inputBase);
+    const raw = out[0].score_breakdown.recency_score / 0.05;
+    expect(raw).toBeCloseTo(0.3, 5);
   });
 
   it('score equals the sum of its breakdown components', () => {
