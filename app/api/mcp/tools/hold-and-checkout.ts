@@ -90,7 +90,11 @@ export const holdAndCheckoutHandler: ToolHandler = async (input, ctx: ToolContex
     p_start_at: startAt.toISOString(),
     p_end_at: endAt.toISOString(),
     p_expires_at: expiresAt.toISOString(),
-    p_source_assistant: ctx.sourceAssistant,
+    // Caller-declared source_assistant is used only for the bridge-card CTA
+    // copy on /c/[token], not as a security boundary. Header-sniffing was
+    // already trivially spoofable, so trusting the explicit input is no
+    // worse — and is more reliable for clients we don't recognise by UA.
+    p_source_assistant: parsed.source_assistant ?? ctx.sourceAssistant,
     p_customer_hints: customer_hints ?? null,
   });
 
