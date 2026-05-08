@@ -49,7 +49,7 @@ export const TOOL_MANIFEST: ToolDescriptor[] = [
     annotations: {
       readOnlyHint: true,
       destructiveHint: false,
-      openWorldHint: true,
+      openWorldHint: false,
     },
   },
   {
@@ -60,7 +60,7 @@ export const TOOL_MANIFEST: ToolDescriptor[] = [
     annotations: {
       readOnlyHint: true,
       destructiveHint: false,
-      openWorldHint: true,
+      openWorldHint: false,
     },
   },
   {
@@ -70,7 +70,7 @@ export const TOOL_MANIFEST: ToolDescriptor[] = [
     inputSchema: toJsonSchema(holdAndCheckoutInput),
     annotations: {
       readOnlyHint: false,
-      destructiveHint: false,
+      destructiveHint: true,
       openWorldHint: true,
     },
   },
@@ -93,7 +93,7 @@ export const TOOL_MANIFEST: ToolDescriptor[] = [
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
-      openWorldHint: true,
+      openWorldHint: false,
     },
   },
   {
@@ -104,7 +104,7 @@ export const TOOL_MANIFEST: ToolDescriptor[] = [
     annotations: {
       readOnlyHint: true,
       destructiveHint: false,
-      openWorldHint: true,
+      openWorldHint: false,
     },
   },
   {
@@ -115,7 +115,7 @@ export const TOOL_MANIFEST: ToolDescriptor[] = [
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
-      openWorldHint: true,
+      openWorldHint: false,
     },
   },
 ];

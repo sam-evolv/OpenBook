@@ -4,6 +4,7 @@ Track of every PR shipped against docs/mcp-server-spec.md.
 Keep entries short. One line per PR. Newest at top.
 
 ## PRs
+- PR #N: Add MCP tool annotations (directory submission requirement)
 - PR #N: Add updated_at columns + re-enable RecencyScore
 - PR #N: Tool 8 — record_post_booking_feedback (final tool!)
 - PR #N: Tool 7 — get_promoted_inventory implementation
