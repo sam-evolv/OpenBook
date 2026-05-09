@@ -139,10 +139,15 @@ export async function POST(req: NextRequest) {
           if (custErr) {
             // Non-fatal: booking is already confirmed, customer
             // contact details are best-effort enrichment.
-            console.error(
-              'stripe-webhook: customer update failed (non-fatal)',
-              custErr,
-            );
+            console.error('[webhook] customer_enrich_failed', {
+              source: 'checkout.session.completed',
+              customer_id: updatedBooking.customer_id,
+              event_id: event.id,
+              pg_code: custErr.code,
+              pg_message: custErr.message,
+              pg_details: custErr.details,
+              pg_hint: custErr.hint,
+            });
           }
         }
 
@@ -247,7 +252,15 @@ export async function POST(req: NextRequest) {
             .update(customerUpdate)
             .eq('id', updatedBooking.customer_id);
           if (custErr) {
-            console.error('stripe-webhook: PI customer update failed (non-fatal)', custErr);
+            console.error('[webhook] customer_enrich_failed', {
+              source: 'payment_intent.succeeded',
+              customer_id: updatedBooking.customer_id,
+              event_id: event.id,
+              pg_code: custErr.code,
+              pg_message: custErr.message,
+              pg_details: custErr.details,
+              pg_hint: custErr.hint,
+            });
           }
         }
 
