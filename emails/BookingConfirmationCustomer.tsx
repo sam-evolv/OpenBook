@@ -7,6 +7,8 @@ import {
   Heading,
   Hr,
   Html,
+  Img,
+  Link,
   Preview,
   Section,
   Text,
@@ -23,6 +25,7 @@ const SANS = 'Geist, system-ui, -apple-system, Segoe UI, sans-serif';
 interface Props {
   customerName: string | null;
   businessName: string;
+  businessLogoUrl: string | null;
   serviceName: string;
   dateLabel: string;
   timeLabel: string;
@@ -49,6 +52,7 @@ function formatDuration(minutes: number): string {
 export function BookingConfirmationCustomer({
   customerName,
   businessName,
+  businessLogoUrl,
   serviceName,
   dateLabel,
   timeLabel,
@@ -77,6 +81,20 @@ export function BookingConfirmationCustomer({
           }}
         >
           <Section>
+            {businessLogoUrl ? (
+              <Img
+                src={businessLogoUrl}
+                alt={`${businessName} logo`}
+                width="56"
+                height="56"
+                style={{
+                  borderRadius: '50%',
+                  objectFit: 'cover',
+                  display: 'block',
+                  marginBottom: 16,
+                }}
+              />
+            ) : null}
             <Text
               style={{
                 margin: 0,
@@ -87,7 +105,7 @@ export function BookingConfirmationCustomer({
                 fontWeight: 600,
               }}
             >
-              OpenBook
+              {businessName}
             </Text>
 
             <Heading
@@ -214,8 +232,23 @@ export function BookingConfirmationCustomer({
             }}
           />
 
-          <Text style={{ margin: 0, color: FAINT, fontSize: 12, lineHeight: 1.55 }}>
-            OpenBook
+          <Text
+            style={{
+              margin: 0,
+              color: FAINT,
+              fontSize: 12,
+              lineHeight: 1.55,
+              textAlign: 'center',
+            }}
+          >
+            Powered by{' '}
+            <Link
+              href="https://openbook.ie"
+              style={{ color: FAINT, textDecoration: 'underline' }}
+            >
+              OpenBook
+            </Link>
+            {' · openbook.ie'}
           </Text>
         </Container>
       </Body>
