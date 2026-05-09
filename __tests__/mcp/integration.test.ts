@@ -222,6 +222,31 @@ describe('POST /api/mcp', () => {
     expect(lastResponse?.headers.get('Retry-After')).toBe('30');
   });
 
+  it('wraps tools/call success result in a CallToolResult envelope', async () => {
+    const { json } = await callJson({
+      jsonrpc: '2.0',
+      id: 100,
+      method: 'tools/call',
+      params: { name: 'get_promoted_inventory', arguments: {} },
+    });
+    const result = json.result as {
+      content: Array<{ type: string; text: string }>;
+      isError: boolean;
+    };
+    expect(result).toBeDefined();
+    expect(result.isError).toBe(false);
+    expect(Array.isArray(result.content)).toBe(true);
+    expect(result.content).toHaveLength(1);
+    expect(result.content[0].type).toBe('text');
+    expect(typeof result.content[0].text).toBe('string');
+    // The payload itself must round-trip through JSON unchanged. Parse it
+    // back and confirm it carries the underlying tool output, not the
+    // envelope wrapper.
+    const parsed = JSON.parse(result.content[0].text) as Record<string, unknown>;
+    expect(parsed).toBeDefined();
+    expect('content' in parsed).toBe(false);
+  });
+
   it('logs every tools/call exactly once with the correct toolName', async () => {
     await callJson({
       jsonrpc: '2.0',
