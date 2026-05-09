@@ -33,6 +33,10 @@ import { supabaseAdmin } from '../../../../lib/supabase';
 import { parseLocation } from '../../../../lib/mcp/parse-location';
 import { parseWhen } from '../../../../lib/mcp/parse-when';
 import { logSearchQuery } from '../../../../lib/mcp/logging';
+import {
+  categoryEquals,
+  categoryQueryVariants,
+} from '../../../../lib/mcp/category-normalise';
 import type { ToolContext, ToolHandler } from './index';
 
 const DEFAULT_LIMIT = 5;
@@ -108,7 +112,7 @@ function scoreCandidate(args: {
   promotionAgeDays: number;
 }): number {
   const intent =
-    args.category && args.category.toLowerCase() === args.business_category.toLowerCase()
+    args.category && categoryEquals(args.category, args.business_category)
       ? 1.0
       : args.category
         ? 0
@@ -183,7 +187,13 @@ export const getPromotedInventoryHandler: ToolHandler = async (input, ctx: ToolC
     .limit(CANDIDATE_FETCH_CAP);
 
   if (parsed.category) {
-    q = q.eq('businesses.category', parsed.category);
+    // The classifier emits canonical snake_case but businesses.category is
+    // stored in mixed cases ("Personal Training", "personal training", etc.).
+    // Expand to all plausible variants.
+    const variants = categoryQueryVariants(parsed.category);
+    if (variants.length > 0) {
+      q = q.in('businesses.category', variants);
+    }
   }
   if (parsedLocation?.city) {
     // businesses table has no `county` column (Appendix D), so location
