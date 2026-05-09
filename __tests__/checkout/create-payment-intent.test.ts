@@ -19,6 +19,8 @@ function buildSelectChain(table: string): Record<string, unknown> {
   chain.select = vi.fn(() => chain);
   chain.eq = vi.fn(() => chain);
   chain.in = vi.fn(() => chain);
+  chain.order = vi.fn(() => chain);
+  chain.limit = vi.fn(() => chain);
   chain.maybeSingle = vi.fn(async () => {
     if (table === 'mcp_holds') return holdResult;
     if (table === 'bookings') return bookingResult;
@@ -26,6 +28,15 @@ function buildSelectChain(table: string): Record<string, unknown> {
     return { data: null, error: null };
   });
   chain.single = vi.fn(async () => customerInsert);
+  // resolveOrCreateCustomer awaits the .order().limit() chain directly,
+  // expecting an array of rows (or an error). Make the chain thenable so
+  // the customers-table lookup resolves to customerLookup.
+  (chain as { then: (resolve: (v: unknown) => void) => void }).then = (
+    resolve: (v: unknown) => void,
+  ) => {
+    if (table === 'customers') resolve(customerLookup);
+    else resolve({ data: null, error: null });
+  };
   return chain;
 }
 
@@ -240,7 +251,7 @@ describe('POST /api/c/[token]/create-payment-intent', () => {
   });
 
   it('reuses an existing customer when email matches', async () => {
-    customerLookup = { data: { id: 'cust-existing' }, error: null };
+    customerLookup = { data: [{ id: 'cust-existing', created_at: '2024-01-01T00:00:00Z' }], error: null };
     const token = await signHoldToken({
       hold_id: 'hold-1', booking_id: 'booking-1',
       business_id: 'biz-1', service_id: 'svc-1',

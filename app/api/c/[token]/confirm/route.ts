@@ -3,6 +3,7 @@ import { supabaseAdmin } from '@/lib/supabase';
 import { verifyHoldToken } from '@/lib/mcp/tokens';
 import { sendBookingConfirmation } from '@/lib/email';
 import { getPaymentMode } from '@/lib/payments/payment-mode';
+import { resolveOrCreateCustomer } from '@/lib/customers/resolve';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -140,37 +141,37 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
     }
 
     // Resolve or create the customer row. Email is the natural key.
-    const { data: existingCustomer, error: custLookupErr } = await sb
-      .from('customers')
-      .select('id')
-      .eq('email', email)
-      .maybeSingle();
-    if (custLookupErr) {
-      console.error('[checkout/confirm] customer lookup failed', custLookupErr);
+    // resolveOrCreateCustomer tolerates 0/1/many rows for the same email
+    // because the customers table has no UNIQUE(email) constraint and
+    // legitimate duplicates exist from auth flows.
+    let customerId: string;
+    let wasCreated: boolean;
+    try {
+      const resolved = await resolveOrCreateCustomer(sb, {
+        email,
+        fullName: name,
+        phone,
+      });
+      customerId = resolved.id;
+      wasCreated = resolved.was_created;
+    } catch (err) {
+      const e = err as { code?: string; message?: string; details?: string; hint?: string };
+      console.error('[checkout/confirm] customer_resolve_failed', {
+        email_provided: !!email,
+        pg_code: e?.code,
+        pg_message: e?.message,
+        pg_details: e?.details,
+        pg_hint: e?.hint,
+      });
       return unavailable();
     }
 
-    let customerId = existingCustomer?.id ?? null;
-    if (!customerId) {
-      const { data: created, error: createErr } = await sb
-        .from('customers')
-        .insert({
-          email,
-          full_name: name,
-          name,
-          phone,
-        })
-        .select('id')
-        .single();
-      if (createErr || !created) {
-        console.error('[checkout/confirm] customer create failed', createErr);
-        return unavailable();
-      }
-      customerId = created.id;
-    } else {
-      // Best-effort enrichment. The booking row carries its own customer_phone
-      // snapshot below, so a write failure here doesn't block confirmation.
-      await sb
+    if (!wasCreated) {
+      // Best-effort enrichment of the existing row. The booking row carries
+      // its own customer_phone snapshot below, so a write failure here
+      // doesn't block confirmation; we just log it now instead of silently
+      // discarding the error.
+      const { error: enrichErr } = await sb
         .from('customers')
         .update({
           full_name: name,
@@ -178,6 +179,15 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
           phone,
         })
         .eq('id', customerId);
+      if (enrichErr) {
+        console.error('[checkout/confirm] customer_enrich_failed', {
+          customer_id: customerId,
+          pg_code: enrichErr.code,
+          pg_message: enrichErr.message,
+          pg_details: enrichErr.details,
+          pg_hint: enrichErr.hint,
+        });
+      }
     }
 
     // Persist customer link + payment mode + phone snapshot, and flip the

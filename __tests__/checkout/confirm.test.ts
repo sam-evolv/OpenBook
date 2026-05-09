@@ -18,6 +18,8 @@ function buildSelectChain(table: string): Record<string, unknown> {
   chain.select = vi.fn(() => chain);
   chain.eq = vi.fn(() => chain);
   chain.in = vi.fn(() => chain);
+  chain.order = vi.fn(() => chain);
+  chain.limit = vi.fn(() => chain);
   chain.maybeSingle = vi.fn(async () => {
     if (table === 'mcp_holds') return holdResult;
     if (table === 'bookings') return bookingResult;
@@ -25,6 +27,15 @@ function buildSelectChain(table: string): Record<string, unknown> {
     return { data: null, error: null };
   });
   chain.single = vi.fn(async () => customerInsert);
+  // resolveOrCreateCustomer awaits the .order().limit() chain directly,
+  // expecting an array of rows (or an error). Make the chain thenable so
+  // the customers-table lookup resolves to customerLookup.
+  (chain as { then: (resolve: (v: unknown) => void) => void }).then = (
+    resolve: (v: unknown) => void,
+  ) => {
+    if (table === 'customers') resolve(customerLookup);
+    else resolve({ data: null, error: null });
+  };
   return chain;
 }
 
@@ -235,7 +246,7 @@ describe('POST /api/c/[token]/confirm', () => {
   });
 
   it('reuses an existing customer by email and writes phone to customers and bookings', async () => {
-    customerLookup = { data: { id: 'cust-existing' }, error: null };
+    customerLookup = { data: [{ id: 'cust-existing', created_at: '2024-01-01T00:00:00Z' }], error: null };
     const token = await tokenForHold();
     await callRoute(token, {
       name: 'Niamh',
@@ -249,5 +260,69 @@ describe('POST /api/c/[token]/confirm', () => {
     );
     expect(link?.values.customer_id).toBe('cust-existing');
     expect(link?.values.customer_phone).toBe('0871234567');
+  });
+
+  it('multi-row email: confirms cleanly and links the newest customer row', async () => {
+    // The bug this PR fixes: prod has emails with 2+ rows in customers
+    // (sam@evolvai.ie x2, samdonfx@gmail.com x3). The helper orders by
+    // created_at DESC and limits to 1, so the route sees a single-row
+    // array containing the newest row. The route must NOT 503 here.
+    customerLookup = {
+      data: [{ id: 'cust-newest', created_at: '2025-05-01T00:00:00Z' }],
+      error: null,
+    };
+    const token = await tokenForHold();
+    const res = await callRoute(token, {
+      name: 'Sam',
+      email: 'sam@evolvai.ie',
+      phone: '0871234567',
+    });
+
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.status).toBe('confirmed');
+
+    const bookingUpdate = updateCalls.find(
+      (c) => c.table === 'bookings' && c.values.status === 'confirmed',
+    );
+    expect(bookingUpdate?.values.customer_id).toBe('cust-newest');
+  });
+
+  it('logs structured fields when customer resolution fails (Vercel UI truncation guard)', async () => {
+    customerLookup = {
+      data: null,
+      error: {
+        code: 'PGRST116',
+        message: 'JSON object requested, multiple (or no) rows returned',
+        details: 'Results contain 2 rows',
+        hint: null,
+      },
+    };
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const token = await tokenForHold();
+    const res = await callRoute(token, {
+      name: 'Sam',
+      email: 'sam@evolvai.ie',
+      phone: '0871234567',
+    });
+
+    expect(res.status).toBe(503);
+
+    const resolveLog = errorSpy.mock.calls.find(
+      (call) => call[0] === '[checkout/confirm] customer_resolve_failed',
+    );
+    expect(resolveLog).toBeDefined();
+    const payload = resolveLog?.[1] as Record<string, unknown>;
+    expect(payload).toMatchObject({
+      email_provided: true,
+      pg_code: 'PGRST116',
+      pg_message: 'JSON object requested, multiple (or no) rows returned',
+      pg_details: 'Results contain 2 rows',
+    });
+    // Each pg_* must be its own field, not concatenated into one string.
+    expect(typeof payload.pg_code).toBe('string');
+    expect(typeof payload.pg_message).toBe('string');
+
+    errorSpy.mockRestore();
   });
 });
