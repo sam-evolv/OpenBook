@@ -70,6 +70,7 @@ export type CheckoutBundle = {
   customer_hints: CustomerHints;
   source_assistant: string | null;
   is_free: boolean;
+  payment_mode: 'stripe_now' | 'in_person';
   is_promoted: boolean;
   original_price_cents: number | null;
   start_voice: string;
@@ -141,12 +142,31 @@ export default function CheckoutClient(props: Props) {
 
   const { bundle } = props;
 
+  // In-person path: skip Stripe Elements entirely. The /confirm endpoint
+  // handles the booking write and returns the reference. Free services
+  // (price_cents === 0) and businesses without Stripe Connect both flow
+  // through here.
+  if (bundle.payment_mode === 'in_person') {
+    return (
+      <PageShell bundle={bundle}>
+        {props.mode === 'confirmed' ? (
+          <ConfirmedView bundle={bundle} />
+        ) : (
+          <InPersonReadyView bundle={bundle} />
+        )}
+      </PageShell>
+    );
+  }
+
   const isPayable =
     Boolean(bundle.stripe_publishable_key) &&
     Boolean(bundle.business.stripe_account_id) &&
     bundle.business.stripe_charges_enabled;
 
   if (!bundle.is_free && !isPayable) {
+    // Defensive: getPaymentMode should have routed every non-payable
+    // business through the in_person branch above. If we get here the
+    // bundle is inconsistent (e.g. a stale cached payment_mode value).
     return <PageShell bundle={bundle}><NotPayableView businessName={bundle.business.name} /></PageShell>;
   }
 
@@ -604,6 +624,233 @@ function PreFillPill() {
         Pre-filled from your conversation
       </span>
     </div>
+  );
+}
+
+// ──────────────────────────────────────────────────────────────────────────
+// In-person ready state. No Stripe Elements. Required phone field. Submit
+// posts directly to /api/c/[token]/confirm. The page is responsible for
+// surfacing the amount the customer will pay at the business on the day.
+// ──────────────────────────────────────────────────────────────────────────
+
+function formatEurosLine(cents: number): string {
+  const euros = cents / 100;
+  return `€${euros.toFixed(euros % 1 === 0 ? 0 : 2)}`;
+}
+
+function InPersonReadyView({ bundle }: { bundle: CheckoutBundle }) {
+  const [name, setName] = useState(bundle.customer_hints.name ?? '');
+  const [email, setEmail] = useState(bundle.customer_hints.email ?? '');
+  const [phone, setPhone] = useState(bundle.customer_hints.phone ?? '');
+  const [notes, setNotes] = useState(
+    bundle.customer_hints.notes ?? bundle.booking.notes ?? '',
+  );
+
+  const anyPrefilled = useMemo(() => {
+    const h = bundle.customer_hints;
+    return Boolean(h.name || h.email || h.phone || h.notes);
+  }, [bundle.customer_hints]);
+
+  const [emailError, setEmailError] = useState<string | null>(null);
+  const [phoneError, setPhoneError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [phase, setPhase] = useState<'ready' | 'processing' | 'confirmed'>('ready');
+  const [confirmedBookingId, setConfirmedBookingId] = useState<string | null>(null);
+
+  const validateEmail = (value: string): boolean => {
+    if (!value) {
+      setEmailError('Email is required');
+      return false;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) {
+      setEmailError('Please enter a valid email');
+      return false;
+    }
+    setEmailError(null);
+    return true;
+  };
+
+  const validatePhone = (value: string): boolean => {
+    if (!value || !value.trim()) {
+      setPhoneError('Phone is required so the business can reach you');
+      return false;
+    }
+    setPhoneError(null);
+    return true;
+  };
+
+  const onSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    setSubmitError(null);
+    if (!validateEmail(email)) return;
+    if (!name.trim()) return;
+    if (!validatePhone(phone)) return;
+
+    setPhase('processing');
+    try {
+      const res = await fetch(`/api/c/${bundle.token}/confirm`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ name, email, phone, notes }),
+      });
+      const json = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      if (!res.ok) {
+        const code = typeof json.error === 'string' ? json.error : 'Could not confirm booking';
+        // Surface a real error message rather than the bare error code.
+        setSubmitError(
+          code === 'missing_required_fields'
+            ? 'Please fill in your name, email and phone.'
+            : code === 'hold_expired' || code === 'hold_unavailable'
+              ? 'Sorry, this slot is no longer being held. Please pick another time.'
+              : code === 'already_confirmed'
+                ? 'This booking is already confirmed.'
+                : 'Could not confirm your booking. Please try again in a moment.',
+        );
+        setPhase('ready');
+        return;
+      }
+      const bookingId = typeof json.booking_id === 'string' ? json.booking_id : bundle.booking.id;
+      setConfirmedBookingId(bookingId);
+      setPhase('confirmed');
+    } catch (err) {
+      console.error('[checkout] in-person submit failed', err);
+      setSubmitError('Network error - check your connection and retry.');
+      setPhase('ready');
+    }
+  };
+
+  if (phase === 'confirmed') {
+    return (
+      <ConfirmedView bundle={bundle} bookingIdOverride={confirmedBookingId ?? undefined} />
+    );
+  }
+
+  const isProcessing = phase === 'processing';
+  const formValid =
+    name.trim().length > 0 &&
+    /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) &&
+    phone.trim().length > 0;
+
+  return (
+    <form onSubmit={onSubmit} style={{ display: 'grid', gap: 32 }}>
+      <BookingSummary
+        serviceName={bundle.service.name}
+        startVoice={bundle.start_voice}
+        durationMinutes={bundle.service.duration_minutes}
+        city={bundle.business.city}
+        isFree={bundle.is_free}
+        priceCents={bundle.service.price_cents}
+        isPromoted={bundle.is_promoted}
+        originalPriceCents={bundle.original_price_cents}
+        accent={bundle.business.primary_colour}
+      />
+
+      {bundle.service.price_cents > 0 ? (
+        <section
+          style={{
+            background: 'var(--ob-co-surface)',
+            border: '1px solid var(--ob-co-border-quiet)',
+            borderRadius: 12,
+            padding: '20px 24px',
+            display: 'grid',
+            gap: 6,
+          }}
+        >
+          <div
+            style={{
+              fontFamily: 'var(--font-geist-sans, system-ui, sans-serif)',
+              fontSize: 17,
+              fontWeight: 600,
+              color: 'var(--ob-co-text-1)',
+            }}
+          >
+            Pay {formatEurosLine(bundle.service.price_cents)} at {bundle.business.name} on the day.
+          </div>
+          <div
+            style={{
+              fontFamily: 'var(--font-geist-sans, system-ui, sans-serif)',
+              fontSize: 14,
+              color: 'var(--ob-co-text-2)',
+            }}
+          >
+            We hold the slot for you now. You settle directly with the business when you arrive.
+          </div>
+        </section>
+      ) : null}
+
+      <fieldset
+        disabled={isProcessing}
+        style={{ border: 0, padding: 0, margin: 0, display: 'grid', gap: 16 }}
+      >
+        {anyPrefilled ? <PreFillPill /> : null}
+
+        <Field
+          label="Email *"
+          type="email"
+          required
+          autoComplete="email"
+          inputMode="email"
+          value={email}
+          onChange={(v) => {
+            setEmail(v);
+            if (emailError) validateEmail(v);
+          }}
+          onBlur={() => validateEmail(email)}
+          error={emailError}
+        />
+        <Field
+          label="Name *"
+          required
+          autoComplete="name"
+          value={name}
+          onChange={setName}
+        />
+        <Field
+          label="Phone *"
+          type="tel"
+          required
+          autoComplete="tel"
+          inputMode="tel"
+          value={phone}
+          onChange={(v) => {
+            setPhone(v);
+            if (phoneError) validatePhone(v);
+          }}
+          onBlur={() => validatePhone(phone)}
+          error={phoneError}
+        />
+        <TextAreaField
+          label="Anything we should know? — optional"
+          value={notes}
+          onChange={setNotes}
+          rows={3}
+          placeholder=""
+        />
+
+        {submitError ? (
+          <div
+            role="alert"
+            style={{
+              color: 'var(--ob-co-danger)',
+              fontSize: 14,
+              padding: '12px 16px',
+              background: 'rgba(232, 75, 75, 0.08)',
+              border: '1px solid rgba(232, 75, 75, 0.25)',
+              borderRadius: 8,
+            }}
+          >
+            {submitError}
+          </div>
+        ) : null}
+
+        <ConfirmCTA
+          isFree={bundle.is_free}
+          priceCents={bundle.service.price_cents}
+          isProcessing={isProcessing}
+          disabled={!formValid}
+        />
+      </fieldset>
+    </form>
   );
 }
 
