@@ -368,4 +368,119 @@ describe('searchBusinessesHandler', () => {
     expect(Array.isArray(out.results)).toBe(true);
     expect(typeof out.query_id).toBe('string');
   });
+
+  // Coverage for the universal category-mismatch zero-result bug fixed by
+  // expanding lib/mcp/category-normalise.ts with a synonym map. Before
+  // that fix, every live category except Personal Training silently
+  // returned zero results because the helper synthesised a Title-Case
+  // form that did not match the actual stored display string.
+  describe('synonym-map coverage', () => {
+    const NAILS_CLASSIFICATION: IntentClassification = {
+      category: 'nails',
+      subcategories: [],
+      vibe: [],
+      price_tier: null,
+      duration_preference_minutes: null,
+      constraint_keywords: [],
+      confidence: 0.9,
+    };
+
+    const BARBER_CLASSIFICATION: IntentClassification = {
+      category: 'barber',
+      subcategories: [],
+      vibe: [],
+      price_tier: null,
+      duration_preference_minutes: null,
+      constraint_keywords: [],
+      confidence: 0.9,
+    };
+
+    it("returns The Nail Studio when intent classifies as 'nails'", async () => {
+      classifyMock.mockResolvedValue(NAILS_CLASSIFICATION);
+      businessesResult = {
+        data: [
+          candidateFixture({
+            slug: 'the-nail-studio',
+            name: 'The Nail Studio',
+            category: 'Nail Studio',
+            city: 'cork',
+            services: [
+              {
+                id: uuid('cccc'),
+                name: 'Gel Manicure',
+                duration_minutes: 45,
+                price_cents: 4000,
+                sort_order: 0,
+                is_active: true,
+                updated_at: new Date(Date.now() - 10 * 86400000).toISOString(),
+              },
+            ],
+          }),
+        ],
+        error: null,
+      };
+      rpcDefault = {
+        data: [{ slot_start: futureDate(2), slot_end: futureDate(3) }],
+        error: null,
+      };
+
+      const out = (await searchBusinessesHandler(
+        { intent: 'nails in Cork', location: 'Cork' },
+        ctx,
+      )) as { results: Array<{ slug: string; category: string }> };
+
+      expect(out.results).toHaveLength(1);
+      expect(out.results[0].slug).toBe('the-nail-studio');
+      expect(out.results[0].category).toBe('Nail Studio');
+      // The DB query was filtered with the synonym variant, not the
+      // synthesised Title-Case form from the old helper.
+      const candFilters = candidateQueryFilters[0] ?? {};
+      expect(candFilters['in:category']).toEqual(
+        expect.arrayContaining(['Nail Studio']),
+      );
+    });
+
+    it("returns Barbershop when intent classifies as 'barber'", async () => {
+      classifyMock.mockResolvedValue(BARBER_CLASSIFICATION);
+      businessesResult = {
+        data: [
+          candidateFixture({
+            slug: 'refresh-barber',
+            name: 'Refresh Barber',
+            category: 'Barbershop',
+            city: 'cork',
+            services: [
+              {
+                id: uuid('dddd'),
+                name: 'Mens Cut',
+                duration_minutes: 30,
+                price_cents: 2500,
+                sort_order: 0,
+                is_active: true,
+                updated_at: new Date(Date.now() - 10 * 86400000).toISOString(),
+              },
+            ],
+          }),
+        ],
+        error: null,
+      };
+      rpcDefault = {
+        data: [{ slot_start: futureDate(2), slot_end: futureDate(3) }],
+        error: null,
+      };
+
+      const out = (await searchBusinessesHandler(
+        { intent: 'barber in Cork', location: 'Cork' },
+        ctx,
+      )) as { results: Array<{ slug: string; category: string }> };
+
+      expect(out.results).toHaveLength(1);
+      expect(out.results[0].slug).toBe('refresh-barber');
+      expect(out.results[0].category).toBe('Barbershop');
+      const candFilters = candidateQueryFilters[0] ?? {};
+      expect(candFilters['in:category']).toEqual(
+        expect.arrayContaining(['Barbershop']),
+      );
+    });
+  });
 });

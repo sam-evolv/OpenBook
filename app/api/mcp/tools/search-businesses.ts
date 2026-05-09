@@ -634,6 +634,29 @@ export const _searchBusinessesImpl: ToolHandler = async (input, ctx: ToolContext
       count: 0,
       reason: 'all candidates dropped at surviving filter',
     });
+    // Triage hint for zero-result cases. Splits into two regimes:
+    //   - unknown_category: classifier emitted a key not in the synonym
+    //     map. Action: add it to lib/mcp/category-normalise.ts.
+    //   - with_category_match: synonym lookup worked, the DB genuinely
+    //     has no live inventory matching this category + location + time.
+    //     Action: add inventory or broaden the user's filters.
+    if (classification.category && classification.category !== 'other') {
+      const variants = categoryQueryVariants(classification.category);
+      if (variants.length === 0) {
+        diag('zero_results_unknown_category', {
+          query_id: queryId,
+          category: classification.category,
+          location: parsedLocation?.city ?? null,
+        });
+      } else {
+        diag('zero_results_with_category_match', {
+          query_id: queryId,
+          category: classification.category,
+          variants,
+          location: parsedLocation?.city ?? null,
+        });
+      }
+    }
     void logSearchQuery({
       queryId,
       sourceAssistant: ctx.sourceAssistant,
