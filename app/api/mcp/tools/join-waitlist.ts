@@ -17,6 +17,7 @@ import {
 import { supabaseAdmin } from '../../../../lib/supabase';
 import { checkWaitlistRateLimit } from '../../../../lib/mcp/waitlist-rate-limit';
 import { humaniseDateTime } from '../../../../lib/checkout/format-datetime';
+import { wrapToolBoundary } from '../../../../lib/mcp/serialization';
 import type { ToolContext, ToolHandler } from './index';
 
 const MAX_WINDOW_DAYS = 7;
@@ -28,7 +29,7 @@ const responseError = (code: string, message: string, extras: Record<string, unk
   error: { code, message, ...extras },
 });
 
-export const joinWaitlistHandler: ToolHandler = async (input, ctx: ToolContext) => {
+export const _joinWaitlistImpl: ToolHandler = async (input, ctx: ToolContext) => {
   const parsed = joinWaitlistInput.parse(input);
   const { slug, service_id, preferred_window, contact, customer_hints } = parsed;
 
@@ -172,3 +173,12 @@ export const joinWaitlistHandler: ToolHandler = async (input, ctx: ToolContext) 
   }
   return validation.data;
 };
+
+export const joinWaitlistHandler: ToolHandler = wrapToolBoundary(
+  'join_waitlist',
+  () => ({
+    notification_token: null,
+    notes: 'OpenBook waitlist signup is temporarily unavailable. Please try again shortly.',
+  }),
+  _joinWaitlistImpl,
+);

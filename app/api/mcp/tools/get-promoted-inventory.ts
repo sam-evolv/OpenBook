@@ -37,6 +37,7 @@ import {
   categoryEquals,
   categoryQueryVariants,
 } from '../../../../lib/mcp/category-normalise';
+import { safeTask, wrapToolBoundary } from '../../../../lib/mcp/serialization';
 import type { ToolContext, ToolHandler } from './index';
 
 const DEFAULT_LIMIT = 5;
@@ -142,7 +143,7 @@ function scoreCandidate(args: {
   return intent * 0.40 + proximity * 0.30 + quality * 0.15 + discountBoost + freshness;
 }
 
-export const getPromotedInventoryHandler: ToolHandler = async (input, ctx: ToolContext) => {
+export const _getPromotedInventoryImpl: ToolHandler = async (input, ctx: ToolContext) => {
   const parsed = getPromotedInventoryInput.parse(input);
   const limit = Math.min(Math.max(parsed.limit ?? DEFAULT_LIMIT, 1), MAX_LIMIT);
 
@@ -237,23 +238,28 @@ export const getPromotedInventoryHandler: ToolHandler = async (input, ctx: ToolC
   for (let i = 0; i < keyEntries.length; i += AVAILABILITY_BATCH) {
     const slice = keyEntries.slice(i, i + AVAILABILITY_BATCH);
     await Promise.all(
-      slice.map(async ([key, params]) => {
-        const { data, error: rpcErr } = await supa.rpc('get_availability_for_ai', {
-          p_business_id: params.business_id,
-          p_service_id: params.service_id,
-          p_date: params.date,
-        });
-        if (rpcErr) {
-          console.error('[mcp.get_promoted_inventory] availability rpc failed', { key, rpcErr });
-          // Treat as no-availability — anti-stale fail-CLOSED. Better to
-          // omit a slot than to surface one we can't verify.
-          availResults.set(key, new Set());
-          return;
-        }
-        const slots = Array.isArray(data) ? (data as Array<{ slot_start: string }>) : [];
-        const set = new Set(slots.map((s) => new Date(s.slot_start).toISOString()));
-        availResults.set(key, set);
-      }),
+      slice.map(([key, params]) =>
+        safeTask(
+          `promoted.avail.rpc:${key}`,
+          (async () => {
+            const { data, error: rpcErr } = await supa.rpc('get_availability_for_ai', {
+              p_business_id: params.business_id,
+              p_service_id: params.service_id,
+              p_date: params.date,
+            });
+            if (rpcErr) {
+              console.error('[mcp.get_promoted_inventory] availability rpc failed', { key, rpcErr });
+              // Treat as no-availability. Anti-stale fail-CLOSED. Better to
+              // omit a slot than to surface one we can't verify.
+              availResults.set(key, new Set());
+              return;
+            }
+            const slots = Array.isArray(data) ? (data as Array<{ slot_start: string }>) : [];
+            const set = new Set(slots.map((s) => new Date(s.slot_start).toISOString()));
+            availResults.set(key, set);
+          })(),
+        ),
+      ),
     );
   }
 
@@ -384,3 +390,12 @@ export const getPromotedInventoryHandler: ToolHandler = async (input, ctx: ToolC
 
   return validation.data;
 };
+
+export const getPromotedInventoryHandler: ToolHandler = wrapToolBoundary(
+  'get_promoted_inventory',
+  () => ({
+    results: [],
+    notes: 'OpenBook promoted inventory is temporarily unavailable. Please try again shortly.',
+  }),
+  _getPromotedInventoryImpl,
+);

@@ -13,7 +13,11 @@ import {
   joinWaitlistInput,
   getPromotedInventoryInput,
   recordPostBookingFeedbackInput,
+  debugOpenbookHealthInput,
+  debugOpenbookSearchSmokeInput,
 } from './schemas';
+
+const DEBUG_TOOLS_ENABLED = process.env.MCP_ENABLE_DEBUG_TOOLS === 'true';
 
 export type ToolDescriptor = {
   name: string;
@@ -29,7 +33,7 @@ export type ToolDescriptor = {
 const toJsonSchema = (schema: Parameters<typeof zodToJsonSchema>[0]) =>
   zodToJsonSchema(schema, { target: 'jsonSchema7' }) as object;
 
-export const TOOL_MANIFEST: ToolDescriptor[] = [
+const BASE_TOOL_MANIFEST: ToolDescriptor[] = [
   {
     name: 'search_businesses',
     description:
@@ -119,3 +123,34 @@ export const TOOL_MANIFEST: ToolDescriptor[] = [
     },
   },
 ];
+
+// Diagnostic tools surfaced only when MCP_ENABLE_DEBUG_TOOLS=true.
+// REMOVE BEFORE PRODUCTION GA.
+const DEBUG_TOOL_MANIFEST: ToolDescriptor[] = [
+  {
+    name: 'debug_openbook_health',
+    description:
+      'Diagnostic health check. Returns env-var presence flags (no values), runtime info, and current timestamp. Remove before production GA.',
+    inputSchema: toJsonSchema(debugOpenbookHealthInput),
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: 'debug_openbook_search_smoke',
+    description:
+      'Diagnostic smoke test. Drives the search_businesses implementation directly with a fixed input ("personal trainer in Cork") and surfaces the actual exception type and message on failure rather than a swallowed fallback. Remove before production GA.',
+    inputSchema: toJsonSchema(debugOpenbookSearchSmokeInput),
+    annotations: {
+      readOnlyHint: true,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+  },
+];
+
+export const TOOL_MANIFEST: ToolDescriptor[] = DEBUG_TOOLS_ENABLED
+  ? [...BASE_TOOL_MANIFEST, ...DEBUG_TOOL_MANIFEST]
+  : BASE_TOOL_MANIFEST;

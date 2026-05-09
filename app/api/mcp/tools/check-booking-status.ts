@@ -18,6 +18,7 @@ import {
 import { supabaseAdmin } from '../../../../lib/supabase';
 import { verifyPollingToken } from '../../../../lib/mcp/tokens';
 import { checkPollingTokenRateLimit } from '../../../../lib/mcp/rate-limit';
+import { wrapToolBoundary } from '../../../../lib/mcp/serialization';
 import type { ToolContext, ToolHandler } from './index';
 
 type BookingRow = {
@@ -87,7 +88,7 @@ function buildAddressForDirections(b: BookingRow['businesses']): string {
   return parts.join(', ');
 }
 
-export const checkBookingStatusHandler: ToolHandler = async (input, _ctx: ToolContext) => {
+export const _checkBookingStatusImpl: ToolHandler = async (input, _ctx: ToolContext) => {
   const parsed = checkBookingStatusInput.parse(input);
 
   const tokenPayload = await verifyPollingToken(parsed.polling_token);
@@ -208,3 +209,13 @@ export const checkBookingStatusHandler: ToolHandler = async (input, _ctx: ToolCo
   }
   return validation.data;
 };
+
+export const checkBookingStatusHandler: ToolHandler = wrapToolBoundary(
+  'check_booking_status',
+  () => ({
+    status: 'unknown',
+    booking: null,
+    notes: 'OpenBook booking status is temporarily unavailable. Please try again shortly.',
+  }),
+  _checkBookingStatusImpl,
+);
