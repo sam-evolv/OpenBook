@@ -50,11 +50,17 @@ const { holdAndCheckoutHandler, humaniseDateTime } = await import(
 
 const ctx = { sourceAssistant: 'chatgpt', sourceIp: null, requestId: 'req-1' };
 
-const businessFixture = () => ({
+const businessFixture = (overrides: Partial<Record<string, unknown>> = {}) => ({
   id: '11111111-1111-1111-1111-111111111111',
   slug: 'evolv',
   name: 'Evolv',
   is_live: true,
+  // Default fixture posture is "Stripe-onboarded business" so existing
+  // paid happy-path tests continue to flow through stripe_now. Override
+  // these per-test for in_person scenarios.
+  stripe_account_id: 'acct_test_evolv',
+  stripe_charges_enabled: true,
+  ...overrides,
 });
 
 const serviceFixture = (overrides: Partial<Record<string, unknown>> = {}) => ({
@@ -172,13 +178,16 @@ describe('holdAndCheckoutHandler', () => {
   });
 
   it('is_free=true when price_cents=0; false otherwise', async () => {
+    // Free service at a Stripe-onboarded business still resolves to
+    // payment_mode=in_person (Stripe rejects PaymentIntents under
+    // 0.50 EUR), so the next_step copy is the in_person free variant.
     serviceResult = { data: serviceFixture({ price_cents: 0 }), error: null };
     const free = (await holdAndCheckoutHandler(
       { slug: 'evolv', service_id: serviceFixture().id, start_iso: futureMcpStart() },
       ctx,
     )) as { summary: { is_free: boolean }; next_step_for_user: string };
     expect(free.summary.is_free).toBe(true);
-    expect(free.next_step_for_user).toMatch(/confirm your booking/i);
+    expect(free.next_step_for_user).toBe('Tap the link to confirm; held for ten minutes.');
 
     serviceResult = { data: serviceFixture({ price_cents: 6000 }), error: null };
     const paid = (await holdAndCheckoutHandler(
@@ -186,7 +195,7 @@ describe('holdAndCheckoutHandler', () => {
       ctx,
     )) as { summary: { is_free: boolean }; next_step_for_user: string };
     expect(paid.summary.is_free).toBe(false);
-    expect(paid.next_step_for_user).toMatch(/confirm and pay/i);
+    expect(paid.next_step_for_user).toBe('Tap the link to confirm and pay; held for ten minutes.');
   });
 
   it('signs both tokens with their respective signers', async () => {
@@ -211,6 +220,81 @@ describe('holdAndCheckoutHandler', () => {
       ctx,
     )) as { error?: { code: string } };
     expect(out.error?.code).toBe('RESPONSE_VALIDATION_FAILED');
+  });
+});
+
+describe('hold_and_checkout payment_mode surface', () => {
+  it("returns payment_mode='stripe_now' and pay-now copy for a paid service at a Stripe-onboarded business", async () => {
+    businessResult = {
+      data: businessFixture({
+        stripe_account_id: 'acct_dublin_iron_gym',
+        stripe_charges_enabled: true,
+      }),
+      error: null,
+    };
+    serviceResult = { data: serviceFixture({ price_cents: 6500 }), error: null };
+
+    const out = (await holdAndCheckoutHandler(
+      { slug: 'evolv', service_id: serviceFixture().id, start_iso: futureMcpStart() },
+      ctx,
+    )) as { summary: { payment_mode: string }; next_step_for_user: string };
+
+    expect(out.summary.payment_mode).toBe('stripe_now');
+    expect(out.next_step_for_user).toBe('Tap the link to confirm and pay; held for ten minutes.');
+  });
+
+  it("returns payment_mode='in_person' and pay-on-the-day copy for a paid service at a non-onboarded business", async () => {
+    // Reproduction of the Nail Studio bug from PR #145. €40 service,
+    // business has no Stripe Connect onboarding.
+    businessResult = {
+      data: businessFixture({
+        name: 'The Nail Studio',
+        slug: 'the-nail-studio',
+        stripe_account_id: null,
+        stripe_charges_enabled: false,
+      }),
+      error: null,
+    };
+    serviceResult = {
+      data: serviceFixture({ name: 'Gel Manicure', price_cents: 4000 }),
+      error: null,
+    };
+
+    const out = (await holdAndCheckoutHandler(
+      { slug: 'the-nail-studio', service_id: serviceFixture().id, start_iso: futureMcpStart() },
+      ctx,
+    )) as { summary: { payment_mode: string }; next_step_for_user: string };
+
+    expect(out.summary.payment_mode).toBe('in_person');
+    expect(out.next_step_for_user).toBe(
+      "Tap the link to confirm. You'll pay €40 at The Nail Studio on the day; held for ten minutes.",
+    );
+  });
+
+  it("returns payment_mode='in_person' and free-confirm copy for a free service regardless of Stripe state", async () => {
+    // Stripe-onboarded business with a free service. Stripe rejects
+    // PaymentIntents under 0.50 EUR so getPaymentMode short-circuits
+    // free services to in_person regardless of the business state.
+    businessResult = {
+      data: businessFixture({
+        name: 'Evolv Performance',
+        stripe_account_id: 'acct_evolv',
+        stripe_charges_enabled: true,
+      }),
+      error: null,
+    };
+    serviceResult = {
+      data: serviceFixture({ name: 'Free Consultation', price_cents: 0 }),
+      error: null,
+    };
+
+    const out = (await holdAndCheckoutHandler(
+      { slug: 'evolv', service_id: serviceFixture().id, start_iso: futureMcpStart() },
+      ctx,
+    )) as { summary: { payment_mode: string }; next_step_for_user: string };
+
+    expect(out.summary.payment_mode).toBe('in_person');
+    expect(out.next_step_for_user).toBe('Tap the link to confirm; held for ten minutes.');
   });
 });
 

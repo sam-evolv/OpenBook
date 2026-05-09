@@ -70,7 +70,7 @@ const BASE_TOOL_MANIFEST: ToolDescriptor[] = [
   {
     name: 'hold_and_checkout',
     description:
-      'Hold a specific slot for 10 minutes and generate a one-tap checkout link the user opens in their browser to complete payment. Use after the user has chosen a specific slot. Always pass `customer_hints` with everything relevant from the conversation — name, email, phone if shared, special requirements, accessibility needs — so the checkout page can pre-fill and the business can prepare.',
+      "Hold a specific slot for 10 minutes and generate a one-tap checkout link the user opens in their browser to complete payment. Use after the user has chosen a specific slot. Always pass `customer_hints` with everything relevant from the conversation — name, email, phone if shared, special requirements, accessibility needs — so the checkout page can pre-fill and the business can prepare.\n\nReturns a summary with payment_mode ('stripe_now' or 'in_person') so you can tell the user upfront whether they need to pay now or at the business on the day. The next_step_for_user copy already reflects this; surface it verbatim or paraphrase as needed.",
     inputSchema: toJsonSchema(holdAndCheckoutInput),
     annotations: {
       readOnlyHint: false,
