@@ -159,7 +159,10 @@ describe('POST /api/c/[token]/create-payment-intent', () => {
     expect(res.status).toBe(410);
   });
 
-  it('free booking: confirms inline + fires emails + skips Stripe', async () => {
+  it('free booking: returns in_person shape + skips Stripe + leaves booking write to /confirm', async () => {
+    // Free services flow through payment_mode='in_person'. The actual
+    // booking confirmation now happens in /api/c/[token]/confirm so this
+    // route only emits the discriminator and the confirm_endpoint URL.
     bookingResult = {
       data: baseBooking({ services: { id: 'svc-1', name: 'Free intro', price_cents: 0 } }),
       error: null,
@@ -174,18 +177,16 @@ describe('POST /api/c/[token]/create-payment-intent', () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(json).toEqual({ is_free: true, confirmed: true, booking_id: 'booking-1' });
+    expect(json.payment_mode).toBe('in_person');
+    expect(json.payment_required_now).toBe(false);
+    expect(json.is_free).toBe(true);
+    expect(json.amount_due_at_business_cents).toBe(0);
+    expect(json.confirm_endpoint).toBe(`/api/c/${token}/confirm`);
     expect(piCreateMock).not.toHaveBeenCalled();
 
-    // status flipped to confirmed via guarded UPDATE on pending_payment.
-    const confirmCall = updateCalls.find(
-      (c) => c.table === 'bookings' && c.values.status === 'confirmed',
-    );
-    expect(confirmCall).toBeDefined();
-    expect(confirmCall?.filters.status).toEqual(['pending_payment', 'pending']);
-
-    // mcp_holds marked completed
-    expect(updateCalls.find((c) => c.table === 'mcp_holds' && c.values.status === 'completed')).toBeDefined();
+    // No inline status flip and no hold completion in this route anymore.
+    expect(updateCalls.find((c) => c.table === 'bookings' && c.values.status === 'confirmed')).toBeUndefined();
+    expect(updateCalls.find((c) => c.table === 'mcp_holds' && c.values.status === 'completed')).toBeUndefined();
   });
 
   it('paid booking: creates PaymentIntent + flips status to awaiting_payment', async () => {
@@ -199,6 +200,7 @@ describe('POST /api/c/[token]/create-payment-intent', () => {
 
     expect(res.status).toBe(200);
     expect(json).toEqual({
+      payment_mode: 'stripe_now',
       is_free: false,
       client_secret: 'pi_test_123_secret_xyz',
       payment_intent_id: 'pi_test_123',
@@ -253,11 +255,42 @@ describe('POST /api/c/[token]/create-payment-intent', () => {
     expect(link?.values.customer_id).toBe('cust-existing');
   });
 
-  it('returns 503 when the business has no Stripe account or charges disabled', async () => {
+  it('Nail Studio repro: business without Stripe returns the in_person shape, not 503', async () => {
+    // Reproduction case from the bug: paid service on a business without
+    // Stripe Connect onboarding. Before this PR the route returned 503
+    // (or a thrown 500); now it returns the in_person shape so the page
+    // can collect a phone number and POST to /confirm.
     bookingResult = {
       data: baseBooking({
         businesses: {
-          id: 'biz-1', name: 'Evolv', stripe_account_id: null, stripe_charges_enabled: false,
+          id: 'biz-1', name: 'The Nail Studio', stripe_account_id: null, stripe_charges_enabled: false,
+        },
+        services: { id: 'svc-1', name: 'Gel Manicure', price_cents: 4000 },
+      }),
+      error: null,
+    };
+    const token = await signHoldToken({
+      hold_id: 'hold-1', booking_id: 'booking-1',
+      business_id: 'biz-1', service_id: 'svc-1',
+      expires_at: futureIso(5 * 60 * 1000),
+    });
+    const res = await callRoute(token, { email: 'a@b.com', name: 'Niamh' });
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect(json.payment_mode).toBe('in_person');
+    expect(json.payment_required_now).toBe(false);
+    expect(json.amount_due_at_business_eur).toBe(40);
+    expect(piCreateMock).not.toHaveBeenCalled();
+  });
+
+  it('Evolv partial Stripe (acct id but charges disabled) routes to in_person', async () => {
+    // Evolv Performance has a Stripe account id but charges are disabled.
+    // Treated identically to "no Stripe at all".
+    bookingResult = {
+      data: baseBooking({
+        businesses: {
+          id: 'biz-1', name: 'Evolv Performance',
+          stripe_account_id: 'acct_partial', stripe_charges_enabled: false,
         },
       }),
       error: null,
@@ -268,7 +301,27 @@ describe('POST /api/c/[token]/create-payment-intent', () => {
       expires_at: futureIso(5 * 60 * 1000),
     });
     const res = await callRoute(token, { email: 'a@b.com', name: 'Niamh' });
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect(json.payment_mode).toBe('in_person');
+  });
+
+  it('never returns 500: handler throws are caught and surfaced as 503', async () => {
+    // Force a Supabase failure that bypasses all the inline checks. The
+    // handler must catch and emit 503, not propagate a 500.
+    bookingResult = {
+      data: null,
+      error: { message: 'simulated supabase outage' },
+    };
+    const token = await signHoldToken({
+      hold_id: 'hold-1', booking_id: 'booking-1',
+      business_id: 'biz-1', service_id: 'svc-1',
+      expires_at: futureIso(5 * 60 * 1000),
+    });
+    const res = await callRoute(token, { email: 'a@b.com', name: 'Niamh' });
     expect(res.status).toBe(503);
+    const json = await res.json();
+    expect(json.error).toBe('checkout_unavailable');
   });
 
   it('refuses an already-confirmed booking with 410', async () => {

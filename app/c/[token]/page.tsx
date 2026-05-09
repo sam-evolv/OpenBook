@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { supabaseAdmin } from '@/lib/supabase';
 import { verifyHoldToken } from '@/lib/mcp/tokens';
 import { humaniseDateTime, formatCompactDublin } from '@/lib/checkout/format-datetime';
+import { getPaymentMode } from '@/lib/payments/payment-mode';
 import CheckoutClient, { type CheckoutBundle } from './CheckoutClient';
 
 export const runtime = 'nodejs';
@@ -186,6 +187,11 @@ async function loadBundle(token: string): Promise<
   // Capitalised so it reads well as a heading on the page.
   const startVoice = capFirst(humaniseDateTime(startsAtDate));
 
+  // Payment mode is computed server-side once so the client renders the
+  // right form on first paint without an extra round trip. Free services
+  // and businesses without Stripe Connect both flow through 'in_person'.
+  const paymentMode = getPaymentMode(business, service);
+
   const bundle: CheckoutBundle = {
     token,
     hold: {
@@ -231,6 +237,7 @@ async function loadBundle(token: string): Promise<
     },
     source_assistant: hold.source_assistant ?? null,
     is_free: service.price_cents === 0,
+    payment_mode: paymentMode,
     is_promoted: isPromoted,
     original_price_cents: originalPriceCents,
     start_voice: startVoice,
