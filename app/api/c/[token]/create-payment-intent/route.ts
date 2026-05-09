@@ -260,6 +260,27 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
         },
       });
 
+      // Persist the PI id immediately so we have a recovery path even if
+      // the webhook is delayed or lost. The webhook still flips status on
+      // payment_intent.succeeded; this just gives ops a way to look up
+      // the booking from a Stripe PI id without waiting on Stripe.
+      const { error: piPersistErr } = await sb
+        .from('bookings')
+        .update({ stripe_payment_intent_id: intent.id })
+        .eq('id', booking.id);
+      if (piPersistErr) {
+        console.error('[checkout/intent] stripe_pi_persist_failed', {
+          step: 'bookings.update.stripe_payment_intent_id',
+          booking_id: booking.id,
+          payment_intent_id: intent.id,
+          pg_code: piPersistErr.code,
+          pg_message: piPersistErr.message,
+          pg_details: piPersistErr.details,
+          pg_hint: piPersistErr.hint,
+        });
+        // Non-fatal: webhook will still backfill on payment_intent.succeeded.
+      }
+
       return NextResponse.json({
         payment_mode: 'stripe_now',
         is_free: false,
@@ -267,7 +288,21 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
         payment_intent_id: intent.id,
       });
     } catch (err: unknown) {
-      console.error('[checkout/intent] PaymentIntent create failed', err);
+      const e = err as {
+        code?: string;
+        type?: string;
+        message?: string;
+        requestId?: string;
+      };
+      console.error('[checkout/intent] stripe_pi_create_failed', {
+        step: 'paymentIntents.create',
+        business_id: business.id,
+        stripe_account_id: business.stripe_account_id,
+        stripe_code: e?.code,
+        stripe_type: e?.type,
+        stripe_message: e?.message,
+        stripe_request_id: e?.requestId,
+      });
       // Roll the booking status back so the user (or another tab) can retry
       // without being stuck in awaiting_payment.
       await sb

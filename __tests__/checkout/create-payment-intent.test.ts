@@ -231,6 +231,14 @@ describe('POST /api/c/[token]/create-payment-intent', () => {
     );
     expect(handoff).toBeDefined();
     expect(handoff?.filters.status).toBe('pending_payment');
+
+    // PI id persisted to the booking row so ops can resolve the booking
+    // from a Stripe PI id even if the webhook is delayed or lost.
+    const piPersist = updateCalls.find(
+      (c) => c.table === 'bookings' && c.values.stripe_payment_intent_id === 'pi_test_123',
+    );
+    expect(piPersist).toBeDefined();
+    expect(piPersist?.filters.id).toBe('booking-1');
   });
 
   it('paid booking: rolls back status when PaymentIntent creation fails', async () => {

@@ -99,15 +99,16 @@ type Props =
     };
 
 const STRIPE_CACHE = new Map<string, Promise<Stripe | null>>();
-function getStripePromise(pk: string, connectedAccountId?: string | null): Promise<Stripe | null> {
-  // The Stripe.js singleton is keyed by both the publishable key and the
-  // connected account so we don't reuse a Stripe instance scoped to the
-  // wrong business when two MCP checkouts open in the same tab session.
-  const key = `${pk}::${connectedAccountId ?? ''}`;
-  let cached = STRIPE_CACHE.get(key);
+function getStripePromise(pk: string): Promise<Stripe | null> {
+  // The PaymentIntent is created on the platform account with
+  // transfer_data.destination (destination charges), so Stripe.js must
+  // run unscoped — passing { stripeAccount } here would scope retrieve
+  // calls to the connected account where the PI does not exist and
+  // surface as "No such payment_intent" on confirm.
+  let cached = STRIPE_CACHE.get(pk);
   if (!cached) {
-    cached = loadStripe(pk, connectedAccountId ? { stripeAccount: connectedAccountId } : undefined);
-    STRIPE_CACHE.set(key, cached);
+    cached = loadStripe(pk);
+    STRIPE_CACHE.set(pk, cached);
   }
   return cached;
 }
@@ -172,7 +173,7 @@ export default function CheckoutClient(props: Props) {
 
   const stripePromise =
     !bundle.is_free && isPayable
-      ? getStripePromise(bundle.stripe_publishable_key!, bundle.business.stripe_account_id)
+      ? getStripePromise(bundle.stripe_publishable_key!)
       : FALLBACK_STRIPE_PROMISE;
 
   // For paid bookings we initialise Elements in deferred mode so the
