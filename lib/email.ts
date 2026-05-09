@@ -121,6 +121,7 @@ interface BookingLookupRow {
     address_line: string | null;
     phone: string | null;
     owner_id: string;
+    logo_url: string | null;
   } | null;
   services: {
     name: string;
@@ -165,7 +166,7 @@ export async function sendBookingConfirmation({
       `
       id, starts_at, ends_at, price_cents, status,
       businesses:business_id (
-        id, name, slug, address, address_line, phone, owner_id
+        id, name, slug, address, address_line, phone, owner_id, logo_url
       ),
       services:service_id ( name, duration_minutes ),
       customers:customer_id ( full_name, name, email, phone )
@@ -233,6 +234,7 @@ export async function sendBookingConfirmation({
       react: BookingConfirmationCustomer({
         customerName: customer.full_name ?? customer.name ?? null,
         businessName: business.name,
+        businessLogoUrl: business.logo_url,
         serviceName: service.name,
         dateLabel: date,
         timeLabel: time,
@@ -267,6 +269,7 @@ export async function sendBookingConfirmation({
     react: BookingConfirmationBusiness({
       ownerName: owner.full_name,
       businessName: business.name,
+      businessLogoUrl: business.logo_url,
       customerName: customer?.full_name ?? customer?.name ?? null,
       customerEmail: customer?.email ?? null,
       customerPhone: customer?.phone ?? null,

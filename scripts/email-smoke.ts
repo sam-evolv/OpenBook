@@ -33,6 +33,7 @@ async function main() {
     createElement(BookingConfirmationCustomer, {
       customerName: 'Aoife',
       businessName: 'Saltwater Sauna',
+      businessLogoUrl: null,
       serviceName: 'Cold-plunge ritual',
       dateLabel: date,
       timeLabel: time,
