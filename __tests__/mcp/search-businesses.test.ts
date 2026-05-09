@@ -39,6 +39,7 @@ function buildFromChain(table: string): Record<string, unknown> {
   };
   chain.select = vi.fn(passthrough('select'));
   chain.eq = vi.fn(passthrough('eq'));
+  chain.ilike = vi.fn(passthrough('ilike'));
   chain.in = vi.fn(passthrough('in'));
   chain.or = vi.fn(passthrough('or'));
   chain.gte = vi.fn(passthrough('gte'));

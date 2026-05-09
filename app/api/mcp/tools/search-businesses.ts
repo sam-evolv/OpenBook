@@ -44,6 +44,24 @@ const DEFAULT_LIMIT = 5;
 const MAX_LIMIT = 10;
 const SHORT_DESC_MAX = 140;
 
+// Structured per-stage logging for the search pipeline. Every line is prefixed
+// with `[search.diag]` and tagged with `query_id` so the full trace for a
+// single request can be reconstructed by grepping production logs. Kept at
+// info level so it survives default log filters.
+function diag(stage: string, payload: Record<string, unknown>): void {
+  console.info(`[search.diag] ${stage}`, payload);
+}
+
+function describeError(err: unknown): Record<string, unknown> {
+  if (err instanceof Error) {
+    return { name: err.name, message: err.message, stack: err.stack };
+  }
+  if (err && typeof err === 'object') {
+    return { value: err };
+  }
+  return { value: String(err) };
+}
+
 type SupabaseClient = ReturnType<typeof supabaseAdmin>;
 
 type SlotRow = { start_iso: string; end_iso: string; service_id: string; service_name: string; price_eur: number; deposit_eur?: number };
@@ -390,6 +408,7 @@ async function runKeywordFallback(args: {
   const { supa, intent, location, limit, queryId } = args;
   const keywords = extractKeywords(intent, location);
   const columns = 'slug, name, category, description, tagline, city';
+  diag('keyword_fallback_start', { query_id: queryId, keywords });
 
   async function tryFilter(filterColumns: string[]): Promise<KeywordCandidateRow[]> {
     if (keywords.length === 0) return [];
@@ -403,8 +422,18 @@ async function runKeywordFallback(args: {
       .limit(limit);
     if (error) {
       console.error('[mcp.search] keyword fallback query error:', error);
+      diag('keyword_fallback_query_error', {
+        query_id: queryId,
+        columns: filterColumns,
+        error: describeError(error),
+      });
       return [];
     }
+    diag('keyword_fallback_attempt', {
+      query_id: queryId,
+      columns: filterColumns,
+      count: (data ?? []).length,
+    });
     return (data ?? []) as unknown as KeywordCandidateRow[];
   }
 
@@ -412,8 +441,14 @@ async function runKeywordFallback(args: {
   if (rows.length === 0) rows = await tryFilter(['name', 'description']);
 
   if (rows.length === 0) {
+    diag('keyword_fallback_no_match', { query_id: queryId });
     return { results: [], query_id: queryId, notes: FALLBACK_NOTE_NO_MATCH };
   }
+  diag('keyword_fallback_results', {
+    query_id: queryId,
+    count: Math.min(rows.length, limit),
+    slugs: rows.slice(0, limit).map((r) => r.slug),
+  });
 
   const results = rows.slice(0, limit).map((c) => {
     const shortDesc = deriveShortDescription({ tagline: c.tagline, description: c.description });
@@ -446,12 +481,30 @@ export const searchBusinessesHandler: ToolHandler = async (input, ctx: ToolConte
   const queryId = crypto.randomUUID();
   const supa = supabaseAdmin();
 
+  diag('request_received', {
+    query_id: queryId,
+    intent,
+    location: location ?? null,
+    when: when ?? null,
+    price_max_eur: price_max_eur ?? null,
+    limit,
+    parsed_location: parsedLocation,
+    parsed_when: { from: parsedWhen.from.toISOString(), to: parsedWhen.to.toISOString() },
+  });
+
   // The handler must NEVER throw. Agentic clients (Claude desktop in
   // particular) interpret a tool error as "this tool is broken, try a
   // different approach" and abandon the conversation. Any unexpected
   // failure below falls through to the keyword fallback.
   try {
   const classification = await classifyIntent({ intent, customer_context });
+  diag('classified_intent', {
+    query_id: queryId,
+    category: classification.category,
+    confidence: classification.confidence,
+    subcategories: classification.subcategories,
+    constraint_keywords: classification.constraint_keywords,
+  });
 
   // Candidate query.
   const useCategoryFilter =
@@ -473,30 +526,65 @@ export const searchBusinessesHandler: ToolHandler = async (input, ctx: ToolConte
     .eq('is_live', true)
     .limit(MAX_CANDIDATES);
 
+  let categoryVariants: string[] | null = null;
   if (allowedCategories && allowedCategories.length > 0) {
     // The classifier emits snake_case categories but businesses.category is
     // stored in mixed forms ("Personal Training" etc.). Expand to all
     // plausible variants so we don't miss matches at the DB layer.
-    const variants = Array.from(
+    categoryVariants = Array.from(
       new Set(allowedCategories.flatMap((c) => categoryQueryVariants(c))),
     );
-    q = q.in('category', variants);
+    q = q.in('category', categoryVariants);
   }
   if (parsedLocation?.city) {
-    q = q.eq('city', parsedLocation.city);
+    // businesses.city is stored title-cased ("Cork", "Dublin") but
+    // parseLocation returns lowercase tokens. PostgREST `.eq` is
+    // case-sensitive, so an exact match against a lowercase value drops
+    // every location-filtered query. ILIKE without wildcards gives
+    // case-insensitive equality and matches the stored Title-Case form.
+    q = q.ilike('city', parsedLocation.city);
   }
+  diag('candidate_query_filters', {
+    query_id: queryId,
+    is_live: true,
+    category_variants: categoryVariants,
+    city_filter: parsedLocation?.city ?? null,
+    limit: MAX_CANDIDATES,
+  });
 
   const { data: rawCandidates, error: candErr } = await q;
   if (candErr) {
     console.error('[mcp.search] candidate query error; running keyword fallback:', candErr);
+    diag('candidate_query_error', {
+      query_id: queryId,
+      error: describeError(candErr),
+    });
     return runKeywordFallback({ supa, intent, location, limit, queryId });
   }
   const candidates = (rawCandidates ?? []) as unknown as CandidateRow[];
+  diag('candidates_after_db_query', {
+    query_id: queryId,
+    count: candidates.length,
+    ids: candidates.map((c) => c.id),
+    slugs: candidates.map((c) => c.slug),
+    categories: candidates.map((c) => c.category),
+    cities: candidates.map((c) => c.city),
+  });
 
   // Pick a primary service per candidate (price-filtered when price_max_eur is set).
   const candidateWithService = candidates
     .map((c) => ({ candidate: c, service: eligibleService(c.services, price_max_eur) }))
     .filter((x): x is { candidate: CandidateRow; service: ServiceRow } => x.service !== null);
+  const droppedNoEligibleService = candidates
+    .filter((c) => eligibleService(c.services, price_max_eur) === null)
+    .map((c) => ({ id: c.id, slug: c.slug, service_count: (c.services ?? []).length }));
+  diag('after_service_filter', {
+    query_id: queryId,
+    count: candidateWithService.length,
+    ids: candidateWithService.map((x) => x.candidate.id),
+    dropped_no_eligible_service: droppedNoEligibleService,
+    price_max_eur: price_max_eur ?? null,
+  });
 
   // Sample slots per candidate, concurrency-limited.
   const window = parsedWhen;
@@ -508,8 +596,28 @@ export const searchBusinessesHandler: ToolHandler = async (input, ctx: ToolConte
       return { candidate, service, slots };
     },
   );
+  diag('after_sample_slots', {
+    query_id: queryId,
+    window: { from: window.from.toISOString(), to: window.to.toISOString() },
+    per_candidate: withSlots.map((x) => ({
+      id: x.candidate.id,
+      slug: x.candidate.slug,
+      service_id: x.service.id,
+      slot_count: x.slots.length,
+    })),
+  });
 
   const surviving = withSlots.filter((x) => x.slots.length > 0);
+  const droppedNoSlots = withSlots
+    .filter((x) => x.slots.length === 0)
+    .map((x) => ({ id: x.candidate.id, slug: x.candidate.slug, service_id: x.service.id }));
+  diag('after_surviving_filter', {
+    query_id: queryId,
+    count: surviving.length,
+    ids: surviving.map((x) => x.candidate.id),
+    dropped_ids: droppedNoSlots,
+    reason: 'no sample slots in window',
+  });
   if (surviving.length === 0) {
     const empty = {
       results: [],
@@ -517,6 +625,11 @@ export const searchBusinessesHandler: ToolHandler = async (input, ctx: ToolConte
       notes:
         'No bookable businesses found for that combination of intent, location and time. Suggest broadening the search by area or time of day.',
     };
+    diag('final_results', {
+      query_id: queryId,
+      count: 0,
+      reason: 'all candidates dropped at surviving filter',
+    });
     void logSearchQuery({
       queryId,
       sourceAssistant: ctx.sourceAssistant,
@@ -531,6 +644,11 @@ export const searchBusinessesHandler: ToolHandler = async (input, ctx: ToolConte
     const validation = searchBusinessesOutput.safeParse(empty);
     if (!validation.success) {
       console.error('[mcp.search] empty-result validation failed', validation.error.format());
+      diag('validation_failed', {
+        query_id: queryId,
+        stage: 'empty_result',
+        errors: validation.error.format(),
+      });
       return runKeywordFallback({ supa, intent, location, limit, queryId });
     }
     return validation.data;
@@ -584,12 +702,24 @@ export const searchBusinessesHandler: ToolHandler = async (input, ctx: ToolConte
     };
   });
 
-  const ranked = rankBusinesses(rankable, {
+  const rankedAll = rankBusinesses(rankable, {
     classification,
     parsed_location: parsedLocation,
     parsed_when: window,
     price_max_eur,
-  }).slice(0, limit);
+  });
+  const ranked = rankedAll.slice(0, limit);
+  diag('after_ranker', {
+    query_id: queryId,
+    in_count: rankable.length,
+    out_count: rankedAll.length,
+    kept_after_limit: ranked.length,
+    limit,
+    ranking: rankedAll.map((r) => ({
+      id: r.business.id,
+      score: r.score,
+    })),
+  });
 
   // Average quality (un-weighted) for the why_recommended threshold check.
   const avgQuality =
@@ -648,6 +778,11 @@ export const searchBusinessesHandler: ToolHandler = async (input, ctx: ToolConte
   });
 
   const response = { results, query_id: queryId };
+  diag('final_results', {
+    query_id: queryId,
+    count: results.length,
+    slugs: results.map((r) => r.slug as string),
+  });
 
   void logSearchQuery({
     queryId,
@@ -667,6 +802,12 @@ export const searchBusinessesHandler: ToolHandler = async (input, ctx: ToolConte
     const validation = searchBusinessesOutput.safeParse(response);
     if (!validation.success) {
       console.error('[mcp.search] response validation failed', validation.error.format());
+      diag('validation_failed', {
+        query_id: queryId,
+        stage: 'final_response',
+        errors: validation.error.format(),
+        result_count: results.length,
+      });
       return runKeywordFallback({ supa, intent, location, limit, queryId });
     }
     return validation.data;
@@ -675,6 +816,10 @@ export const searchBusinessesHandler: ToolHandler = async (input, ctx: ToolConte
   return response;
   } catch (err) {
     console.error('[mcp.search] unexpected handler error; running keyword fallback:', err);
+    diag('unexpected_handler_error', {
+      query_id: queryId,
+      error: describeError(err),
+    });
     return runKeywordFallback({ supa, intent, location, limit, queryId });
   }
 };
