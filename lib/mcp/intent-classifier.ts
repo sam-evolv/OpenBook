@@ -192,9 +192,14 @@ export async function classifyIntent(args: {
     void setCachedClassification(cacheKey, classification);
     return classification;
   } catch (err) {
+    const detail =
+      err instanceof Error
+        ? { name: err.name, message: err.message, stack: err.stack }
+        : { value: err };
     console.error('[mcp.intent-classifier] failing to fallback:', {
       intent: args.intent,
-      error: err instanceof Error ? err.message : err,
+      has_customer_context: Boolean(args.customer_context),
+      ...detail,
     });
     return FALLBACK_CLASSIFICATION;
   }
