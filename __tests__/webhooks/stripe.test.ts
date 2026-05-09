@@ -156,4 +156,59 @@ describe('POST /api/webhooks/stripe — payment_intent.succeeded', () => {
     // No confirmation emails sent when no row was flipped.
     expect(sendEmailMock).not.toHaveBeenCalled();
   });
+
+  it('dedupes a replayed event (unique-violation 23505 on stripe_events insert)', async () => {
+    // Stripe at-least-once delivery means we can receive the same event twice.
+    // The stripe_events table has a unique constraint on event_id; a 23505
+    // means we already processed this delivery, so short-circuit with 200.
+    stripeEventInsertResult = { data: null, error: { code: '23505' } };
+    nextEvent = {
+      id: 'evt_pi_succeeded_dup',
+      type: 'payment_intent.succeeded',
+      data: {
+        object: {
+          id: 'pi_test_dup',
+          metadata: { booking_id: 'booking-pi-dup' },
+          receipt_email: null,
+          latest_charge: null,
+        },
+      },
+    };
+
+    const res = await callWebhook();
+    expect(res.status).toBe(200);
+    const json = await res.json();
+    expect(json.deduped).toBe(true);
+
+    // No booking update on the dedup path.
+    const flip = updateCalls.find(
+      (c) => c.table === 'bookings' && c.values.status === 'confirmed',
+    );
+    expect(flip).toBeUndefined();
+  });
+
+  it('skips processing when metadata.booking_id is absent', async () => {
+    nextEvent = {
+      id: 'evt_pi_succeeded_orphan',
+      type: 'payment_intent.succeeded',
+      data: {
+        object: {
+          id: 'pi_orphan',
+          metadata: {},
+          receipt_email: null,
+          latest_charge: null,
+        },
+      },
+    };
+
+    const res = await callWebhook();
+    expect(res.status).toBe(200);
+
+    // Nothing to resolve back to; no booking update should occur.
+    const flip = updateCalls.find(
+      (c) => c.table === 'bookings' && c.values.status === 'confirmed',
+    );
+    expect(flip).toBeUndefined();
+    expect(sendEmailMock).not.toHaveBeenCalled();
+  });
 });

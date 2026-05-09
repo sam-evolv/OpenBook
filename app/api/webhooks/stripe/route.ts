@@ -232,7 +232,16 @@ export async function POST(req: NextRequest) {
           .maybeSingle();
 
         if (bookingErr) {
-          console.error('stripe-webhook: PI booking update failed', bookingErr);
+          console.error('[webhook] stripe_pi_succeeded_booking_update_failed', {
+            step: 'bookings.update',
+            event_id: event.id,
+            booking_id: relatedBookingId,
+            payment_intent_id: pi.id,
+            pg_code: (bookingErr as { code?: string }).code,
+            pg_message: (bookingErr as { message?: string }).message,
+            pg_details: (bookingErr as { details?: string }).details,
+            pg_hint: (bookingErr as { hint?: string }).hint,
+          });
           throw bookingErr;
         }
 
