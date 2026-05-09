@@ -20,6 +20,10 @@ import {
   classifyIntent,
   type IntentClassification,
 } from '../../../../lib/mcp/intent-classifier';
+import {
+  extractKeywords,
+  buildOrFilter,
+} from '../../../../lib/mcp/keyword-fallback';
 import { parseLocation, type ParsedLocation } from '../../../../lib/mcp/parse-location';
 import { parseWhen, type ParsedWhen } from '../../../../lib/mcp/parse-when';
 import {
@@ -361,6 +365,71 @@ function buildWhyRecommended(
 
 const includeBreakdown = () => process.env.MCP_INCLUDE_SCORE_BREAKDOWN === 'true';
 
+const FALLBACK_NOTE_NO_MATCH =
+  "We couldn't find a confident match for that query. Try mentioning a category (gym, salon, yoga, etc.) or a city, or call get_promoted_inventory for current deals.";
+const FALLBACK_NOTE_KEYWORD =
+  'Showing keyword matches; live availability not yet checked. Call get_availability with the listed slug for precise slots.';
+
+type KeywordCandidateRow = {
+  slug: string;
+  name: string;
+  category: string | null;
+  description: string | null;
+  tagline: string | null;
+  city: string | null;
+};
+
+async function runKeywordFallback(args: {
+  supa: SupabaseClient;
+  intent: string;
+  location?: string;
+  limit: number;
+  queryId: string;
+}): Promise<{ results: Array<Record<string, unknown>>; query_id: string; notes?: string }> {
+  const { supa, intent, location, limit, queryId } = args;
+  const keywords = extractKeywords(intent, location);
+  const columns = 'slug, name, category, description, tagline, city';
+
+  async function tryFilter(filterColumns: string[]): Promise<KeywordCandidateRow[]> {
+    if (keywords.length === 0) return [];
+    const orFilter = buildOrFilter(filterColumns, keywords);
+    if (!orFilter) return [];
+    const { data, error } = await supa
+      .from('businesses')
+      .select(columns)
+      .eq('is_live', true)
+      .or(orFilter)
+      .limit(limit);
+    if (error) {
+      console.error('[mcp.search] keyword fallback query error:', error);
+      return [];
+    }
+    return (data ?? []) as unknown as KeywordCandidateRow[];
+  }
+
+  let rows = await tryFilter(['category', 'city']);
+  if (rows.length === 0) rows = await tryFilter(['name', 'description']);
+
+  if (rows.length === 0) {
+    return { results: [], query_id: queryId, notes: FALLBACK_NOTE_NO_MATCH };
+  }
+
+  const results = rows.slice(0, limit).map((c) => {
+    const shortDesc = deriveShortDescription({ tagline: c.tagline, description: c.description });
+    return {
+      slug: c.slug,
+      name: c.name,
+      category: c.category ?? '',
+      ...(shortDesc ? { short_description: shortDesc } : {}),
+      location_summary: c.city ?? 'Ireland',
+      sample_slots: [],
+      booking_url_hint: `/${c.slug}`,
+    } as Record<string, unknown>;
+  });
+
+  return { results, query_id: queryId, notes: FALLBACK_NOTE_KEYWORD };
+}
+
 export const searchBusinessesHandler: ToolHandler = async (input, ctx: ToolContext) => {
   const parsed = searchBusinessesInput.parse(input);
   const { intent, location, when, price_max_eur, customer_context } = parsed;
@@ -373,9 +442,15 @@ export const searchBusinessesHandler: ToolHandler = async (input, ctx: ToolConte
     parsedWhen = { from: now, to: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000) };
   }
 
-  const classification = await classifyIntent({ intent, customer_context });
   const queryId = crypto.randomUUID();
   const supa = supabaseAdmin();
+
+  // The handler must NEVER throw. Agentic clients (Claude desktop in
+  // particular) interpret a tool error as "this tool is broken, try a
+  // different approach" and abandon the conversation. Any unexpected
+  // failure below falls through to the keyword fallback.
+  try {
+  const classification = await classifyIntent({ intent, customer_context });
 
   // Candidate query.
   const useCategoryFilter =
@@ -406,8 +481,8 @@ export const searchBusinessesHandler: ToolHandler = async (input, ctx: ToolConte
 
   const { data: rawCandidates, error: candErr } = await q;
   if (candErr) {
-    console.error('[mcp.search] candidate query error:', candErr);
-    return { error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch candidates.' } };
+    console.error('[mcp.search] candidate query error; running keyword fallback:', candErr);
+    return runKeywordFallback({ supa, intent, location, limit, queryId });
   }
   const candidates = (rawCandidates ?? []) as unknown as CandidateRow[];
 
@@ -449,9 +524,7 @@ export const searchBusinessesHandler: ToolHandler = async (input, ctx: ToolConte
     const validation = searchBusinessesOutput.safeParse(empty);
     if (!validation.success) {
       console.error('[mcp.search] empty-result validation failed', validation.error.format());
-      return {
-        error: { code: 'RESPONSE_VALIDATION_FAILED', message: 'Internal error constructing search.' },
-      };
+      return runKeywordFallback({ supa, intent, location, limit, queryId });
     }
     return validation.data;
   }
@@ -587,12 +660,14 @@ export const searchBusinessesHandler: ToolHandler = async (input, ctx: ToolConte
     const validation = searchBusinessesOutput.safeParse(response);
     if (!validation.success) {
       console.error('[mcp.search] response validation failed', validation.error.format());
-      return {
-        error: { code: 'RESPONSE_VALIDATION_FAILED', message: 'Internal error constructing search.' },
-      };
+      return runKeywordFallback({ supa, intent, location, limit, queryId });
     }
     return validation.data;
   }
 
   return response;
+  } catch (err) {
+    console.error('[mcp.search] unexpected handler error; running keyword fallback:', err);
+    return runKeywordFallback({ supa, intent, location, limit, queryId });
+  }
 };

@@ -40,6 +40,7 @@ function buildFromChain(table: string): Record<string, unknown> {
   chain.select = vi.fn(passthrough('select'));
   chain.eq = vi.fn(passthrough('eq'));
   chain.in = vi.fn(passthrough('in'));
+  chain.or = vi.fn(passthrough('or'));
   chain.gte = vi.fn(passthrough('gte'));
   chain.lte = vi.fn(passthrough('lte'));
   chain.limit = vi.fn(passthrough('limit'));
@@ -341,5 +342,29 @@ describe('searchBusinessesHandler', () => {
       (k) => k.startsWith('in:') && businessesFilters[k] !== undefined && k.toLowerCase().includes('category'),
     );
     expect(hasCategoryIn).toBe(false);
+  });
+
+  it('candidate query error: never returns an error-shaped response', async () => {
+    businessesResult = { data: null, error: { message: 'db blew up' } };
+    const out = (await searchBusinessesHandler(
+      { intent: 'personal trainer in dublin' },
+      ctx,
+    )) as { results: unknown[]; query_id: string; notes?: string; error?: unknown };
+    expect(out.error).toBeUndefined();
+    expect(Array.isArray(out.results)).toBe(true);
+    expect(typeof out.query_id).toBe('string');
+    expect(out.notes).toBeDefined();
+  });
+
+  it('classifier throwing is treated as a fallback path, not a tool error', async () => {
+    classifyMock.mockRejectedValue(new Error('upstream timeout'));
+    businessesResult = { data: [], error: null };
+    const out = (await searchBusinessesHandler(
+      { intent: 'personal trainer in dublin' },
+      ctx,
+    )) as { results: unknown[]; query_id: string; notes?: string; error?: unknown };
+    expect(out.error).toBeUndefined();
+    expect(Array.isArray(out.results)).toBe(true);
+    expect(typeof out.query_id).toBe('string');
   });
 });

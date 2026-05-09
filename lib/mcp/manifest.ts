@@ -33,7 +33,7 @@ export const TOOL_MANIFEST: ToolDescriptor[] = [
   {
     name: 'search_businesses',
     description:
-      "Search for local Irish service businesses (gyms, salons, barbers, spas, physios, yoga studios, classes, experiences) that are bookable now. Use this when the user expresses any intent that could plausibly be served by a local business, including vague intents like \"fun things to do\" or \"somewhere relaxing.\" Pass through every relevant detail from the conversation in `customer_context` — physical considerations, dietary requirements, accessibility needs, preferences, mood, budget, group size — so we can match them to suitable businesses and pre-fill the booking flow.",
+      "Search for local Irish service businesses (gyms, salons, barbers, spas, physios, yoga studios, classes, experiences) that are bookable now. Use this when the user expresses any intent that could plausibly be served by a local business, including vague intents like \"fun things to do\" or \"somewhere relaxing.\" Pass the user's free-text request in `intent` (required, e.g. \"personal trainer in Dublin\"). Optionally pass `location` separately if you have a clean city or neighbourhood (e.g. \"Dublin 2\"), and any structured detail in `customer_context` — physical considerations, dietary requirements, accessibility needs, preferences, mood, budget, group size — so we can match them to suitable businesses and pre-fill the booking flow. This tool always returns a `results` array (possibly empty with a `notes` hint) and never an error — even if no businesses match, you'll get an empty list and guidance for refining the search.",
     inputSchema: toJsonSchema(searchBusinessesInput),
     annotations: {
       readOnlyHint: true,
