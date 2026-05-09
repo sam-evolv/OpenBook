@@ -8,7 +8,7 @@
 import type { IntentClassification } from './intent-classifier';
 import type { ParsedLocation } from './parse-location';
 import type { ParsedWhen } from './parse-when';
-import { normaliseCategory } from './category-normalise';
+import { categoryEquals, normaliseCategory } from './category-normalise';
 
 export const RANKING_WEIGHTS = {
   availability_fit: 0.30,
@@ -162,12 +162,19 @@ function proximityScore(b: BusinessForRanking, loc: ParsedLocation | null): numb
 }
 
 function intentMatchScore(b: BusinessForRanking, c: IntentClassification): number {
-  // The classifier emits canonical snake_case; the DB stores mixed case.
-  // Normalise on both sides so "Personal Training" matches "personal_training".
+  // Primary match uses categoryEquals so non-primary synonyms work
+  // symmetrically. PR #146's helper resolves stored display strings to
+  // a single canonical key per group ('Yoga & Pilates' to 'yoga'), so a
+  // direct === would miss when the classifier emits a sibling synonym
+  // ('pilates' for the same display string). categoryEquals does
+  // variant-set intersection, which catches both cases.
+  if (categoryEquals(b.category, c.category)) return 1.0;
+
+  // RELATED_CATEGORIES still keys off the normalised classifier category
+  // and checks against the normalised business category; that mapping is
+  // expressed in canonical snake_case keys so direct lookup is correct here.
   const cat = normaliseCategory(b.category);
   const classifierCat = normaliseCategory(c.category);
-  if (cat && classifierCat === cat) return 1.0;
-
   const related = RELATED_CATEGORIES[classifierCat];
   if (related && related.includes(cat)) return 0.7;
 

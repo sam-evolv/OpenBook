@@ -237,3 +237,49 @@ describe('rankBusinesses', () => {
     }
   });
 });
+
+describe('ranker.intentMatchScore - synonym handling', () => {
+  const exactWeight = RANKING_WEIGHTS.intent_match_score;
+
+  function withClassifier(category: string): typeof inputBase {
+    return {
+      ...inputBase,
+      classification: { ...baseClassification, category },
+    };
+  }
+
+  it('returns 1.0 when classifier emits manicure for a Nail Studio business', () => {
+    // 'manicure' is a synonym of 'nails' (which is the canonical key for
+    // 'Nail Studio'). Both reach the same stored display string, so the
+    // ranker should fully match.
+    const c = candidate(baseBusiness({ id: 'nail', category: 'Nail Studio' }));
+    const out = rankBusinesses([c], withClassifier('manicure'));
+    expect(out[0].score_breakdown.intent_match_score).toBeCloseTo(exactWeight);
+  });
+
+  it('returns 1.0 when classifier emits primary canonical key (yoga) and business has display string (Yoga & Pilates)', () => {
+    const c = candidate(baseBusiness({ id: 'yp', category: 'Yoga & Pilates' }));
+    const out = rankBusinesses([c], withClassifier('yoga'));
+    expect(out[0].score_breakdown.intent_match_score).toBeCloseTo(exactWeight);
+  });
+
+  it('returns 1.0 when classifier emits secondary synonym (pilates) and business has display string (Yoga & Pilates)', () => {
+    // 'pilates' resolves to a different canonical key than 'yoga' but
+    // both map to the same stored display string. categoryEquals must
+    // catch this via variant-set intersection.
+    const c = candidate(baseBusiness({ id: 'yp', category: 'Yoga & Pilates' }));
+    const out = rankBusinesses([c], withClassifier('pilates'));
+    expect(out[0].score_breakdown.intent_match_score).toBeCloseTo(exactWeight);
+  });
+
+  it('does not score 1.0 for distinct stored categories that share a synonym word', () => {
+    // 'wellness' is a synonym for both 'Sauna / Spa' and 'Fitness & Wellness',
+    // but the two stored categories are still distinct businesses and a
+    // 'fitness' classifier intent must not score 1.0 against a Sauna / Spa
+    // business. (Variants ['Sauna / Spa'] vs ['Fitness & Wellness'] do not
+    // intersect.)
+    const c = candidate(baseBusiness({ id: 'sauna', category: 'Sauna / Spa' }));
+    const out = rankBusinesses([c], withClassifier('fitness'));
+    expect(out[0].score_breakdown.intent_match_score).toBeLessThan(exactWeight);
+  });
+});
