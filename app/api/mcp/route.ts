@@ -157,7 +157,23 @@ export async function POST(request: Request): Promise<Response> {
       let toolError: unknown = null;
       try {
         result = await TOOL_HANDLERS[name](validation.data, ctx);
-        return jsonResponse(successResponse(id, result), cors);
+        // MCP spec: `tools/call` result must be a CallToolResult, not the
+        // tool's payload directly. Anthropic's MCP client validates against
+        // this shape and surfaces a generic "Error occurred during tool
+        // execution" if the envelope is wrong, even when the HTTP status is
+        // 200 and the payload is well-formed JSON. isError stays false on
+        // every successful response since wrapToolBoundary already converts
+        // throws into structured fallback objects.
+        const toolResult = {
+          content: [
+            {
+              type: 'text' as const,
+              text: JSON.stringify(result),
+            },
+          ],
+          isError: false as const,
+        };
+        return jsonResponse(successResponse(id, toolResult), cors);
       } catch (err) {
         toolError = err instanceof Error ? { message: err.message } : err;
         throw err;
