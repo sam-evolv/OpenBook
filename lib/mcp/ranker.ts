@@ -8,6 +8,7 @@
 import type { IntentClassification } from './intent-classifier';
 import type { ParsedLocation } from './parse-location';
 import type { ParsedWhen } from './parse-when';
+import { normaliseCategory } from './category-normalise';
 
 export const RANKING_WEIGHTS = {
   availability_fit: 0.30,
@@ -161,10 +162,13 @@ function proximityScore(b: BusinessForRanking, loc: ParsedLocation | null): numb
 }
 
 function intentMatchScore(b: BusinessForRanking, c: IntentClassification): number {
-  const cat = (b.category ?? '').toLowerCase();
-  if (c.category === cat) return 1.0;
+  // The classifier emits canonical snake_case; the DB stores mixed case.
+  // Normalise on both sides so "Personal Training" matches "personal_training".
+  const cat = normaliseCategory(b.category);
+  const classifierCat = normaliseCategory(c.category);
+  if (cat && classifierCat === cat) return 1.0;
 
-  const related = RELATED_CATEGORIES[c.category];
+  const related = RELATED_CATEGORIES[classifierCat];
   if (related && related.includes(cat)) return 0.7;
 
   if (c.subcategories.length > 0) {

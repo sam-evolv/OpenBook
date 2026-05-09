@@ -222,4 +222,18 @@ describe('rankBusinesses', () => {
     const empty = rankBusinesses([candidate(baseBusiness({ id: 'x' }))], inputBase);
     expect(empty[0].score_breakdown.context_fit_score).toBeCloseTo(0.5 * RANKING_WEIGHTS.context_fit_score);
   });
+
+  it('intentMatchScore matches across category casing variants', () => {
+    // Production data stores categories as "Personal Training" while the
+    // classifier emits "personal_training". The ranker must treat them as
+    // an exact match (1.0 * weight), not a miss.
+    const titleCase = candidate(baseBusiness({ id: 't', category: 'Personal Training' }));
+    const lowercaseSpaced = candidate(baseBusiness({ id: 'l', category: 'personal training' }));
+    const snakeCase = candidate(baseBusiness({ id: 's', category: 'personal_training' }));
+    const out = rankBusinesses([titleCase, lowercaseSpaced, snakeCase], inputBase);
+    const exactWeight = RANKING_WEIGHTS.intent_match_score;
+    for (const r of out) {
+      expect(r.score_breakdown.intent_match_score).toBeCloseTo(exactWeight);
+    }
+  });
 });

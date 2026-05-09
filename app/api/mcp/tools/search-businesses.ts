@@ -24,6 +24,7 @@ import {
   extractKeywords,
   buildOrFilter,
 } from '../../../../lib/mcp/keyword-fallback';
+import { categoryQueryVariants } from '../../../../lib/mcp/category-normalise';
 import { parseLocation, type ParsedLocation } from '../../../../lib/mcp/parse-location';
 import { parseWhen, type ParsedWhen } from '../../../../lib/mcp/parse-when';
 import {
@@ -473,7 +474,13 @@ export const searchBusinessesHandler: ToolHandler = async (input, ctx: ToolConte
     .limit(MAX_CANDIDATES);
 
   if (allowedCategories && allowedCategories.length > 0) {
-    q = q.in('category', allowedCategories);
+    // The classifier emits snake_case categories but businesses.category is
+    // stored in mixed forms ("Personal Training" etc.). Expand to all
+    // plausible variants so we don't miss matches at the DB layer.
+    const variants = Array.from(
+      new Set(allowedCategories.flatMap((c) => categoryQueryVariants(c))),
+    );
+    q = q.in('category', variants);
   }
   if (parsedLocation?.city) {
     q = q.eq('city', parsedLocation.city);
