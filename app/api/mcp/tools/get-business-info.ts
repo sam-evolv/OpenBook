@@ -13,6 +13,7 @@
 
 import { getBusinessInfoInput, getBusinessInfoOutput } from '../../../../lib/mcp/schemas';
 import { supabaseAdmin } from '../../../../lib/supabase';
+import { wrapToolBoundary } from '../../../../lib/mcp/serialization';
 import type { ToolHandler } from './index';
 
 const SELECT_COLUMNS = `
@@ -98,7 +99,7 @@ function dayBoundsIso(date: string): { starts: string; ends: string } {
   };
 }
 
-export const getBusinessInfoHandler: ToolHandler = async (input) => {
+export const _getBusinessInfoImpl: ToolHandler = async (input) => {
   const { slug } = getBusinessInfoInput.parse(input);
 
   const { data, error } = await supabaseAdmin()
@@ -237,3 +238,12 @@ export const getBusinessInfoHandler: ToolHandler = async (input) => {
 
   return validation.data;
 };
+
+export const getBusinessInfoHandler: ToolHandler = wrapToolBoundary(
+  'get_business_info',
+  () => ({
+    business: null,
+    notes: 'OpenBook business lookup is temporarily unavailable. Please try again shortly.',
+  }),
+  _getBusinessInfoImpl,
+);

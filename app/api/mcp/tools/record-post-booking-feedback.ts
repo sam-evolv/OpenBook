@@ -27,6 +27,7 @@ import {
   recordPostBookingFeedbackOutput,
 } from '../../../../lib/mcp/schemas';
 import { supabaseAdmin } from '../../../../lib/supabase';
+import { wrapToolBoundary } from '../../../../lib/mcp/serialization';
 import type { ToolContext, ToolHandler } from './index';
 
 const ALLOWED_STATUSES = new Set(['confirmed', 'cancelled']);
@@ -68,7 +69,7 @@ function pickThanksMessage(args: {
   return 'Thanks for letting me know.';
 }
 
-export const recordPostBookingFeedbackHandler: ToolHandler = async (input, ctx: ToolContext) => {
+export const _recordPostBookingFeedbackImpl: ToolHandler = async (input, ctx: ToolContext) => {
   const parsed = recordPostBookingFeedbackInput.parse(input);
 
   const supa = supabaseAdmin();
@@ -149,3 +150,12 @@ export const recordPostBookingFeedbackHandler: ToolHandler = async (input, ctx: 
   }
   return validation.data;
 };
+
+export const recordPostBookingFeedbackHandler: ToolHandler = wrapToolBoundary(
+  'record_post_booking_feedback',
+  () => ({
+    recorded: false,
+    notes: 'OpenBook feedback capture is temporarily unavailable. Please try again shortly.',
+  }),
+  _recordPostBookingFeedbackImpl,
+);

@@ -321,3 +321,8 @@ export const recordPostBookingFeedbackOutput = z.object({
   acknowledged: z.literal(true),
   thanks_message: z.string().optional(),
 });
+
+// Diagnostic tools (gated behind MCP_ENABLE_DEBUG_TOOLS=true).
+// REMOVE BEFORE PRODUCTION GA.
+export const debugOpenbookHealthInput = z.object({}).passthrough();
+export const debugOpenbookSearchSmokeInput = z.object({}).passthrough();

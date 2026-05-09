@@ -20,6 +20,7 @@ import {
   getAvailabilityOutput,
 } from '../../../../lib/mcp/schemas';
 import { supabaseAdmin } from '../../../../lib/supabase';
+import { safeTask, wrapToolBoundary } from '../../../../lib/mcp/serialization';
 import type { ToolHandler } from './index';
 
 const MAX_RANGE_DAYS = 14;
@@ -59,7 +60,7 @@ const NOT_FOUND = (code: 'BUSINESS_NOT_FOUND' | 'SERVICE_NOT_FOUND', message: st
   error: { code, message },
 });
 
-export const getAvailabilityHandler: ToolHandler = async (input) => {
+export const _getAvailabilityImpl: ToolHandler = async (input) => {
   const parsed = getAvailabilityInput.parse(input);
   const { slug, service_id, date_from } = parsed;
 
@@ -106,17 +107,25 @@ export const getAvailabilityHandler: ToolHandler = async (input) => {
   const dates = datesInRange(date_from, date_to);
   const rpcResults = await Promise.all(
     dates.map((d) =>
-      supa.rpc('get_availability_for_ai', {
-        p_business_id: business.id,
-        p_service_id: service.id,
-        p_date: d,
-      }),
+      safeTask(
+        `availability.rpc:${slug}:${d}`,
+        supa.rpc('get_availability_for_ai', {
+          p_business_id: business.id,
+          p_service_id: service.id,
+          p_date: d,
+        }),
+      ),
     ),
   );
 
   type RpcRow = { slot_start: string; slot_end: string };
   const rawSlots: RpcRow[] = [];
   for (const r of rpcResults) {
+    if (!r) {
+      // safeTask already logged the failure. Treat as no availability for
+      // that date rather than failing the whole call.
+      continue;
+    }
     if (r.error) {
       console.error('[mcp.get_availability] rpc error', { slug, service_id, error: r.error });
       return {
@@ -234,6 +243,15 @@ export const getAvailabilityHandler: ToolHandler = async (input) => {
 
   return validation.data;
 };
+
+export const getAvailabilityHandler: ToolHandler = wrapToolBoundary(
+  'get_availability',
+  () => ({
+    slots: [],
+    notes: 'OpenBook availability is temporarily unavailable. Please try again shortly.',
+  }),
+  _getAvailabilityImpl,
+);
 
 async function drainWaitlistQueueLazily(): Promise<void> {
   try {

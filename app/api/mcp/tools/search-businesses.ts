@@ -36,6 +36,7 @@ import {
   type RankedResult,
 } from '../../../../lib/mcp/ranker';
 import { logSearchQuery } from '../../../../lib/mcp/logging';
+import { safeTask, wrapToolBoundary } from '../../../../lib/mcp/serialization';
 import type { ToolContext, ToolHandler } from './index';
 
 const MAX_CANDIDATES = 30;
@@ -182,16 +183,19 @@ async function fetchSampleSlots(
   const dates = dateStringsInWindow(window.from, window.to);
   const results = await Promise.all(
     dates.map((d) =>
-      supa.rpc('get_availability_for_ai', {
-        p_business_id: candidate.id,
-        p_service_id: service.id,
-        p_date: d,
-      }),
+      safeTask(
+        `search.availability:${candidate.slug}:${d}`,
+        supa.rpc('get_availability_for_ai', {
+          p_business_id: candidate.id,
+          p_service_id: service.id,
+          p_date: d,
+        }),
+      ),
     ),
   );
   const all: SlotRow[] = [];
   for (const r of results) {
-    if (r.error || !Array.isArray(r.data)) continue;
+    if (!r || r.error || !Array.isArray(r.data)) continue;
     for (const row of r.data as Array<{ slot_start: string; slot_end: string }>) {
       const startMs = new Date(row.slot_start).getTime();
       if (Number.isNaN(startMs)) continue;
@@ -466,7 +470,7 @@ async function runKeywordFallback(args: {
   return { results, query_id: queryId, notes: FALLBACK_NOTE_KEYWORD };
 }
 
-export const searchBusinessesHandler: ToolHandler = async (input, ctx: ToolContext) => {
+export const _searchBusinessesImpl: ToolHandler = async (input, ctx: ToolContext) => {
   const parsed = searchBusinessesInput.parse(input);
   const { intent, location, when, price_max_eur, customer_context } = parsed;
   const limit = Math.min(parsed.limit ?? DEFAULT_LIMIT, MAX_LIMIT);
@@ -823,3 +827,12 @@ export const searchBusinessesHandler: ToolHandler = async (input, ctx: ToolConte
     return runKeywordFallback({ supa, intent, location, limit, queryId });
   }
 };
+
+export const searchBusinessesHandler: ToolHandler = wrapToolBoundary(
+  'search_businesses',
+  () => ({
+    results: [],
+    notes: 'OpenBook search is temporarily unavailable. Please try again shortly.',
+  }),
+  _searchBusinessesImpl,
+);

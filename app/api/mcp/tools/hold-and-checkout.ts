@@ -14,6 +14,7 @@ import {
 import { supabaseAdmin } from '../../../../lib/supabase';
 import { signHoldToken, signPollingToken } from '../../../../lib/mcp/tokens';
 import { humaniseDateTime } from '../../../../lib/checkout/format-datetime';
+import { safeTask, wrapToolBoundary } from '../../../../lib/mcp/serialization';
 import type { ToolContext, ToolHandler } from './index';
 
 export { humaniseDateTime };
@@ -38,7 +39,7 @@ const responseError = (code: string, message: string, extras: Record<string, unk
   error: { code, message, ...extras },
 });
 
-export const holdAndCheckoutHandler: ToolHandler = async (input, ctx: ToolContext) => {
+export const _holdAndCheckoutImpl: ToolHandler = async (input, ctx: ToolContext) => {
   const parsed = holdAndCheckoutInput.parse(input);
   const { slug, service_id, start_iso, customer_hints } = parsed;
 
@@ -170,6 +171,16 @@ export const holdAndCheckoutHandler: ToolHandler = async (input, ctx: ToolContex
   return validation.data;
 };
 
+export const holdAndCheckoutHandler: ToolHandler = wrapToolBoundary(
+  'hold_and_checkout',
+  () => ({
+    checkout_url: null,
+    polling_token: null,
+    notes: 'OpenBook checkout is temporarily unavailable. Please try again shortly.',
+  }),
+  _holdAndCheckoutImpl,
+);
+
 type SupabaseClient = ReturnType<typeof supabaseAdmin>;
 
 async function fetchAlternatives(
@@ -186,16 +197,19 @@ async function fetchAlternatives(
   }
   const results = await Promise.all(
     dates.map((d) =>
-      supa.rpc('get_availability_for_ai', {
-        p_business_id: businessId,
-        p_service_id: service.id,
-        p_date: d,
-      }),
+      safeTask(
+        `hold.alts.rpc:${businessId}:${d}`,
+        supa.rpc('get_availability_for_ai', {
+          p_business_id: businessId,
+          p_service_id: service.id,
+          p_date: d,
+        }),
+      ),
     ),
   );
   const flat: Array<{ slot_start: string; slot_end: string }> = [];
   for (const r of results) {
-    if (r.error || !Array.isArray(r.data)) continue;
+    if (!r || r.error || !Array.isArray(r.data)) continue;
     for (const row of r.data as Array<{ slot_start: string; slot_end: string }>) {
       flat.push(row);
     }
