@@ -210,6 +210,7 @@ export const holdAndCheckoutOutput = z.object({
     price_eur: z.number(),
     deposit_eur: z.number().optional(),
     is_free: z.boolean(),
+    payment_mode: z.enum(['stripe_now', 'in_person']),
   }),
   next_step_for_user: z.string(),
 });

@@ -15,6 +15,7 @@ import { supabaseAdmin } from '../../../../lib/supabase';
 import { signHoldToken, signPollingToken } from '../../../../lib/mcp/tokens';
 import { humaniseDateTime } from '../../../../lib/checkout/format-datetime';
 import { safeTask, wrapToolBoundary } from '../../../../lib/mcp/serialization';
+import { getPaymentMode, type PaymentMode } from '../../../../lib/payments/payment-mode';
 import type { ToolContext, ToolHandler } from './index';
 
 export { humaniseDateTime };
@@ -39,6 +40,30 @@ const responseError = (code: string, message: string, extras: Record<string, unk
   error: { code, message, ...extras },
 });
 
+// Three-way branched copy for next_step_for_user. stripe_now keeps the
+// original wording; in_person paid surfaces the price and business name
+// so the assistant can tell the user upfront they will settle directly
+// with the business; in_person free omits any mention of payment. Whole
+// euros render without trailing .00 ("€40" not "€40.00").
+function buildNextStepCopy(args: {
+  paymentMode: PaymentMode;
+  priceCents: number;
+  businessName: string;
+}): string {
+  const { paymentMode, priceCents, businessName } = args;
+
+  if (paymentMode === 'stripe_now') {
+    return 'Tap the link to confirm and pay; held for ten minutes.';
+  }
+
+  if (priceCents === 0) {
+    return 'Tap the link to confirm; held for ten minutes.';
+  }
+
+  const eur = (priceCents / 100).toFixed(2).replace(/\.00$/, '');
+  return `Tap the link to confirm. You'll pay €${eur} at ${businessName} on the day; held for ten minutes.`;
+}
+
 export const _holdAndCheckoutImpl: ToolHandler = async (input, ctx: ToolContext) => {
   const parsed = holdAndCheckoutInput.parse(input);
   const { slug, service_id, start_iso, customer_hints } = parsed;
@@ -56,7 +81,7 @@ export const _holdAndCheckoutImpl: ToolHandler = async (input, ctx: ToolContext)
 
   const { data: business, error: bizErr } = await supa
     .from('businesses')
-    .select('id, slug, name, is_live')
+    .select('id, slug, name, is_live, stripe_account_id, stripe_charges_enabled')
     .eq('slug', slug)
     .eq('is_live', true)
     .maybeSingle();
@@ -143,6 +168,14 @@ export const _holdAndCheckoutImpl: ToolHandler = async (input, ctx: ToolContext)
   const checkoutUrl = `${checkoutBaseUrl()}/c/${holdToken}`;
   const isFree = service.price_cents === 0;
 
+  // Resolve payment_mode using the same helper the page-side flow uses
+  // (lib/payments/payment-mode.ts, introduced in PR #145). Free services
+  // and businesses without Stripe Connect onboarding both resolve to
+  // in_person; everything else is stripe_now. The MCP-side copy tracks
+  // this so assistants tell users upfront whether they pay now or at
+  // the business on the day.
+  const paymentMode: PaymentMode = getPaymentMode(business, service);
+
   const response = {
     hold_id: row.hold_id,
     polling_token: pollingToken,
@@ -157,10 +190,13 @@ export const _holdAndCheckoutImpl: ToolHandler = async (input, ctx: ToolContext)
       price_eur: service.price_cents / 100,
       // deposit_eur intentionally omitted — column not stored (Appendix D).
       is_free: isFree,
+      payment_mode: paymentMode,
     },
-    next_step_for_user: isFree
-      ? 'Tap the link to confirm your booking; held for ten minutes.'
-      : 'Tap the link to confirm and pay; held for ten minutes.',
+    next_step_for_user: buildNextStepCopy({
+      paymentMode,
+      priceCents: service.price_cents,
+      businessName: business.name,
+    }),
   };
 
   const validation = holdAndCheckoutOutput.safeParse(response);
