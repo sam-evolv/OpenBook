@@ -31,11 +31,7 @@ import {
   joinWaitlistInput,
   getPromotedInventoryInput,
   recordPostBookingFeedbackInput,
-  debugOpenbookHealthInput,
-  debugOpenbookSearchSmokeInput,
 } from '../../../lib/mcp/schemas';
-
-const DEBUG_TOOLS_ENABLED = process.env.MCP_ENABLE_DEBUG_TOOLS === 'true';
 
 const TOOL_INPUT_SCHEMAS: Record<string, z.ZodTypeAny> = {
   search_businesses: searchBusinessesInput,
@@ -46,12 +42,6 @@ const TOOL_INPUT_SCHEMAS: Record<string, z.ZodTypeAny> = {
   join_waitlist: joinWaitlistInput,
   get_promoted_inventory: getPromotedInventoryInput,
   record_post_booking_feedback: recordPostBookingFeedbackInput,
-  ...(DEBUG_TOOLS_ENABLED
-    ? {
-        debug_openbook_health: debugOpenbookHealthInput,
-        debug_openbook_search_smoke: debugOpenbookSearchSmokeInput,
-      }
-    : {}),
 };
 
 const SUPPORTED_PROTOCOL_VERSIONS = ['2024-11-05', '2025-03-26', '2025-06-18'] as const;

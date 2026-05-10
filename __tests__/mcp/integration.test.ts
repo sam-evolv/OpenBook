@@ -140,6 +140,26 @@ describe('POST /api/mcp', () => {
     );
   });
 
+  it('every tool returned by tools/list has all three annotation hints populated as booleans', async () => {
+    // The wire shape, not just the in-memory manifest: ChatGPT App
+    // Directory review reads what comes over the JSON-RPC connection, so
+    // we assert against the serialised response itself.
+    const { json } = await callJson({ jsonrpc: '2.0', id: 21, method: 'tools/list' });
+    const tools = (json.result as {
+      tools: Array<{
+        name: string;
+        annotations?: { readOnlyHint?: unknown; destructiveHint?: unknown; openWorldHint?: unknown };
+      }>;
+    }).tools;
+    expect(tools).toHaveLength(8);
+    for (const tool of tools) {
+      expect(tool.annotations, `tool ${tool.name} missing annotations on the wire`).toBeDefined();
+      expect(typeof tool.annotations!.readOnlyHint, `tool ${tool.name} readOnlyHint`).toBe('boolean');
+      expect(typeof tool.annotations!.destructiveHint, `tool ${tool.name} destructiveHint`).toBe('boolean');
+      expect(typeof tool.annotations!.openWorldHint, `tool ${tool.name} openWorldHint`).toBe('boolean');
+    }
+  });
+
   it('every registered tool is now a REAL handler (no not_implemented stubs left)', async () => {
     // After PR #N (record_post_booking_feedback), all eight Section 5
     // tools are real. This test guards that invariant — if anyone wires

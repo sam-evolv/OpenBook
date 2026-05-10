@@ -15,34 +15,22 @@ const EXPECTED: Record<
   string,
   { readOnlyHint: boolean; destructiveHint: boolean; openWorldHint: boolean }
 > = {
-  // Calls OpenAI for intent classification → openWorldHint true.
+  // Read-only against external state (DB + intent classifier).
   search_businesses: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
 
-  // Pure Supabase reads.
-  get_business_info: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
-  get_availability: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
+  // Read-only profile/availability/promoted/status reads against the
+  // OpenBook DB (external from ChatGPT's perspective).
+  get_business_info: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  get_availability: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  check_booking_status: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
+  get_promoted_inventory: { readOnlyHint: true, destructiveHint: false, openWorldHint: true },
 
-  // Creates booking + hold rows (destructive: hard to undo cleanly,
-  // returns a Stripe checkout URL the user is meant to act on); the URL
-  // itself reaches an external payment provider → openWorldHint true.
-  hold_and_checkout: { readOnlyHint: false, destructiveHint: true, openWorldHint: true },
-
-  // Pure Supabase read.
-  check_booking_status: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
-
-  // Inserts a row but is reversible by re-submission and naturally expires;
-  // PR #118 deferred SMS to v1.1, so the handler currently makes no
-  // external calls.
-  join_waitlist: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
-
-  // Pure Supabase reads + the existing get_availability_for_ai RPC; no
-  // external services from THIS tool's call site (the simplified ranker
-  // intentionally skips the OpenAI intent-classifier — see PR #122).
-  get_promoted_inventory: { readOnlyHint: true, destructiveHint: false, openWorldHint: false },
-
-  // Upserts a feedback row + optional guarded outcome update; reversible
-  // via re-submission to the same tool. No external calls.
-  record_post_booking_feedback: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  // Writes that create new rows. None are destructive: holds expire after
+  // 10 minutes, waitlist entries can be re-submitted or expire, feedback
+  // can be edited via re-submission. All touch external state.
+  hold_and_checkout: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+  join_waitlist: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+  record_post_booking_feedback: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
 };
 
 describe('TOOL_MANIFEST annotations', () => {
@@ -51,7 +39,17 @@ describe('TOOL_MANIFEST annotations', () => {
     expect(names).toEqual(Object.keys(EXPECTED).sort());
   });
 
-  it('every tool has all three annotations defined as booleans', () => {
+  it('exposes exactly 8 tools (regression guard against debug tools sneaking back in)', () => {
+    expect(TOOL_MANIFEST).toHaveLength(8);
+  });
+
+  it('no tool name starts with debug_', () => {
+    for (const tool of TOOL_MANIFEST) {
+      expect(tool.name.startsWith('debug_'), `tool ${tool.name} starts with debug_`).toBe(false);
+    }
+  });
+
+  it('every tool has all three annotations defined as literal booleans', () => {
     for (const tool of TOOL_MANIFEST) {
       expect(tool.annotations, `tool ${tool.name} has annotations`).toBeDefined();
       expect(typeof tool.annotations.readOnlyHint).toBe('boolean');
@@ -69,7 +67,6 @@ describe('TOOL_MANIFEST annotations', () => {
 
   it('readOnlyHint and destructiveHint cannot both be true', () => {
     // A read-only tool can't also be destructive — they're contradictory.
-    // Caught here rather than relying on a reviewer to spot the error.
     for (const tool of TOOL_MANIFEST) {
       const a = tool.annotations;
       const both = a.readOnlyHint && a.destructiveHint;
@@ -86,6 +83,15 @@ describe('TOOL_MANIFEST annotations', () => {
       expect(typeof tool.inputSchema).toBe('object');
       expect(tool.inputSchema).not.toBeNull();
       expect(typeof tool.annotations).toBe('object');
+    }
+  });
+
+  it("no tool description contains the substring 'any intent' (OpenAI flags this as overly broad)", () => {
+    for (const tool of TOOL_MANIFEST) {
+      expect(
+        tool.description.toLowerCase().includes('any intent'),
+        `tool ${tool.name} description contains 'any intent'`,
+      ).toBe(false);
     }
   });
 });
