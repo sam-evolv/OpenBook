@@ -1,7 +1,10 @@
-// MCP `tools/list` manifest. Tool descriptions are taken verbatim from
-// docs/mcp-server-spec.md sections 5.2–5.9. Annotations follow the spec
-// for each tool. Input schemas are JSON Schema (Draft-7) generated from
-// the Zod input schemas in ./schemas.ts.
+// MCP `tools/list` manifest. Descriptions are written for the ChatGPT
+// App Directory submission flow: narrow user-intent framing, no "any
+// intent" or promotional language, no model-steering instructions.
+// Annotations follow OpenAI's submission guidance — readOnlyHint,
+// openWorldHint, and destructiveHint are set explicitly on every tool.
+// Input schemas are JSON Schema (Draft-7) generated from the Zod input
+// schemas in ./schemas.ts.
 
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import {
@@ -13,11 +16,7 @@ import {
   joinWaitlistInput,
   getPromotedInventoryInput,
   recordPostBookingFeedbackInput,
-  debugOpenbookHealthInput,
-  debugOpenbookSearchSmokeInput,
 } from './schemas';
-
-const DEBUG_TOOLS_ENABLED = process.env.MCP_ENABLE_DEBUG_TOOLS === 'true';
 
 export type ToolDescriptor = {
   name: string;
@@ -33,11 +32,11 @@ export type ToolDescriptor = {
 const toJsonSchema = (schema: Parameters<typeof zodToJsonSchema>[0]) =>
   zodToJsonSchema(schema, { target: 'jsonSchema7' }) as object;
 
-const BASE_TOOL_MANIFEST: ToolDescriptor[] = [
+export const TOOL_MANIFEST: ToolDescriptor[] = [
   {
     name: 'search_businesses',
     description:
-      "Search for local Irish service businesses (gyms, salons, barbers, spas, physios, yoga studios, classes, experiences) that are bookable now. Use this when the user expresses any intent that could plausibly be served by a local business, including vague intents like \"fun things to do\" or \"somewhere relaxing.\" Pass the user's free-text request in `intent` (required, e.g. \"personal trainer in Dublin\"). Optionally pass `location` separately if you have a clean city or neighbourhood (e.g. \"Dublin 2\"), and any structured detail in `customer_context` — physical considerations, dietary requirements, accessibility needs, preferences, mood, budget, group size — so we can match them to suitable businesses and pre-fill the booking flow. This tool always returns a `results` array (possibly empty with a `notes` hint) and never an error — even if no businesses match, you'll get an empty list and guidance for refining the search.",
+      "Search for local Irish service businesses (gyms, salons, barbers, spas, physios, yoga studios, classes, experiences) that have live booking inventory in OpenBook. Use when the user wants to find or book a local service in Ireland. Pass the user's request in `intent` (e.g. \"personal trainer in Dublin\"). Pass `customer_context` with any constraints, accessibility needs, or preferences they shared so we can match suitable businesses and pre-fill checkout. Always returns a `results` array (possibly empty with `notes` guidance); never errors.",
     inputSchema: toJsonSchema(searchBusinessesInput),
     annotations: {
       readOnlyHint: true,
@@ -48,109 +47,78 @@ const BASE_TOOL_MANIFEST: ToolDescriptor[] = [
   {
     name: 'get_business_info',
     description:
-      'Get full details about a specific business, including services, opening hours, address, photos of the space, accessibility information, parking, and nearby landmarks. Use this when the user asks "tell me more about X" or wants to evaluate a business before booking.',
+      'Get full profile details for a specific business in OpenBook by slug: services, prices, opening hours, address, accessibility, and parking notes. Use when the user wants to evaluate a business before booking, or asks for more detail about one returned by `search_businesses`.',
     inputSchema: toJsonSchema(getBusinessInfoInput),
     annotations: {
       readOnlyHint: true,
       destructiveHint: false,
-      openWorldHint: false,
+      openWorldHint: true,
     },
   },
   {
     name: 'get_availability',
     description:
-      'Given a business and service, return precise available slots over a date range.',
+      'Return available booking slots for a specific service at a specific business over a date range. Use after the user has chosen a business and service and wants to see times.',
     inputSchema: toJsonSchema(getAvailabilityInput),
     annotations: {
       readOnlyHint: true,
       destructiveHint: false,
-      openWorldHint: false,
+      openWorldHint: true,
     },
   },
   {
     name: 'hold_and_checkout',
     description:
-      "Hold a specific slot for 10 minutes and generate a one-tap checkout link the user opens in their browser to complete payment. Use after the user has chosen a specific slot. Always pass `customer_hints` with everything relevant from the conversation — name, email, phone if shared, special requirements, accessibility needs — so the checkout page can pre-fill and the business can prepare.\n\nReturns a summary with payment_mode ('stripe_now' or 'in_person') so you can tell the user upfront whether they need to pay now or at the business on the day. The next_step_for_user copy already reflects this; surface it verbatim or paraphrase as needed.",
+      "Hold a specific slot for 10 minutes and return a one-tap checkout URL the user opens in their browser to confirm and (if applicable) pay. Use after the user has chosen a specific slot. Pass `customer_hints` with name, email, phone, and any relevant notes from the conversation so the checkout page can pre-fill. The response includes `payment_mode` ('stripe_now' or 'in_person') and a `next_step_for_user` string. Surface that string to the user so they know whether they pay now or at the business on the day.",
     inputSchema: toJsonSchema(holdAndCheckoutInput),
     annotations: {
       readOnlyHint: false,
-      destructiveHint: true,
+      destructiveHint: false,
       openWorldHint: true,
     },
   },
   {
     name: 'check_booking_status',
     description:
-      'Check whether a booking has been confirmed, expired, or is still pending payment. Call this after `hold_and_checkout` to follow up with the user — typically 30 to 90 seconds later, or whenever the user\'s message suggests they may have completed payment ("done", "booked", "paid"). Returns booking details on confirmation so you can confirm to the user, suggest a calendar invite, offer a route, or set a reminder.',
+      'Check whether a held booking has been confirmed, expired, or is still awaiting payment. Use after `hold_and_checkout` to follow up with the user, typically 30 to 90 seconds later or when their next message implies they may have completed checkout.',
     inputSchema: toJsonSchema(checkBookingStatusInput),
     annotations: {
       readOnlyHint: true,
       destructiveHint: false,
-      openWorldHint: false,
+      openWorldHint: true,
     },
   },
   {
     name: 'join_waitlist',
     description:
-      'Add the user to the waitlist for a specific business and time window when their preferred slot isn\'t available. Returns a notification token. We send an SMS or push notification if a matching slot opens, with a one-tap booking link. Use when the user has expressed a strong preference for a specific time and alternatives don\'t fit.',
+      "Add the user to the waitlist for a specific business and time window when their preferred slot is unavailable. Returns a notification token. We send an SMS or push notification with a one-tap booking link if a matching slot opens before the expiry. Use when the user has expressed a clear preference for a time and the available alternatives don't fit.",
     inputSchema: toJsonSchema(joinWaitlistInput),
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
-      openWorldHint: false,
+      openWorldHint: true,
     },
   },
   {
     name: 'get_promoted_inventory',
     description:
-      'Surface time slots that local businesses are actively promoting — last-minute openings, flash sales, or curated availability. Use when the user asks "what\'s available right now," "any good deals," "anything fun tonight," or expresses open-ended local discovery intent. Promoted slots are clearly labelled in the response and the assistant should disclose to the user when a slot is discounted.',
+      "List time slots that businesses are actively promoting in OpenBook (last-minute openings or curated discounts). Use when the user asks what's available now, what's bookable tonight, or wants to discover something local without a specific business in mind. Discounted slots are flagged in the response and should be disclosed to the user as discounted.",
     inputSchema: toJsonSchema(getPromotedInventoryInput),
     annotations: {
       readOnlyHint: true,
       destructiveHint: false,
-      openWorldHint: false,
+      openWorldHint: true,
     },
   },
   {
     name: 'record_post_booking_feedback',
     description:
-      'Record the user\'s feedback after a booking has happened. Call this when the user mentions how a booking went, either spontaneously ("the session was great") or when you\'ve prompted ("how was it?"). Pass through the user\'s verbatim sentiment in `verbatim` and your inferred rating. Use the booking_id from a previous `check_booking_status` response.',
+      "Record the user's feedback after a booking has happened. Use when the user mentions how it went, either spontaneously or after you asked. Pass their verbatim sentiment and your inferred rating.",
     inputSchema: toJsonSchema(recordPostBookingFeedbackInput),
     annotations: {
       readOnlyHint: false,
       destructiveHint: false,
-      openWorldHint: false,
+      openWorldHint: true,
     },
   },
 ];
-
-// Diagnostic tools surfaced only when MCP_ENABLE_DEBUG_TOOLS=true.
-// REMOVE BEFORE PRODUCTION GA.
-const DEBUG_TOOL_MANIFEST: ToolDescriptor[] = [
-  {
-    name: 'debug_openbook_health',
-    description:
-      'Diagnostic health check. Returns env-var presence flags (no values), runtime info, and current timestamp. Remove before production GA.',
-    inputSchema: toJsonSchema(debugOpenbookHealthInput),
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      openWorldHint: false,
-    },
-  },
-  {
-    name: 'debug_openbook_search_smoke',
-    description:
-      'Diagnostic smoke test. Drives the search_businesses implementation directly with a fixed input ("personal trainer in Cork") and surfaces the actual exception type and message on failure rather than a swallowed fallback. Remove before production GA.',
-    inputSchema: toJsonSchema(debugOpenbookSearchSmokeInput),
-    annotations: {
-      readOnlyHint: true,
-      destructiveHint: false,
-      openWorldHint: false,
-    },
-  },
-];
-
-export const TOOL_MANIFEST: ToolDescriptor[] = DEBUG_TOOLS_ENABLED
-  ? [...BASE_TOOL_MANIFEST, ...DEBUG_TOOL_MANIFEST]
-  : BASE_TOOL_MANIFEST;
