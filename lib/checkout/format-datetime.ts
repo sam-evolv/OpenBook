@@ -97,6 +97,7 @@ export function formatCompactDublin(date: Date): string {
   })
     .format(date)
     .replace(' ', '')
+    .replace(/\./g, '')
     .toLowerCase();
   return `${dateLabel}, ${timeLabel}`;
 }

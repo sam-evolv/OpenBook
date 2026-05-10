@@ -24,11 +24,7 @@ const HOLD_DURATION_MIN = 10;
 const APP_DOMAIN = (() => {
   const fromEnv = process.env.APP_DOMAIN;
   if (fromEnv) return fromEnv;
-  if (process.env.NODE_ENV === 'production') {
-    // Fail loud — we don't want to silently sign URLs against the wrong host.
-    throw new Error('APP_DOMAIN env var is required in production');
-  }
-  return 'http://localhost:3000';
+  return process.env.NODE_ENV === 'production' ? 'app.openbook.ie' : 'http://localhost:3000';
 })();
 
 function checkoutBaseUrl(): string {
