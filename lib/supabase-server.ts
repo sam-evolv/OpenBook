@@ -1,5 +1,10 @@
 import { createServerClient } from '@supabase/ssr';
-import { cookies, headers } from 'next/headers';
+import {
+  cookies,
+  headers,
+  type UnsafeUnwrappedCookies,
+  type UnsafeUnwrappedHeaders,
+} from 'next/headers';
 
 /**
  * Server-side Supabase client. Uses the modern getAll/setAll cookie API
@@ -10,8 +15,8 @@ import { cookies, headers } from 'next/headers';
  * them and OAuth appears to bounce back to login.
  */
 export function createSupabaseServerClient() {
-  const cookieStore = cookies();
-  const host = headers().get('host') ?? '';
+  const cookieStore = cookies() as unknown as UnsafeUnwrappedCookies;
+  const host = (headers() as unknown as UnsafeUnwrappedHeaders).get('host') ?? '';
   const isProduction = process.env.NODE_ENV === 'production';
   const useCrossSubdomain = isProduction && host.endsWith('openbook.ie');
 

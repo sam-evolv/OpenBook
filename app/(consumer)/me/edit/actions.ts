@@ -11,7 +11,7 @@ export interface CustomerProfilePayload {
 }
 
 export async function saveCustomerProfile(payload: CustomerProfilePayload) {
-  const customerId = cookies().get('ob_customer_id')?.value ?? null;
+  const customerId = (await cookies()).get('ob_customer_id')?.value ?? null;
   if (!customerId) {
     return { ok: false as const, error: 'No customer profile found on this device.' };
   }

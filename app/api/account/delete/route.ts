@@ -7,7 +7,7 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function DELETE() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const cookieCustomerId = cookieStore.get('ob_customer_id')?.value ?? null;
   const userClient = createSupabaseServerClient();
   const admin = supabaseAdmin();

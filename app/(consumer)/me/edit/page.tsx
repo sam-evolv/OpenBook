@@ -6,7 +6,7 @@ import { ProfileEditForm } from './ProfileEditForm';
 export const dynamic = 'force-dynamic';
 
 async function getCustomer() {
-  const customerId = cookies().get('ob_customer_id')?.value;
+  const customerId = (await cookies()).get('ob_customer_id')?.value;
   if (!customerId) return null;
   const sb = supabaseAdmin();
   const { data } = await sb

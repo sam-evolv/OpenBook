@@ -11,7 +11,7 @@ import { BookingDetailActions } from './BookingDetailActions';
 export const dynamic = 'force-dynamic';
 
 interface Props {
-  params: { bookingId: string };
+  params: Promise<{ bookingId: string }>;
 }
 
 type BookingDetail = {
@@ -55,7 +55,7 @@ async function getBooking(bookingId: string): Promise<BookingDetail | null> {
   // We accept either identity so AI-flow bookings are visible alongside
   // any prior anonymous ones from the same browser.
   const sb = supabaseAdmin();
-  const cookieCustomerId = cookies().get('ob_customer_id')?.value ?? null;
+  const cookieCustomerId = (await cookies()).get('ob_customer_id')?.value ?? null;
 
   let authCustomerId: string | null = null;
   try {
@@ -130,7 +130,8 @@ function formatBookedOn(iso: string): string {
 }
 
 export default async function BookingDetailPage({ params }: Props) {
-  const booking = await getBooking(params.bookingId);
+  const { bookingId } = await params;
+  const booking = await getBooking(bookingId);
   if (!booking) notFound();
 
   const colour = getTileColour(booking.businesses.primary_colour).mid;

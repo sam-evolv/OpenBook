@@ -11,22 +11,23 @@ const VALID_VIEWS: CalendarView[] = ['day', 'week', 'month'];
 export default async function CalendarV2Page({
   searchParams,
 }: {
-  searchParams: { view?: string; date?: string; staff?: string };
+  searchParams: Promise<{ view?: string; date?: string; staff?: string }>;
 }) {
+  const sp = await searchParams;
   const { business } = await requireCurrentBusiness<{ id: string }>('id');
 
-  const requestedView = VALID_VIEWS.includes(searchParams.view as CalendarView)
-    ? (searchParams.view as CalendarView)
+  const requestedView = VALID_VIEWS.includes(sp.view as CalendarView)
+    ? (sp.view as CalendarView)
     : 'week';
   // Month view is reserved in the switcher but not yet implemented — fall back
   // to week so the page still renders if someone deep-links to ?view=month.
   const view: CalendarView = requestedView === 'month' ? 'week' : requestedView;
 
-  const anchorIso = searchParams.date
-    ? new Date(searchParams.date).toISOString()
+  const anchorIso = sp.date
+    ? new Date(sp.date).toISOString()
     : new Date().toISOString();
 
-  const activeStaff = searchParams.staff && searchParams.staff !== 'all' ? searchParams.staff : 'all';
+  const activeStaff = sp.staff && sp.staff !== 'all' ? sp.staff : 'all';
 
   return (
     <Suspense fallback={<WeekGridSkeleton />}>

@@ -46,8 +46,9 @@ export const dynamic = 'force-dynamic';
 const POLL_ATTEMPTS = 6;
 const POLL_INTERVAL_MS = 500;
 
-export async function POST(req: NextRequest, { params }: { params: { token: string } }) {
-  const payload = await verifyHoldToken(params.token);
+export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params;
+  const payload = await verifyHoldToken(token);
   if (!payload) {
     return NextResponse.json({ error: 'invalid_token' }, { status: 401 });
   }

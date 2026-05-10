@@ -9,11 +9,12 @@ const VALID_TABS: CatalogTabId[] = ['services'];
 export default async function CatalogV2Page({
   searchParams,
 }: {
-  searchParams: { tab?: string };
+  searchParams: Promise<{ tab?: string }>;
 }) {
+  const sp = await searchParams;
   const { business, sb } = await requireCurrentBusiness<{ id: string }>('id');
-  const activeTab: CatalogTabId = VALID_TABS.includes(searchParams.tab as CatalogTabId)
-    ? (searchParams.tab as CatalogTabId)
+  const activeTab: CatalogTabId = VALID_TABS.includes(sp.tab as CatalogTabId)
+    ? (sp.tab as CatalogTabId)
     : 'services';
 
   // `services` has no `created_at` column — ordering by it silently

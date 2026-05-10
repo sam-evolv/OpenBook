@@ -14,7 +14,7 @@ async function getMyBookings(): Promise<BookingWithDetails[]> {
   // freshly-authed AI booking lands here alongside any earlier guest
   // bookings from the same browser.
   const sb = supabaseAdmin();
-  const cookieCustomerId = cookies().get('ob_customer_id')?.value ?? null;
+  const cookieCustomerId = (await cookies()).get('ob_customer_id')?.value ?? null;
 
   let authCustomerId: string | null = null;
   try {

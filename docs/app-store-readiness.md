@@ -61,7 +61,7 @@ OpenBook now has a working Capacitor iOS build path. The native shell loads the 
 
 ## Known Remaining Blockers
 
-- Dependency audit currently reports only the Next.js advisory group plus Next's nested PostCSS dependency. Dev/test Vite/Vitest advisories have been cleared. The remaining automatic npm fix requires a breaking Next upgrade, so this should be handled as a dedicated migration and regression pass.
+- Dependency audit now passes after the Next/Vitest upgrade and PostCSS override. Keep `npm audit --audit-level=moderate` as a release gate on every launch branch.
 - The privacy manifest is a starter manifest. It must be reconciled against the final App Store Connect answers before submission.
 - The current iOS shell depends on the hosted app URL. Production uptime and network/offline behavior must be reviewed before App Review.
 - Xcode archive and TestFlight validation still need to happen outside the web build.

@@ -16,8 +16,8 @@ export const dynamic = 'force-dynamic';
  * Host sniffing is cheap enough to keep inline here — the middleware
  * remains the canonical router for the two production hosts.
  */
-export default function RootPage() {
-  const host = headers().get('host') ?? '';
+export default async function RootPage() {
+  const host = (await headers()).get('host') ?? '';
   if (host.startsWith('dash.')) {
     redirect('/dashboard');
   }

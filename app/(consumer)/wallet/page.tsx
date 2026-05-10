@@ -38,7 +38,7 @@ type PackageRow = {
 };
 
 async function getWalletData() {
-  const customerId = cookies().get('ob_customer_id')?.value;
+  const customerId = (await cookies()).get('ob_customer_id')?.value;
   if (!customerId) return { credits: [], packages: [], totalCents: 0 };
 
   const sb = supabaseAdmin();

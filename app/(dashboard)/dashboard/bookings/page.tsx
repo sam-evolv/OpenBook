@@ -14,16 +14,17 @@ const VALID_STATUSES: StatusFilter[] = ['all', 'pending', 'confirmed', 'complete
 export default async function BookingsV2Page({
   searchParams,
 }: {
-  searchParams: { tab?: string; q?: string; status?: string };
+  searchParams: Promise<{ tab?: string; q?: string; status?: string }>;
 }) {
+  const sp = await searchParams;
   const { business, sb } = await requireCurrentBusiness<{ id: string }>('id');
 
-  const tab: TabId = VALID_TABS.includes(searchParams.tab as TabId)
-    ? (searchParams.tab as TabId)
+  const tab: TabId = VALID_TABS.includes(sp.tab as TabId)
+    ? (sp.tab as TabId)
     : 'upcoming';
-  const q = (searchParams.q ?? '').trim();
-  const statusFilter: StatusFilter = VALID_STATUSES.includes(searchParams.status as StatusFilter)
-    ? (searchParams.status as StatusFilter)
+  const q = (sp.q ?? '').trim();
+  const statusFilter: StatusFilter = VALID_STATUSES.includes(sp.status as StatusFilter)
+    ? (sp.status as StatusFilter)
     : 'all';
 
   const now = new Date().toISOString();

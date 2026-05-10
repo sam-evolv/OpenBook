@@ -34,9 +34,10 @@ async function getBookingContext(serviceId: string) {
 export default async function BookingPage({
   params,
 }: {
-  params: { serviceId: string };
+  params: Promise<{ serviceId: string }>;
 }) {
-  const ctx = await getBookingContext(params.serviceId);
+  const { serviceId } = await params;
+  const ctx = await getBookingContext(serviceId);
   if (!ctx) notFound();
 
   const { service, business } = ctx;

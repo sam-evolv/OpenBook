@@ -28,14 +28,15 @@ function notFound(origin: string | null): Response {
 
 export async function GET(
   request: Request,
-  { params }: { params: { token: string } },
+  { params }: { params: Promise<{ token: string }> },
 ): Promise<Response> {
+  const { token: requestedToken } = await params;
   const origin = request.headers.get('origin');
   const expectedPath = process.env.OPENAI_DOMAIN_VERIFICATION_PATH;
   const token = process.env.OPENAI_DOMAIN_VERIFICATION_TOKEN;
 
   if (!expectedPath || !token) return notFound(origin);
-  if (params.token !== expectedPath) return notFound(origin);
+  if (requestedToken !== expectedPath) return notFound(origin);
 
   return new Response(token, {
     status: 200,

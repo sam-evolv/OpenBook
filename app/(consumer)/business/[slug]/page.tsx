@@ -5,18 +5,19 @@ import { BusinessAppShell } from '@/components/business/BusinessAppShell';
 export const dynamic = 'force-dynamic';
 
 interface Props {
-  params: { slug: string };
-  searchParams: { tab?: string };
+  params: Promise<{ slug: string }>;
+  searchParams: Promise<{ tab?: string }>;
 }
 
 export default async function BusinessPage({ params, searchParams }: Props) {
+  const [{ slug }, sp] = await Promise.all([params, searchParams]);
   const sb = createSupabaseServerClient();
 
   // Fetch business + services + hours in parallel
   const { data: business } = await sb
     .from('businesses')
     .select('*')
-    .eq('slug', params.slug)
+    .eq('slug', slug)
     .eq('is_live', true)
     .maybeSingle();
 
@@ -37,7 +38,7 @@ export default async function BusinessPage({ params, searchParams }: Props) {
   ]);
 
   const initialTab =
-    (searchParams.tab as 'home' | 'book' | 'gallery' | 'about') ?? 'home';
+    (sp.tab as 'home' | 'book' | 'gallery' | 'about') ?? 'home';
 
   return (
     <BusinessAppShell

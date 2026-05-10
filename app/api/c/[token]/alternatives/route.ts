@@ -22,14 +22,15 @@ export const dynamic = 'force-dynamic';
 // route the user back to the service's slot picker page where they can
 // re-pick and re-hold via the standard consumer flow).
 
-export async function GET(_req: NextRequest, { params }: { params: { token: string } }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params;
   // verifyHoldToken returns null for expired tokens; we still need to
   // recover the hold_id from the JWT body so we can find the original
   // service. Decode the body without verifying signature for the lookup
   // hint, but DO NOT trust it for any DB writes — this route is read-only.
   let holdId: string | null = null;
   try {
-    const parts = params.token.split('.');
+    const parts = token.split('.');
     if (parts.length === 3) {
       const body = JSON.parse(Buffer.from(parts[1], 'base64url').toString());
       if (typeof body.hold_id === 'string') holdId = body.hold_id;
@@ -40,7 +41,7 @@ export async function GET(_req: NextRequest, { params }: { params: { token: stri
   // Prefer the verified payload when present (covers the "user clicked
   // alternatives 30s after the hold landed" edge case where exp is still
   // valid). Either way we only do reads.
-  const verified = await verifyHoldToken(params.token);
+  const verified = await verifyHoldToken(token);
   if (verified) holdId = verified.hold_id;
 
   if (!holdId) {

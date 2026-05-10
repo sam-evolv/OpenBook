@@ -21,14 +21,15 @@ const VALID_COHORTS: CohortFilter[] = [
 export default async function CustomersV2Page({
   searchParams,
 }: {
-  searchParams: { cohort?: string; q?: string };
+  searchParams: Promise<{ cohort?: string; q?: string }>;
 }) {
+  const sp = await searchParams;
   const { business } = await requireCurrentBusiness<{ id: string; slug: string }>('id, slug');
 
-  const cohort: CohortFilter = VALID_COHORTS.includes(searchParams.cohort as CohortFilter)
-    ? (searchParams.cohort as CohortFilter)
+  const cohort: CohortFilter = VALID_COHORTS.includes(sp.cohort as CohortFilter)
+    ? (sp.cohort as CohortFilter)
     : 'all';
-  const q = (searchParams.q ?? '').trim();
+  const q = (sp.q ?? '').trim();
 
   return (
     <Suspense

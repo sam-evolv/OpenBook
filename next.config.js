@@ -1,3 +1,5 @@
+const path = require('node:path');
+
 const securityHeaders = [
   {
     key: 'Strict-Transport-Security',
@@ -29,6 +31,7 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   poweredByHeader: false,
+  outputFileTracingRoot: path.join(__dirname),
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: 'nrntaowmmemhjfxjqjch.supabase.co' },

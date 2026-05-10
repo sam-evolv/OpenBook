@@ -7,9 +7,10 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(
   _req: Request,
-  { params }: { params: { bookingId: string } }
+  { params }: { params: Promise<{ bookingId: string }> }
 ) {
-  const customerId = cookies().get('ob_customer_id')?.value;
+  const { bookingId } = await params;
+  const customerId = (await cookies()).get('ob_customer_id')?.value;
   if (!customerId) {
     return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
   }
@@ -19,7 +20,7 @@ export async function POST(
   const { data: booking } = await sb
     .from('bookings')
     .select('id, status, customer_id, ends_at')
-    .eq('id', params.bookingId)
+    .eq('id', bookingId)
     .eq('customer_id', customerId)
     .maybeSingle();
 

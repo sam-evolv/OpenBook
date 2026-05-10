@@ -19,8 +19,9 @@ export const dynamic = 'force-dynamic';
  */
 export async function GET(
   _req: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
   let customerId: string | null = null;
 
   try {
@@ -37,7 +38,7 @@ export async function GET(
   }
 
   if (!customerId) {
-    customerId = cookies().get('ob_customer_id')?.value ?? null;
+    customerId = (await cookies()).get('ob_customer_id')?.value ?? null;
   }
 
   if (!customerId) {
@@ -55,7 +56,7 @@ export async function GET(
       services (id, name, duration_minutes, price_cents)
     `
     )
-    .eq('id', params.id)
+    .eq('id', id)
     .eq('customer_id', customerId)
     .maybeSingle();
 

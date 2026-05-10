@@ -8,14 +8,15 @@ export const dynamic = 'force-dynamic';
 export default async function MessagesV2Page({
   searchParams,
 }: {
-  searchParams: { conversation?: string; tab?: string };
+  searchParams: Promise<{ conversation?: string; tab?: string }>;
 }) {
+  const sp = await searchParams;
   const { business } = await requireCurrentBusiness<{ id: string; slug: string }>(
     'id, slug',
   );
 
-  const activeConversationId = searchParams.conversation ?? null;
-  const tab = searchParams.tab === 'ai' ? 'ai' : 'whatsapp';
+  const activeConversationId = sp.conversation ?? null;
+  const tab = sp.tab === 'ai' ? 'ai' : 'whatsapp';
 
   return (
     <Suspense fallback={<MessagesSkeleton />}>
