@@ -97,12 +97,12 @@ Notes for the reviewer:
   the standard MCP tools/list method.
 
 If you want a separate dedicated review environment instead of
-production for the paid-flow test, ask Sam at support@openbook.ie
+production for the paid-flow test, ask Sam at sam@openhouseai.ie
 and he will spin one up.
 
 ## Support contact
 
-support@openbook.ie
+sam@openhouseai.ie
 
 ## Privacy policy URL
 

@@ -9,8 +9,8 @@ one screen telling him what to click. Each step does one thing.
 - [ ] `https://www.openbook.ie/privacy` resolves and shows the canonical privacy policy (the marketing deployment is the source of truth)
 - [ ] `https://www.openbook.ie/terms` resolves and shows the canonical terms
 - [ ] `https://openbook.ie/privacy` and `/terms` 307-redirect to the `www.` host and end up at 200 (this is the URL you'll paste into the OpenAI form)
-- [ ] support@openbook.ie inbox set up and forwarding to a real address you actually read
-- [ ] Test: send a mail to support@openbook.ie from a personal account, confirm it arrives
+- [ ] sam@openhouseai.ie inbox set up and forwarding to a real address you actually read
+- [ ] Test: send a mail to sam@openhouseai.ie from a personal account, confirm it arrives
 - [ ] `curl https://mcp.openbook.ie/mcp -X POST -H 'content-type: application/json' -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'` returns 8 tools, each with `annotations` populated and no `debug_*` names
 
 ## OpenAI Platform Dashboard steps
@@ -33,7 +33,7 @@ one screen telling him what to click. Each step does one thing.
 - [ ] MCP server URL: `https://mcp.openbook.ie/mcp`
 - [ ] Privacy policy URL: `https://openbook.ie/privacy`
 - [ ] Terms of use URL: `https://openbook.ie/terms`
-- [ ] Support email: `support@openbook.ie`
+- [ ] Support email: `sam@openhouseai.ie`
 - [ ] Upload screenshots (capture per the spec in `docs/chatgpt-app-listing.md`)
 - [ ] Upload logo / app icon at the required size
 
@@ -62,7 +62,7 @@ on Vercel before verifying.
 
 - [ ] Final review: walk every field in the dashboard once, slowly
 - [ ] Click Submit for review
-- [ ] Save the case ID OpenAI emails you. Filed somewhere you'll find it (1Password, Notion, support@openbook.ie inbox)
+- [ ] Save the case ID OpenAI emails you. Filed somewhere you'll find it (1Password, Notion, sam@openhouseai.ie inbox)
 
 ## Post-submission
 
