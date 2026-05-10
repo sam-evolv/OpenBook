@@ -139,10 +139,15 @@ export async function POST(req: NextRequest) {
           if (custErr) {
             // Non-fatal: booking is already confirmed, customer
             // contact details are best-effort enrichment.
-            console.error(
-              'stripe-webhook: customer update failed (non-fatal)',
-              custErr,
-            );
+            console.error('[webhook] customer_enrich_failed', {
+              source: 'checkout.session.completed',
+              customer_id: updatedBooking.customer_id,
+              event_id: event.id,
+              pg_code: custErr.code,
+              pg_message: custErr.message,
+              pg_details: custErr.details,
+              pg_hint: custErr.hint,
+            });
           }
         }
 
@@ -178,6 +183,121 @@ export async function POST(req: NextRequest) {
             // anything in the wrapper does (e.g. import-time issue),
             // swallow it so the webhook still returns 200.
             console.error('[webhook] email wrapper threw:', {
+              bookingId: updatedBooking.id,
+              eventId: event.id,
+              error: emailErr,
+            });
+          }
+        }
+
+        break;
+      }
+
+      case 'payment_intent.succeeded': {
+        // MCP-source bookings pay via PaymentIntent + Stripe Elements (the
+        // /c/[token] checkout page) rather than Checkout Sessions, so the
+        // webhook receives `payment_intent.succeeded` instead of
+        // `checkout.session.completed`. Mirror the Checkout-side handler:
+        // guarded UPDATE on status='awaiting_payment' (idempotent for
+        // replays / late deliveries), customer enrichment if Stripe gives
+        // us details, then fire the same confirmation emails.
+        //
+        // The Checkout-Session flow also dispatches a payment_intent.succeeded
+        // event, but its handler is a no-op here because Checkout has
+        // already flipped status='confirmed' via checkout.session.completed
+        // — the guarded UPDATE returns no row and we skip the email path.
+        const pi = event.data.object as Stripe.PaymentIntent;
+        relatedBookingId = (pi.metadata?.booking_id as string) ?? null;
+
+        if (!relatedBookingId) break;
+
+        const charge =
+          pi.latest_charge && typeof pi.latest_charge !== 'string'
+            ? pi.latest_charge
+            : null;
+        const billing = charge?.billing_details ?? null;
+        const customerEmail = billing?.email ?? pi.receipt_email ?? null;
+        const customerName = billing?.name ?? null;
+        const customerPhone = billing?.phone ?? null;
+
+        const { data: updatedBooking, error: bookingErr } = await sb
+          .from('bookings')
+          .update({
+            status: 'confirmed',
+            stripe_payment_intent_id: pi.id,
+          })
+          .eq('id', relatedBookingId)
+          .eq('status', 'awaiting_payment')
+          .select('id, customer_id')
+          .maybeSingle();
+
+        if (bookingErr) {
+          console.error('[webhook] stripe_pi_succeeded_booking_update_failed', {
+            step: 'bookings.update',
+            event_id: event.id,
+            booking_id: relatedBookingId,
+            payment_intent_id: pi.id,
+            pg_code: (bookingErr as { code?: string }).code,
+            pg_message: (bookingErr as { message?: string }).message,
+            pg_details: (bookingErr as { details?: string }).details,
+            pg_hint: (bookingErr as { hint?: string }).hint,
+          });
+          throw bookingErr;
+        }
+
+        if (
+          updatedBooking?.customer_id &&
+          (customerEmail || customerName || customerPhone)
+        ) {
+          const customerUpdate: Record<string, string> = {};
+          if (customerEmail) customerUpdate.email = customerEmail;
+          if (customerName) {
+            customerUpdate.full_name = customerName;
+            customerUpdate.name = customerName;
+          }
+          if (customerPhone) customerUpdate.phone = customerPhone;
+          const { error: custErr } = await sb
+            .from('customers')
+            .update(customerUpdate)
+            .eq('id', updatedBooking.customer_id);
+          if (custErr) {
+            console.error('[webhook] customer_enrich_failed', {
+              source: 'payment_intent.succeeded',
+              customer_id: updatedBooking.customer_id,
+              event_id: event.id,
+              pg_code: custErr.code,
+              pg_message: custErr.message,
+              pg_details: custErr.details,
+              pg_hint: custErr.hint,
+            });
+          }
+        }
+
+        if (updatedBooking?.id) {
+          // Mark the corresponding MCP hold as completed so the
+          // alternatives surface stops listing this slot. Best-effort.
+          await sb
+            .from('mcp_holds')
+            .update({ status: 'completed' })
+            .eq('booking_id', updatedBooking.id)
+            .eq('status', 'pending');
+
+          try {
+            const results = await Promise.allSettled([
+              sendBookingConfirmation({ bookingId: updatedBooking.id, audience: 'customer' }),
+              sendBookingConfirmation({ bookingId: updatedBooking.id, audience: 'business' }),
+            ]);
+            for (const result of results) {
+              if (result.status === 'rejected') {
+                console.error('[webhook] PI confirmation email failed:', {
+                  bookingId: updatedBooking.id,
+                  eventId: event.id,
+                  reason: result.reason,
+                });
+              }
+            }
+          } catch (emailErr) {
+            console.error('[webhook] PI email wrapper threw:', {
               bookingId: updatedBooking.id,
               eventId: event.id,
               error: emailErr,

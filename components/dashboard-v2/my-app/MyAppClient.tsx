@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import {
   Check,
   Copy,
@@ -98,10 +98,78 @@ export function MyAppClient({
   );
   const heroSrc = form.hero_image_url ?? form.cover_image_url ?? form.gallery_urls[0] ?? null;
   const logoSrc = form.processed_icon_url ?? form.logo_url;
-  const livePreviewSrc = useMemo(
-    () => `${publicUrl}?dashboardPreview=${previewVersion}`,
-    [publicUrl, previewVersion],
+  const previewIframeOrigin = useMemo(() => {
+    try {
+      return new URL(publicUrl).origin;
+    } catch {
+      return null;
+    }
+  }, [publicUrl]);
+  const livePreviewSrc = useMemo(() => {
+    const params = new URLSearchParams({ dashboardPreview: String(previewVersion) });
+    if (typeof window !== 'undefined') {
+      params.set('studioOrigin', window.location.origin);
+    }
+    return `${publicUrl}?${params.toString()}`;
+  }, [publicUrl, previewVersion]);
+  const previewIframeRef = useRef<HTMLIFrameElement | null>(null);
+
+  // Build the patch we send to the preview iframe. Memoised so the postMessage
+  // effect below only fires when something actually changed.
+  const previewPatch = useMemo(
+    () => ({
+      name: form.name,
+      tagline: form.tagline,
+      about_long: form.about_long,
+      city: form.city,
+      primary_colour: form.primary_colour,
+      logo_url: form.logo_url,
+      processed_icon_url: form.processed_icon_url,
+      hero_image_url: form.hero_image_url,
+      cover_image_url: form.cover_image_url,
+      gallery_urls: form.gallery_urls,
+    }),
+    [
+      form.name,
+      form.tagline,
+      form.about_long,
+      form.city,
+      form.primary_colour,
+      form.logo_url,
+      form.processed_icon_url,
+      form.hero_image_url,
+      form.cover_image_url,
+      form.gallery_urls,
+    ],
   );
+
+  // Push live edits into the preview iframe so the customer-facing app
+  // re-renders without waiting for a save.
+  useEffect(() => {
+    const iframe = previewIframeRef.current;
+    if (!iframe || !iframe.contentWindow || !previewIframeOrigin) return;
+    iframe.contentWindow.postMessage(
+      { type: 'openbook:studio-preview', patch: previewPatch, appConfig },
+      previewIframeOrigin,
+    );
+  }, [previewPatch, appConfig, previewIframeOrigin]);
+
+  // Re-send the latest draft whenever the iframe (re)loads, so a hard reload
+  // after Save still reflects any pending edits the user typed since.
+  useEffect(() => {
+    if (typeof window === 'undefined' || !previewIframeOrigin) return;
+    const onMessage = (event: MessageEvent) => {
+      if (event.origin !== previewIframeOrigin) return;
+      if (event.data?.type !== 'openbook:studio-preview-ready') return;
+      const iframe = previewIframeRef.current;
+      iframe?.contentWindow?.postMessage(
+        { type: 'openbook:studio-preview', patch: previewPatch, appConfig },
+        previewIframeOrigin,
+      );
+    };
+    window.addEventListener('message', onMessage);
+    return () => window.removeEventListener('message', onMessage);
+  }, [previewPatch, appConfig, previewIframeOrigin]);
   const description = form.about_long ?? '';
   const readiness = getReadiness({
     name: form.name,
@@ -737,10 +805,11 @@ export function MyAppClient({
           <LiveAppPreview
             src={livePreviewSrc}
             previewDevice={previewDevice}
+            iframeRef={previewIframeRef}
           />
           {dirty && (
             <p className="mt-3 rounded-xl border border-gold-border bg-gold-soft px-3 py-2 text-[11.5px] leading-snug text-paper-text-2 dark:text-ink-text-2">
-              Save changes to refresh the live app preview.
+              Live preview reflects unsaved edits. Save to publish them.
             </p>
           )}
         </aside>
@@ -1029,9 +1098,11 @@ function FocalPointPicker({
 function LiveAppPreview({
   src,
   previewDevice,
+  iframeRef,
 }: {
   src: string;
   previewDevice: PreviewDevice;
+  iframeRef: React.RefObject<HTMLIFrameElement>;
 }) {
   const size =
     previewDevice === 'android'
@@ -1057,6 +1128,7 @@ function LiveAppPreview({
       >
         <iframe
           key={src}
+          ref={iframeRef}
           src={src}
           title="Live customer app preview"
           className="h-full w-full border-0 bg-black"
