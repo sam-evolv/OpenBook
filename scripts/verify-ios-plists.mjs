@@ -35,6 +35,10 @@ const privacy = readPlistJson(privacyPath);
 const project = readFileSync(projectPath, 'utf8');
 
 expect(info.CFBundleDisplayName === 'OpenBook', 'CFBundleDisplayName must be OpenBook.');
+expect(
+  info.ITSAppUsesNonExemptEncryption === false,
+  'ITSAppUsesNonExemptEncryption must be false for the current HTTPS-only app.',
+);
 expect(info.LSRequiresIPhoneOS === true, 'LSRequiresIPhoneOS must be true.');
 expect(
   Array.isArray(info.UISupportedInterfaceOrientations) &&
