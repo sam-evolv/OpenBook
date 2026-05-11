@@ -9,7 +9,8 @@ export function ConsumerLayoutClient({ children }: { children: React.ReactNode }
   /* Hide the home dock on business app routes and anywhere that has its own nav */
   const hideDock =
     pathname.startsWith('/business/') ||
-    pathname.startsWith('/booking/');
+    pathname.startsWith('/booking/') ||
+    pathname.startsWith('/open-spots/');
 
   return (
     <>

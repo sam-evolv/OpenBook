@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation';
 import { supabaseAdmin } from '@/lib/supabase';
 import { ConsumerHeader } from '@/components/consumer/ConsumerHeader';
-import { BottomTabBar } from '@/components/consumer/BottomTabBar';
 import {
   ConfirmSpotScreen,
   type ConfirmSpotData,
@@ -138,7 +137,6 @@ export default async function OpenSpotConfirmPage({
       />
       <ConsumerHeader showClose={false} />
       <ConfirmSpotScreen data={data} />
-      <BottomTabBar />
     </main>
   );
 }
