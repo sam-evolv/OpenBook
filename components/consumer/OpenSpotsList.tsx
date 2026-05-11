@@ -12,7 +12,6 @@
 
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { LocationChip, type CityValue } from './LocationChip';
 import { FilterPillRow } from './FilterPillRow';
@@ -170,21 +169,23 @@ function EmptyState({ city }: { city: CityValue }) {
       <h3 className="font-serif text-[22px] font-medium text-white">
         Nothing open {cityLabel}
       </h3>
-      <p className="mt-2 max-w-[280px] text-[14px] leading-[1.5] text-zinc-400">
-        We&apos;ll alert you the moment a spot opens up that matches what
-        you&apos;re after.
+      <p className="mt-2 max-w-[300px] text-[14px] leading-[1.5] text-zinc-400">
+        Standing alerts are coming soon &mdash; we&apos;ll ping you the
+        moment a spot opens up that matches what you&apos;re after.
       </p>
-      {/* TODO(open-spots PR 4): route /standing-alerts/new ships in PR 4. */}
-      <Link
-        href="/standing-alerts/new"
-        className="
-          mt-6 inline-flex h-12 items-center justify-center rounded-full
-          bg-[#D4AF37] px-6 text-[14px] font-semibold text-black
-          active:scale-95 transition
-        "
+      {/* TODO(PR4): Re-enable as a Link to /standing-alerts/new
+           once the standing alerts page ships. */}
+      <button
+        type="button"
+        disabled
+        aria-label="Standing alerts launching soon"
+        className="mt-6 inline-flex items-center gap-2 rounded-xl border border-zinc-200 dark:border-white/10 bg-transparent px-5 py-3 text-sm font-medium text-zinc-400 dark:text-zinc-500 opacity-70 cursor-not-allowed"
       >
-        Set a standing alert →
-      </Link>
+        Set a standing alert
+        <span className="text-[10px] uppercase tracking-[0.08em] font-semibold text-[#D4AF37]/80">
+          Coming soon
+        </span>
+      </button>
     </div>
   );
 }
