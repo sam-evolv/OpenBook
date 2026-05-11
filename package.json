@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "build:ios": "next build && npx cap sync ios",
-    "test": "vitest run"
+    "test": "vitest run",
+    "verify:ios-plists": "node scripts/verify-ios-plists.mjs",
+    "verify:launch": "npm test && npm run build && npm audit --audit-level=moderate && npm run verify:ios-plists"
   },
   "dependencies": {
     "@capacitor/cli": "^8.3.1",
@@ -25,7 +27,7 @@
     "geist": "^1.7.0",
     "jose": "^6.2.3",
     "lucide-react": "^0.469.0",
-    "next": "^15.5.15",
+    "next": "^15.5.18",
     "openai": "^6.34.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
