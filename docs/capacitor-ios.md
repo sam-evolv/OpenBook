@@ -78,6 +78,7 @@ Do not switch back to universal (`1,2`) until the iPad dashboard, customer app, 
 - `NSCameraUsageDescription` — add only if the app captures photos/video.
 - `NSLocationWhenInUseUsageDescription` — not used; do not add.
 - `UIBackgroundModes` — none required.
+- `ITSAppUsesNonExemptEncryption` is `false` because the current app only uses standard HTTPS/TLS encryption.
 
 ## Notes
 
