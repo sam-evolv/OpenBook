@@ -57,18 +57,7 @@ const CATEGORY_MATCHERS: Record<Exclude<CategoryFilter, 'all'>, string[]> = {
   health: ['physio', 'health', 'chiro', 'osteo', 'dental', 'clinic'],
 };
 
-const EUR = new Intl.NumberFormat('en-IE', {
-  style: 'currency',
-  currency: 'EUR',
-  maximumFractionDigits: 2,
-});
-
-export function formatEUR(cents: number): string {
-  const value = cents / 100;
-  const out = EUR.format(value);
-  // Drop ".00" but keep ".50".
-  return out.replace(/\.00$/, '').replace(/ /g, '');
-}
+export { formatEUR } from './money';
 
 const DAY = new Intl.DateTimeFormat('en-IE', {
   timeZone: 'Europe/Dublin',
