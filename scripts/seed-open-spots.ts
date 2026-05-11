@@ -59,10 +59,10 @@ async function main(): Promise<void> {
 
   const targetSlugs = [
     'evolv-performance',
-    'saltwater-sauna-cork',
+    'saltwater-sauna',
     'the-nail-studio',
     'refresh-barber',
-    'cork-physio-sports',
+    'cork-physio',
     'yoga-flow-cork',
   ];
 
@@ -120,7 +120,7 @@ async function main(): Promise<void> {
     }
 
     // Tier 2 — Limited (within 24h, planned source)
-    if (biz.slug === 'saltwater-sauna-cork') {
+    if (biz.slug === 'saltwater-sauna') {
       const sale = Math.round(svc.price_cents * 0.50);
       seedPlan.push({
         ...base,
@@ -161,14 +161,14 @@ async function main(): Promise<void> {
     }
 
     // Tier 3 — No badge (24h+, planned source)
-    if (biz.slug === 'cork-physio-sports' || biz.slug === 'evolv-performance') {
+    if (biz.slug === 'cork-physio' || biz.slug === 'evolv-performance') {
       const sale = Math.round(svc.price_cents * 0.55);
       seedPlan.push({
         ...base,
         sale_price_cents: sale,
         discount_percent: Math.round((1 - sale / svc.price_cents) * 100),
-        slot_offset_hours: biz.slug === 'cork-physio-sports' ? 48 : 72,
-        expires_offset_minutes: biz.slug === 'cork-physio-sports' ? 47 * 60 : 71 * 60,
+        slot_offset_hours: biz.slug === 'cork-physio' ? 48 : 72,
+        expires_offset_minutes: biz.slug === 'cork-physio' ? 47 * 60 : 71 * 60,
         max_bookings: 1,
         bookings_taken: 0,
         source: 'planned',
