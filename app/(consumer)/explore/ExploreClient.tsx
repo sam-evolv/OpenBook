@@ -62,17 +62,7 @@ export function ExploreClient({ businesses }: { businesses: Business[] }) {
   const showTrending = query.trim() === '' && category === 'all';
 
   return (
-    <div className="pb-40">
-      {/* Title */}
-      <div className="px-5 pt-4 pb-4">
-        <h1 className="text-[30px] font-bold tracking-tight leading-none">
-          Explore <span className="text-[#D4AF37]">Ireland</span>
-        </h1>
-        <p className="mt-1.5 text-[14px] text-white/55">
-          Everything nearby, one tap to book.
-        </p>
-      </div>
-
+    <div className="pb-40 pt-4">
       {/* Search */}
       <div className="px-5">
         <div
