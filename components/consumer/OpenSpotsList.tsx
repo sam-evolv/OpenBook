@@ -146,7 +146,11 @@ export function OpenSpotsList({
             <OpenSpotCardSkeleton />
           </div>
         ) : spots.length === 0 ? (
-          <EmptyState city={city} />
+          <EmptyState
+            city={city}
+            onTryLongerWindow={() => setWhen('2weeks')}
+            onTryAnywhere={() => setCity('anywhere')}
+          />
         ) : (
           <div className="flex flex-col gap-4">
             {spots.map((s) => (
@@ -159,33 +163,46 @@ export function OpenSpotsList({
   );
 }
 
-function EmptyState({ city }: { city: CityValue }) {
+function EmptyState({
+  city,
+  onTryLongerWindow,
+  onTryAnywhere,
+}: {
+  city: CityValue;
+  onTryLongerWindow: () => void;
+  onTryAnywhere: () => void;
+}) {
   const cityLabel =
     city === 'anywhere'
       ? 'right now'
       : `right now in ${capitalise(city)}`;
   return (
-    <div className="pt-[28vh] flex flex-col items-center text-center px-2">
+    <div className="pt-[22vh] flex flex-col items-center text-center px-2">
       <h3 className="font-serif text-[22px] font-medium text-white">
         Nothing open {cityLabel}
       </h3>
       <p className="mt-2 max-w-[300px] text-[14px] leading-[1.5] text-zinc-400">
-        Standing alerts are coming soon &mdash; we&apos;ll ping you the
-        moment a spot opens up that matches what you&apos;re after.
+        Try widening the window or looking across every city. The best
+        last-minute slots can appear outside the first filter.
       </p>
-      {/* TODO(PR4): Re-enable as a Link to /standing-alerts/new
-           once the standing alerts page ships. */}
-      <button
-        type="button"
-        disabled
-        aria-label="Standing alerts launching soon"
-        className="mt-6 inline-flex items-center gap-2 rounded-xl border border-zinc-200 dark:border-white/10 bg-transparent px-5 py-3 text-sm font-medium text-zinc-400 dark:text-zinc-500 opacity-70 cursor-not-allowed"
-      >
-        Set a standing alert
-        <span className="text-[10px] uppercase tracking-[0.08em] font-semibold text-[#D4AF37]/80">
-          Coming soon
-        </span>
-      </button>
+      <div className="mt-6 flex flex-wrap justify-center gap-2">
+        <button
+          type="button"
+          onClick={onTryLongerWindow}
+          className="rounded-xl border border-[#D4AF37]/35 bg-[#D4AF37]/10 px-4 py-3 text-sm font-semibold text-[#F5D76E] active:scale-[0.98] transition"
+        >
+          Search next 2 weeks
+        </button>
+        {city !== 'anywhere' && (
+          <button
+            type="button"
+            onClick={onTryAnywhere}
+            className="rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm font-semibold text-white/75 active:scale-[0.98] transition"
+          >
+            Try anywhere
+          </button>
+        )}
+      </div>
     </div>
   );
 }
