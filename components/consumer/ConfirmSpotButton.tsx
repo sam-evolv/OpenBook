@@ -63,6 +63,7 @@ export function ConfirmSpotButton({
   })();
 
   const onClaim = useCallback(async () => {
+    console.log('[confirm-cta] tap', { saleId, mode, state: status });
     if (typeof window !== 'undefined') {
       window.navigator.vibrate?.(8);
     }
@@ -74,6 +75,10 @@ export function ConfirmSpotButton({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ payment_mode: mode }),
       });
+
+      const cloned = res.clone();
+      const debugBody = await cloned.text().catch(() => '<unreadable>');
+      console.log('[confirm-cta] response', { status: res.status, body: debugBody });
 
       if (res.status === 410) {
         setStatus('error_sold_out');
@@ -117,10 +122,11 @@ export function ConfirmSpotButton({
       }
 
       window.location.assign(`/booking/confirm?id=${booking_id}`);
-    } catch {
+    } catch (err) {
+      console.error('[confirm-cta] error', err);
       setStatus('error_server');
     }
-  }, [saleId, mode, isFree, stripeEnabled]);
+  }, [saleId, mode, isFree, stripeEnabled, status]);
 
   if (status === 'error_sold_out') {
     return (
