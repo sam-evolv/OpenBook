@@ -79,7 +79,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Resolve customer (guest flow if no session)
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     let customerId = cookieStore.get('ob_customer_id')?.value ?? null;
 
     if (!customerId) {

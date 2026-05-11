@@ -41,11 +41,12 @@ function readParam(
 export default async function ExplorePage({
   searchParams,
 }: {
-  searchParams: SearchParams;
+  searchParams: Promise<SearchParams>;
 }) {
-  const cityParam = readParam(searchParams, 'city');
-  const categoryParam = readParam(searchParams, 'category');
-  const whenParam = readParam(searchParams, 'when');
+  const sp = await searchParams;
+  const cityParam = readParam(sp, 'city');
+  const categoryParam = readParam(sp, 'category');
+  const whenParam = readParam(sp, 'when');
 
   const initialCity = cityParam ?? 'anywhere';
   const initialCategory: CategoryFilter = isValidCategory(categoryParam)

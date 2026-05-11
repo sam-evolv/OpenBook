@@ -62,9 +62,10 @@ function unavailable(): NextResponse {
   );
 }
 
-export async function POST(req: NextRequest, { params }: { params: { token: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   try {
-    const payload = await verifyHoldToken(params.token);
+    const { token } = await params;
+    const payload = await verifyHoldToken(token);
     if (!payload) {
       return NextResponse.json({ error: 'invalid_token' }, { status: 401 });
     }
@@ -125,7 +126,7 @@ export async function POST(req: NextRequest, { params }: { params: { token: stri
       return NextResponse.json({
         payment_mode: 'in_person',
         payment_required_now: false,
-        confirm_endpoint: `/api/c/${params.token}/confirm`,
+        confirm_endpoint: `/api/c/${token}/confirm`,
         amount_due_at_business_cents: service.price_cents,
         amount_due_at_business_eur: service.price_cents / 100,
         is_free: service.price_cents === 0,

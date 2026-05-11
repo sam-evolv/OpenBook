@@ -31,10 +31,11 @@ async function getBooking(id: string): Promise<BookingWithDetails | null> {
 export default async function ConfirmPage({
   searchParams,
 }: {
-  searchParams: { id?: string; cancelled?: string; session_id?: string };
+  searchParams: Promise<{ id?: string; cancelled?: string; session_id?: string }>;
 }) {
-  if (!searchParams.id) notFound();
-  const booking = await getBooking(searchParams.id);
+  const sp = await searchParams;
+  if (!sp.id) notFound();
+  const booking = await getBooking(sp.id);
   if (!booking) notFound();
 
   const colour = getTileColour(booking.businesses.primary_colour).mid;
@@ -83,7 +84,7 @@ export default async function ConfirmPage({
           timeLabel,
           tileColour: colour,
         }}
-        cancelled={searchParams.cancelled === '1'}
+        cancelled={sp.cancelled === '1'}
       />
 
       <BottomTabBar />

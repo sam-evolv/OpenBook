@@ -6,14 +6,18 @@ This is the working launch checklist for getting OpenBook from preview-ready to 
 
 OpenBook now has a working Capacitor iOS build path. The native shell loads the hosted production app and includes a bundled offline fallback, which fits the current dynamic Next.js architecture.
 
+The launch target is deliberately iPhone-first. The Xcode project targets iPhone only and the iPhone shell is portrait-only, matching the home-screen product concept and avoiding accidental iPad App Review scope before the iPad experience has been deliberately designed and QAed.
+
 ## Gates For 100/100
 
 ### 1. Build And Native Packaging
 
 - `npm run build` must pass.
 - `npm run build:ios` must pass.
+- `npm run verify:launch` must pass.
 - `ios/App/App/Info.plist` must lint successfully.
 - `ios/App/App/PrivacyInfo.xcprivacy` must lint successfully.
+- Xcode target device family must remain iPhone-only until iPad has a dedicated QA pass.
 - Xcode archive must complete without warnings that affect App Review.
 - TestFlight build must install on a physical iPhone.
 
@@ -39,6 +43,7 @@ OpenBook now has a working Capacitor iOS build path. The native shell loads the 
 
 - App Store Connect privacy labels must match actual collection and use.
 - `PrivacyInfo.xcprivacy` must match App Store Connect privacy labels.
+- `docs/app-privacy-labels.md` must match both the native privacy manifest and the published privacy policy.
 - Privacy policy and terms links must be live.
 - Account deletion must be available and tested.
 - Data collected through business uploads, customer bookings, AI assistant messages, payment metadata, and support links must be reflected in privacy answers.
@@ -61,8 +66,7 @@ OpenBook now has a working Capacitor iOS build path. The native shell loads the 
 
 ## Known Remaining Blockers
 
-- Dependency audit currently reports Next/PostCSS advisories. The automatic npm fix requires a breaking Next upgrade, so this should be handled as a dedicated migration and regression pass.
-- The privacy manifest is a starter manifest. It must be reconciled against the final App Store Connect answers before submission.
+- Dependency audit now passes after the Next/Vitest upgrade and PostCSS override. Keep `npm audit --audit-level=moderate` as a release gate on every launch branch.
+- The privacy manifest now has a matching App Privacy label draft in `docs/app-privacy-labels.md`. It still must be reconciled against the final published privacy policy and App Store Connect answers before submission.
 - The current iOS shell depends on the hosted app URL. Production uptime and network/offline behavior must be reviewed before App Review.
 - Xcode archive and TestFlight validation still need to happen outside the web build.
-

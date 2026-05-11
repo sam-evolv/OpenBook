@@ -70,7 +70,7 @@ export default async function DashboardLayout({
     'id, name, plan, logo_url',
   );
 
-  const themeCookie = cookies().get('theme')?.value;
+  const themeCookie = (await cookies()).get('theme')?.value;
   const theme: 'dark' | 'light' = themeCookie === 'light' ? 'light' : 'dark';
 
   const ownerName = owner.full_name ?? 'You';

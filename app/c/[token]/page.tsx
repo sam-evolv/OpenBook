@@ -9,7 +9,7 @@ import CheckoutClient, { type CheckoutBundle } from './CheckoutClient';
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
-type PageProps = { params: { token: string } };
+type PageProps = { params: Promise<{ token: string }> };
 
 const FALLBACK_ACCENT = '#D4AF37';
 
@@ -261,7 +261,8 @@ async function loadBundle(token: string): Promise<
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const result = await loadBundle(params.token);
+  const { token } = await params;
+  const result = await loadBundle(token);
   if (!result || result.kind === 'expired') {
     return { title: 'Booking — OpenBook' };
   }
@@ -275,7 +276,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function CheckoutPage({ params }: PageProps) {
-  const result = await loadBundle(params.token);
+  const { token } = await params;
+  const result = await loadBundle(token);
   if (!result) notFound();
 
   if (result.kind === 'expired') {
@@ -285,7 +287,7 @@ export default async function CheckoutPage({ params }: PageProps) {
         // from /api/c/[token]/alternatives — the route allows expired
         // tokens for exactly this recovery flow.
         mode="expired"
-        token={params.token}
+        token={token}
         expiredReason={result.reason}
         expiredBusinessName={result.businessName ?? null}
       />
@@ -295,7 +297,7 @@ export default async function CheckoutPage({ params }: PageProps) {
   return (
     <CheckoutClient
       mode={result.kind}
-      token={params.token}
+      token={token}
       bundle={result.bundle}
     />
   );

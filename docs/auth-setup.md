@@ -4,9 +4,11 @@ This doc captures the manual steps that sit **around** the code — things that 
 
 ## 1. `owners` row seeding for new auth users
 
-**Problem.** A signed-in user needs an `owners` row keyed to their `auth.users.id` for the dashboard to load. Without it, `requireCurrentBusiness` silently redirects them to `/onboard` on every page, because `getCurrentOwner()` returns `null`. Supabase's email-magic-link flow creates the `auth.users` row, but nothing auto-creates the `owners` row.
+**Problem.** A signed-in user needs an `owners` row keyed to their `auth.users.id` for the dashboard to load. Without it, `requireCurrentBusiness` silently redirects them to `/onboard` on every page, because `getCurrentOwner()` returns `null`.
 
-**Short-term manual fix.** After a new user signs in for the first time, insert their owner row via Studio → SQL Editor:
+**Current code path.** `app/auth/callback/route.ts` now upserts the owner row after OAuth code exchange, using the Supabase user id, email, display name, and avatar metadata. This prevents Google OAuth from bouncing a valid user back to the login screen just because the owner record was missing.
+
+**Manual recovery fix.** If a legacy user was created before the callback upsert existed, insert their owner row via Studio → SQL Editor:
 
 ```sql
 INSERT INTO owners (id, email, onboarding_completed, onboarding_step)
@@ -20,7 +22,7 @@ VALUES (
 
 Replace `<auth.users.id>` with the user's UUID from **Authentication → Users** and `<email>` with their address. Setting `onboarding_completed = true` lets them bypass the `/onboard/flow` wizard — only appropriate for internal seeding (Sam's own account, test accounts). Real customers walk through `/onboard/flow` which writes the row for them on completion.
 
-**Long-term fix (separate PR).** A Postgres trigger on `auth.users` INSERT that auto-creates the matching `owners` row with `onboarding_completed = false` and routes the user through `/onboard/flow`. Trigger sketch:
+**Optional database hardening.** A Postgres trigger on `auth.users` INSERT can also auto-create the matching `owners` row with `onboarding_completed = false` and route the user through `/onboard/flow`. Trigger sketch:
 
 ```sql
 CREATE OR REPLACE FUNCTION public.handle_new_auth_user()
@@ -38,7 +40,7 @@ CREATE TRIGGER on_auth_user_created
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_auth_user();
 ```
 
-Not wired yet because it interacts with the `/onboard/flow` wizard's own row creation — needs a deliberate pass to decide which path owns the write.
+Not required for launch because the callback upsert covers OAuth sign-in, but still useful as defense-in-depth later.
 
 ## 2. Vercel Deployment Protection on preview deployments
 
