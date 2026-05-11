@@ -6,7 +6,7 @@ Wraps the Next.js app in a native iOS binary for App Store submission.
 
 - `capacitor.config.ts` — Capacitor config (appId `ie.openbook.app`, appName `OpenBook`, webDir `ios-web`).
 - `ios-web/` — bundled offline fallback copied into the native app. The live product still loads from the hosted OpenBook app.
-- `ios/` — generated native Xcode project. Open `ios/App/App.xcworkspace` in Xcode.
+- `ios/` — generated native Xcode project. Open `ios/App/App.xcodeproj` in Xcode. This repo uses Capacitor's Swift Package Manager integration, so there is no top-level CocoaPods `App.xcworkspace`.
 - `ios/App/App/PrivacyInfo.xcprivacy` — starter Apple privacy manifest. Keep this aligned with App Store Connect privacy answers before submission.
 
 ## Build
@@ -15,7 +15,7 @@ Wraps the Next.js app in a native iOS binary for App Store submission.
 npm run build:ios
 ```
 
-Runs `next build` then `npx cap sync ios`. Open the workspace in Xcode to archive and submit.
+Runs `next build` then `npx cap sync ios`. Open the Xcode project to archive and submit.
 
 For the full launch gate, run:
 
@@ -23,6 +23,35 @@ For the full launch gate, run:
 npm run verify:launch
 npm run build:ios
 ```
+
+## Native Preflight
+
+If the command line tools are selected instead of full Xcode, point the command at the full Xcode app:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  xcodebuild -project ios/App/App.xcodeproj \
+  -scheme App \
+  -configuration Release \
+  -destination generic/platform=iOS \
+  CODE_SIGNING_ALLOWED=NO \
+  build
+```
+
+To prove the archive structure without requiring Apple signing credentials:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  xcodebuild -project ios/App/App.xcodeproj \
+  -scheme App \
+  -configuration Release \
+  -destination generic/platform=iOS \
+  -archivePath /private/tmp/OpenBook-App.xcarchive \
+  CODE_SIGNING_ALLOWED=NO \
+  archive
+```
+
+These commands verify native compilation and archive packaging only. The App Store upload still needs a signed archive from Xcode with the correct Apple Developer team and provisioning profile.
 
 ## Server URL
 
@@ -57,6 +86,7 @@ Before archiving for App Store review:
 - Confirm the production web app is deployed at the same URL used by the native shell.
 - Confirm Google and Apple sign-in redirects work on the production domain and in the iOS app.
 - Confirm Stripe/payment flows use production-safe keys and have a reviewer-friendly test path.
+- Resolve any local Xcode provisioning profile warnings before the signed archive if Xcode reports malformed or missing profile metadata.
 - Reconcile `PrivacyInfo.xcprivacy` with App Store Connect privacy labels, the privacy policy, and the live data collection behavior.
 - Run a real-device TestFlight pass across onboarding, booking, profile editing, business dashboard, and payment cancellation/success states.
 - Follow `docs/app-store-submission-runbook.md` for the final drill.

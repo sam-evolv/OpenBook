@@ -21,7 +21,9 @@ Expected result:
 
 ## 2. Xcode Archive
 
-Open `ios/App/App.xcworkspace`.
+Open `ios/App/App.xcodeproj`.
+
+This Capacitor project uses Swift Package Manager rather than a top-level CocoaPods workspace. If `xcode-select` points at Command Line Tools, use full Xcode in the terminal with `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` or switch the active developer directory before archiving.
 
 Release settings:
 
@@ -39,6 +41,29 @@ Archive flow:
 2. Validate App.
 3. Distribute App > App Store Connect > Upload.
 4. Confirm there are no privacy, signing, entitlement, or ITMS warnings.
+
+Optional native CLI preflight before signed archive:
+
+```bash
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  xcodebuild -project ios/App/App.xcodeproj \
+  -scheme App \
+  -configuration Release \
+  -destination generic/platform=iOS \
+  CODE_SIGNING_ALLOWED=NO \
+  build
+
+DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer \
+  xcodebuild -project ios/App/App.xcodeproj \
+  -scheme App \
+  -configuration Release \
+  -destination generic/platform=iOS \
+  -archivePath /private/tmp/OpenBook-App.xcarchive \
+  CODE_SIGNING_ALLOWED=NO \
+  archive
+```
+
+These unsigned commands should succeed before upload, but they do not replace the signed Xcode archive required for App Store Connect.
 
 ## 3. TestFlight Pass
 
