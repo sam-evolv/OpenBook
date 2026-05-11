@@ -1,0 +1,131 @@
+{
+  "$schema_note": "Best-approximation schema for the OpenAI Apps SDK directory submission form (platform.openai.com/apps-manage). OpenAI does not publish a public JSON schema; field names below mirror the form labels and the content in docs/chatgpt-app-listing.md and docs/chatgpt-submission-checklist.md. If a bulk JSON upload is rejected, paste each field manually using the labels here as a guide.",
+  "app": {
+    "public_name": "OpenBook",
+    "publisher": {
+      "$note": "Pick one before submitting. Marketing footer says 'OpenHouse AI Limited. Trading as OpenBook.' — the publisher name on the directory must match the trading entity in the footer or one of them must be updated so they agree.",
+      "individual_name": "Sam <surname>",
+      "business_affiliation": "EvolvAI",
+      "trading_entity": "OpenHouse AI Limited (trading as OpenBook)",
+      "selected": null
+    },
+    "tagline": "Book local Irish service businesses directly in chat",
+    "short_description": "Find and book gyms, salons, spas, physios, classes and more across Ireland. Get suggestions, see times, hold a slot, complete in one tap.",
+    "long_description": "OpenBook is a booking platform for local Irish service businesses, connected to ChatGPT through an MCP server. Ask ChatGPT for a service you want and OpenBook returns real, bookable inventory: live slots, real prices, real businesses.\n\nThree things people actually use it for:\n\n- Discovery, when you have a window and an idea but not a plan. \"Anything fun on tonight in Cork?\", \"Suggest something relaxing near me\", \"What is open late?\". OpenBook surfaces businesses with promoted or last-minute availability and tells you what is still open.\n- Specific search, when you know what you want. \"A Pilates class in Dublin tomorrow at 6pm\", \"A barber near me on Saturday morning\", \"A physio who can see me this week\". OpenBook matches the request against live availability and returns slots you can book straight away.\n- Booking, when you have chosen. ChatGPT generates a one-tap checkout link. You open it in your browser, confirm, and you are booked. The slot is held for 10 minutes while you finish, so you do not lose it to someone else.\n\nWhat is bookable today: gyms and personal training, salons and barbers, beauty and nails, spas and saunas, physios and recovery, yoga and Pilates studios. The catalogue is Ireland-only for now.\n\nHow payment works: businesses set up with Stripe accept card payment on the OpenBook checkout page. Businesses without Stripe take payment in person on the day. Whichever applies is shown clearly before you confirm. OpenBook never takes payment inside ChatGPT itself.\n\nAfter you book, you get an email confirmation with the address, service, time and the business's contact details. If you join a waitlist for a slot that is full, OpenBook notifies you when a matching slot opens. The business owns the customer relationship; we are the booking infrastructure underneath.\n\nHow to invoke OpenBook: just ask ChatGPT to find or book a service in Ireland, or call OpenBook by name (\"ask OpenBook to find me…\"). ChatGPT routes the request to the OpenBook MCP server and surfaces the answer in the conversation.",
+    "categories": {
+      "primary": "Lifestyle",
+      "secondary": "Local services"
+    },
+    "country_availability": ["IE"],
+    "country_availability_display": ["Ireland"],
+    "languages": ["en"],
+    "mcp_server_url": "https://mcp.openbook.ie/mcp",
+    "privacy_policy_url": "https://openbook.ie/privacy",
+    "terms_of_use_url": "https://openbook.ie/terms",
+    "support_email": "sam@openhouseai.ie",
+    "support_url": null,
+    "authentication": {
+      "required": false,
+      "$note": "OpenBook does not require a login to book through ChatGPT."
+    },
+    "payments": {
+      "in_chatgpt": false,
+      "external_checkout": true,
+      "providers": ["Stripe Connect"],
+      "$note": "Businesses set up with Stripe accept card payment on the OpenBook checkout page. Businesses without Stripe take payment in person on the day. OpenBook never takes payment inside ChatGPT itself."
+    },
+    "data_handling": {
+      "collects_pii": true,
+      "pii_collected": ["name", "email", "phone"],
+      "shared_with_third_parties": ["Stripe (payments)", "Business owner (booking confirmation)"],
+      "retention_policy_url": "https://openbook.ie/privacy"
+    },
+    "reviewer_notes": "OpenBook does not require a login to book through ChatGPT. The reviewer can test by asking ChatGPT, with OpenBook connected, something like:\n\n- \"Find me a sauna in Cork tonight\"\n- \"Book a manicure at The Nail Studio in Dublin\"\n- \"Anything fun on tonight in Galway?\"\n\nNotes for the reviewer:\n\n- Holds expire 10 minutes after they are issued. The checkout URL is single-use; once paid (or expired) it can no longer be reused.\n- The full paid flow: Dublin Iron Gym + PT Session uses Stripe Connect. In Stripe test mode the reviewer can pay with card 4242 4242 4242 4242, any future expiry, any 3-digit CVC, any postcode. This will confirm a real booking row in the OpenBook database.\n- The in-person flow: any other live business. The reviewer enters name, email, phone on the checkout page, taps Confirm, and no payment is taken (the customer pays the business on the day).\n- The check_booking_status tool can be invoked 30 to 90 seconds after hold_and_checkout to confirm the booking went through.\n- All eight tools are documented at https://mcp.openbook.ie/mcp via the standard MCP tools/list method.\n\nIf you want a separate dedicated review environment instead of production for the paid-flow test, ask Sam at sam@openhouseai.ie and he will spin one up.",
+    "demo_prompts": [
+      "Find me a sauna in Cork tonight",
+      "Book a manicure at The Nail Studio in Dublin",
+      "Anything fun on tonight in Galway?",
+      "A Pilates class in Dublin tomorrow at 6pm",
+      "A barber near me on Saturday morning"
+    ],
+    "test_credentials": {
+      "$note": "No login required for the demo flow. Stripe test card for the paid flow:",
+      "stripe_test_card": {
+        "number": "4242 4242 4242 4242",
+        "expiry": "any future date",
+        "cvc": "any 3-digit",
+        "postcode": "any"
+      }
+    },
+    "tools": [
+      {
+        "name": "search_businesses",
+        "summary": "Search live bookable inventory across the Ireland-only catalogue."
+      },
+      {
+        "name": "get_availability",
+        "summary": "Return real bookable slots for a given business, service and time window."
+      },
+      {
+        "name": "get_business_info",
+        "summary": "Return business detail (services, location, contact, payment mode)."
+      },
+      {
+        "name": "get_promoted_inventory",
+        "summary": "Surface promoted or last-minute availability for discovery prompts."
+      },
+      {
+        "name": "hold_and_checkout",
+        "summary": "Place a 10-minute hold on a slot and return a one-tap checkout URL."
+      },
+      {
+        "name": "check_booking_status",
+        "summary": "Confirm whether a checkout completed (call 30–90s after hold_and_checkout)."
+      },
+      {
+        "name": "join_waitlist",
+        "summary": "Add the user to a waitlist for a fully-booked slot; notifies on open."
+      },
+      {
+        "name": "record_post_booking_feedback",
+        "summary": "Capture post-booking feedback from the user."
+      }
+    ],
+    "screenshots": [
+      {
+        "order": 1,
+        "filename": "01-chatgpt-search-results.png",
+        "alt_text": "ChatGPT conversation showing 'a sauna in Cork tonight' and OpenBook results rendered as a list of cards.",
+        "$capture_note": "ChatGPT conversation, showing a search query ('a sauna in Cork tonight' works well) and the results rendered as a list / card."
+      },
+      {
+        "order": 2,
+        "filename": "02-chatgpt-checkout-link.png",
+        "alt_text": "ChatGPT conversation showing the hold_and_checkout response with a one-tap checkout link.",
+        "$capture_note": "ChatGPT conversation, showing the hold_and_checkout response with the one-tap checkout link surfaced."
+      },
+      {
+        "order": 3,
+        "filename": "03-checkout-mobile.png",
+        "alt_text": "OpenBook checkout page on mobile, showing business name, slot, payment-mode badge and contact form.",
+        "$capture_note": "The OpenBook checkout page in a mobile browser, showing the business name, the slot, the payment mode badge, and the contact form."
+      },
+      {
+        "order": 4,
+        "filename": "04-booking-confirmation.png",
+        "alt_text": "OpenBook booking confirmation success screen.",
+        "$capture_note": "The booking confirmation success screen after the booking completes."
+      }
+    ],
+    "screenshot_dimensions_note": "Read current pixel-size requirements directly from https://developers.openai.com/apps-sdk/app-submission-guidelines on the day of capture; do not rely on a snapshot in the repo. Capture on a real iPhone or iPhone simulator at a current device resolution (iPhone 15 / 16 Pro is a good default). Use real businesses, not test data. For the ChatGPT screenshots, use a fresh chat with no other apps enabled.",
+    "logo": {
+      "source_path": "public/icons/",
+      "$note": "Use the existing OpenBook icon set in public/icons/. If OpenAI requires a specific square size not in the set, export from the master logo at the requested resolution."
+    },
+    "domain_verification": {
+      "domain": "mcp.openbook.ie",
+      "verification_path_prefix": "/.well-known/",
+      "$note": "MCP middleware only forwards /.well-known/* through to their own handlers; everything else is rewritten to /api/mcp. If OpenAI gives a non-.well-known path, push back or set up a temporary edge route on Vercel before verifying. Production env vars: OPENAI_DOMAIN_VERIFICATION_TOKEN and OPENAI_DOMAIN_VERIFICATION_PATH."
+    }
+  }
+}

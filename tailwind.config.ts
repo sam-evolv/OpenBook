@@ -77,6 +77,7 @@ const config: Config = {
       animation: {
         'slide-in-right': 'slideInRight 200ms cubic-bezier(0.16, 1, 0.3, 1)',
         'fade-in': 'fadeIn 150ms ease-out',
+        'pulse-dot': 'pulseDot 2s ease-in-out infinite',
       },
       keyframes: {
         slideInRight: {
@@ -86,6 +87,14 @@ const config: Config = {
         fadeIn: {
           '0%': { opacity: '0' },
           '100%': { opacity: '1' },
+        },
+        pulseDot: {
+          '0%, 100%': { opacity: '1' },
+          '50%': { opacity: '0.4' },
+        },
+        slideUp: {
+          '0%': { transform: 'translateY(16px)', opacity: '0' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
         },
       },
     },

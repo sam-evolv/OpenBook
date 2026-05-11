@@ -42,7 +42,7 @@ The launch binary is intentionally iPhone-first:
 
 Do not switch back to universal (`1,2`) until the iPad dashboard, customer app, onboarding, screenshots, and TestFlight pass are deliberately designed and QAed.
 
-## Info.plist policy
+## Info.plist Policy
 
 `ios/App/App/Info.plist` intentionally omits the following keys. Add them only when a feature actually needs the permission, otherwise App Review will flag unused entitlements.
 
