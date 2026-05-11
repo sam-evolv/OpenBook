@@ -44,6 +44,11 @@ export async function POST(
       );
     }
 
+    console.log('[open-spots.claim] hit', {
+      saleId: saleId.data,
+      payment_mode: body.data.payment_mode,
+    });
+
     const sb = supabaseAdmin();
 
     const cookieStore = await cookies();
