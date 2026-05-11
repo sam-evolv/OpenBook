@@ -9,6 +9,8 @@ Run these from the repo root before opening Xcode:
 ```bash
 npm run verify:launch
 npm run build:ios
+npm run verify:launch-env
+npm run verify:demo -- --slug=evolv-performance
 ```
 
 Expected result:
@@ -18,6 +20,8 @@ Expected result:
 - `npm audit --audit-level=moderate` reports `0 vulnerabilities`.
 - iOS plist/privacy verification passes.
 - Capacitor sync finishes without errors.
+- Production environment variables are present and launch-safe.
+- The App Review demo business has a bookable reviewer-safe path.
 
 ## 2. Xcode Archive
 
@@ -80,6 +84,8 @@ Install the TestFlight build on a physical iPhone and run:
 - Apple sign-in inside the iOS shell.
 - Sign-out and sign-in again.
 - Account deletion.
+
+Use `docs/testflight-qa-script.md` as the step-by-step pass/fail script and keep screenshots/log timestamps for every failed step.
 
 ## 4. App Review Demo Path
 

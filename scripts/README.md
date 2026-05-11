@@ -23,3 +23,20 @@ Each run produces ~8 flash sales spanning:
 
 Seeded rows are tagged in their `message` column with `seed:open-spots-v1`
 for easy cleanup.
+
+## verify-launch-env.mjs
+
+Checks production launch configuration before App Store submission.
+
+```bash
+npm run verify:launch-env
+node scripts/verify-launch-env.mjs --strict --production --network
+```
+
+## verify-demo-readiness.mjs
+
+Checks the App Review demo business has a live storefront and a bookable service.
+
+```bash
+npm run verify:demo -- --slug=evolv-performance
+```
