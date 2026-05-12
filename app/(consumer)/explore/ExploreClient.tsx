@@ -2,10 +2,11 @@
 
 import Link from 'next/link';
 import Image from 'next/image';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Search, Star, TrendingUp } from 'lucide-react';
 import type { Business } from '@/lib/supabase';
 import { getTileColour } from '@/lib/tile-palette';
+import { PinButton } from '@/components/consumer/PinButton';
 
 const CATEGORIES = [
   { id: 'all', label: 'All' },
@@ -31,9 +32,30 @@ function matchesCategory(biz: Business, catId: string): boolean {
   return cat.match.some((m) => hay.includes(m));
 }
 
-export function ExploreClient({ businesses }: { businesses: Business[] }) {
+export function ExploreClient({
+  businesses,
+  initialPinnedIds = new Set<string>(),
+}: {
+  businesses: Business[];
+  initialPinnedIds?: Set<string>;
+}) {
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<string>('all');
+  const [pinnedIds, setPinnedIds] = useState<Set<string>>(initialPinnedIds);
+
+  // Reconcile if the parent passes a fresh set (e.g. after server refetch).
+  useEffect(() => {
+    setPinnedIds(initialPinnedIds);
+  }, [initialPinnedIds]);
+
+  const handlePinned = (businessId: string) => {
+    setPinnedIds((prev) => {
+      if (prev.has(businessId)) return prev;
+      const next = new Set(prev);
+      next.add(businessId);
+      return next;
+    });
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -120,7 +142,12 @@ export function ExploreClient({ businesses }: { businesses: Business[] }) {
           <div className="overflow-x-auto no-scrollbar">
             <div className="flex gap-3 px-5 pb-1">
               {trending.map((biz) => (
-                <TrendingCard key={biz.id} biz={biz} />
+                <TrendingCard
+                  key={biz.id}
+                  biz={biz}
+                  pinned={pinnedIds.has(biz.id)}
+                  onPinned={() => handlePinned(biz.id)}
+                />
               ))}
             </div>
           </div>
@@ -135,7 +162,12 @@ export function ExploreClient({ businesses }: { businesses: Business[] }) {
         {featured.length > 0 ? (
           <div className="grid grid-cols-2 gap-3">
             {featured.map((biz) => (
-              <FeaturedCard key={biz.id} biz={biz} />
+              <FeaturedCard
+                key={biz.id}
+                biz={biz}
+                pinned={pinnedIds.has(biz.id)}
+                onPinned={() => handlePinned(biz.id)}
+              />
             ))}
           </div>
         ) : (
@@ -170,7 +202,12 @@ export function ExploreClient({ businesses }: { businesses: Business[] }) {
           </h2>
           <div className="flex flex-col gap-2.5">
             {rest.map((biz) => (
-              <NearbyRow key={biz.id} biz={biz} />
+              <NearbyRow
+                key={biz.id}
+                biz={biz}
+                pinned={pinnedIds.has(biz.id)}
+                onPinned={() => handlePinned(biz.id)}
+              />
             ))}
           </div>
         </section>
@@ -179,7 +216,15 @@ export function ExploreClient({ businesses }: { businesses: Business[] }) {
   );
 }
 
-function TrendingCard({ biz }: { biz: Business }) {
+function TrendingCard({
+  biz,
+  pinned,
+  onPinned,
+}: {
+  biz: Business;
+  pinned: boolean;
+  onPinned: () => void;
+}) {
   const colour = getTileColour(biz.primary_colour).mid;
   return (
     <Link
@@ -208,6 +253,16 @@ function TrendingCard({ biz }: { biz: Business }) {
           />
         )}
         <div className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black via-black/60 to-transparent" />
+        <div className="absolute right-2.5 top-2.5">
+          <PinButton
+            businessId={biz.id}
+            businessName={biz.name}
+            logoUrl={biz.processed_icon_url ?? biz.logo_url ?? null}
+            primaryColour={biz.primary_colour}
+            initiallyPinned={pinned}
+            onPinned={onPinned}
+          />
+        </div>
         <div className="absolute inset-x-0 bottom-0 p-3.5">
           <h3 className="text-[15px] font-semibold tracking-tight text-white leading-tight truncate">
             {biz.name}
@@ -235,7 +290,15 @@ function TrendingCard({ biz }: { biz: Business }) {
   );
 }
 
-function FeaturedCard({ biz }: { biz: Business }) {
+function FeaturedCard({
+  biz,
+  pinned,
+  onPinned,
+}: {
+  biz: Business;
+  pinned: boolean;
+  onPinned: () => void;
+}) {
   const colour = getTileColour(biz.primary_colour).mid;
   const initials = biz.name
     .split(' ')
@@ -278,6 +341,16 @@ function FeaturedCard({ biz }: { biz: Business }) {
           </div>
         )}
         <div className="absolute inset-x-0 bottom-0 h-[55%] bg-gradient-to-t from-black via-black/70 to-transparent" />
+        <div className="absolute right-2.5 top-2.5">
+          <PinButton
+            businessId={biz.id}
+            businessName={biz.name}
+            logoUrl={biz.processed_icon_url ?? biz.logo_url ?? null}
+            primaryColour={biz.primary_colour}
+            initiallyPinned={pinned}
+            onPinned={onPinned}
+          />
+        </div>
         <div className="absolute inset-x-0 bottom-0 p-3.5">
           <h3 className="text-[16px] font-semibold tracking-tight text-white leading-tight">
             {biz.name}
@@ -305,17 +378,35 @@ function FeaturedCard({ biz }: { biz: Business }) {
   );
 }
 
-function NearbyRow({ biz }: { biz: Business }) {
+function NearbyRow({
+  biz,
+  pinned,
+  onPinned,
+}: {
+  biz: Business;
+  pinned: boolean;
+  onPinned: () => void;
+}) {
   const colour = getTileColour(biz.primary_colour).mid;
   return (
     <Link
       href={`/business/${biz.slug}`}
       className="
-        flex items-center gap-3 p-2.5 rounded-2xl
+        relative flex items-center gap-3 p-2.5 rounded-2xl
         bg-white/[0.03] border border-white/[0.06]
         active:scale-[0.99] transition
       "
     >
+      <div className="absolute right-2.5 top-2.5">
+        <PinButton
+          businessId={biz.id}
+          businessName={biz.name}
+          logoUrl={biz.processed_icon_url ?? biz.logo_url ?? null}
+          primaryColour={biz.primary_colour}
+          initiallyPinned={pinned}
+          onPinned={onPinned}
+        />
+      </div>
       <div className="relative w-[72px] h-[72px] rounded-xl overflow-hidden shrink-0 bg-white/5">
         {biz.cover_image_url ? (
           <Image

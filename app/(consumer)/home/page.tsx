@@ -2,7 +2,8 @@ import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase';
 import { BottomTabBar } from '@/components/consumer/BottomTabBar';
 import { HomeWallpaper } from '@/components/consumer/HomeWallpaper';
-import { HomeTileGrid, type HomeBusiness } from '@/components/consumer/HomeTileGrid';
+import { HomeTileGrid } from '@/components/consumer/HomeTileGrid';
+import { fetchHomePins, type HomePinWithBusiness } from '@/lib/home-pins';
 import {
   firstNameFrom,
   formatGreeting,
@@ -11,18 +12,13 @@ import {
 } from '@/lib/greeting';
 
 export const dynamic = 'force-dynamic';
-export const revalidate = 60;
+export const revalidate = 0;
 
-async function getBusinesses(): Promise<HomeBusiness[]> {
+async function getPins(): Promise<HomePinWithBusiness[]> {
+  const customerId = (await cookies()).get('ob_customer_id')?.value;
+  if (!customerId) return [];
   const sb = supabaseAdmin();
-  const { data } = await sb
-    .from('businesses')
-    .select(
-      'id, slug, name, category, city, primary_colour, cover_image_url, logo_url, processed_icon_url, description, price_tier, rating, is_live, business_hours(day_of_week, open_time, close_time)'
-    )
-    .eq('is_live', true)
-    .order('name', { ascending: true });
-  return (data ?? []) as unknown as HomeBusiness[];
+  return fetchHomePins(sb, customerId);
 }
 
 async function getCustomerFirstName(): Promise<string | null> {
@@ -38,8 +34,8 @@ async function getCustomerFirstName(): Promise<string | null> {
 }
 
 export default async function HomePage() {
-  const [businesses, firstName] = await Promise.all([
-    getBusinesses(),
+  const [pins, firstName] = await Promise.all([
+    getPins(),
     getCustomerFirstName(),
   ]);
   const greeting = formatGreeting(
@@ -54,19 +50,12 @@ export default async function HomePage() {
     >
       <HomeWallpaper />
 
-      {/* iPhone-shaped frame on every viewport. The whole consumer
-          surface is capped at `max-w-md` (28 rem ~= 448 px, just wider
-          than an iPhone Pro Max) and centred with `mx-auto`, so on a
-          desktop monitor the page reads as an iPhone home screen
-          floating in the centre. The inner column is a flex layout
-          that fills 100dvh: safe-area → greeting → grid (vertically
-          centred) → page dots, with the BottomTabBar fixed-positioned
-          outside this frame. */}
+      {/* iPhone-shaped frame. The whole consumer surface is capped at
+          max-w-md (~448 px, just wider than an iPhone Pro Max) and centred,
+          so on desktop the page reads as an iPhone home screen. The inner
+          column is a flex layout that fills 100dvh: greeting → grid
+          (anchored top) → empty space, with BottomTabBar fixed outside. */}
       <div className="relative mx-auto flex h-full w-full max-w-md flex-col">
-        {/* Greeting — single-line headline. No second-line wordmark; "OpenBook"
-            in the greeting slot read like the product greeting itself. The
-            body element already applies env(safe-area-inset-top) globally
-            (see app/globals.css), so no per-page pt-safe is needed here. */}
         <header className="mx-auto w-[336px] max-w-[calc(100%-40px)] px-0 pt-7 pb-1 mb-8 animate-reveal-up">
           <h1
             className="text-display leading-[0.95]"
@@ -76,27 +65,11 @@ export default async function HomePage() {
           </h1>
         </header>
 
-        {/* App grid — `justify-start` anchors the icons just below the
-            greeting (iPhone home-screen pattern: apps near the top, dock
-            anchored bottom). `pb-36` reserves room for the floating
-            BottomTabBar so the page-dots indicator clears it. */}
         <section
           className="flex flex-1 flex-col items-center justify-start px-5 pb-36 animate-reveal-up"
           style={{ animationDelay: '60ms' }}
         >
-          <HomeTileGrid businesses={businesses} />
-
-          {/* iOS page dots */}
-          <div className="mt-10 flex items-center justify-center gap-1.5">
-            <span
-              className="w-[7px] h-[7px] rounded-full"
-              style={{ background: 'rgba(255,255,255,0.9)' }}
-            />
-            <span
-              className="w-[7px] h-[7px] rounded-full"
-              style={{ background: 'rgba(255,255,255,0.28)' }}
-            />
-          </div>
+          <HomeTileGrid pins={pins} />
         </section>
       </div>
 

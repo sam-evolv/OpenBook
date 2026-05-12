@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+import { cookies } from 'next/headers';
 import { supabaseAdmin, type Business } from '@/lib/supabase';
 import { ConsumerHeader } from '@/components/consumer/ConsumerHeader';
 import { BottomTabBar } from '@/components/consumer/BottomTabBar';
@@ -19,12 +20,24 @@ async function getBusinesses(): Promise<Business[]> {
   const { data, error } = await sb
     .from('businesses')
     .select(
-      'id, slug, name, category, city, primary_colour, cover_image_url, logo_url, description, price_tier, rating, is_live'
+      'id, slug, name, category, city, primary_colour, cover_image_url, logo_url, processed_icon_url, description, price_tier, rating, is_live'
     )
     .eq('is_live', true)
     .order('name', { ascending: true });
   if (error) return [];
   return (data ?? []) as Business[];
+}
+
+async function getPinnedIds(): Promise<Set<string>> {
+  const customerId = (await cookies()).get('ob_customer_id')?.value;
+  if (!customerId) return new Set();
+  const sb = supabaseAdmin();
+  const { data, error } = await sb
+    .from('home_pins')
+    .select('business_id')
+    .eq('customer_id', customerId);
+  if (error || !data) return new Set();
+  return new Set(data.map((r) => r.business_id as string));
 }
 
 type SearchParams = { [key: string]: string | string[] | undefined };
@@ -54,13 +67,14 @@ export default async function ExplorePage({
     : 'all';
   const initialWhen: WhenFilter = isValidWhen(whenParam) ? whenParam : 'week';
 
-  const [businesses, initialOpenSpots] = await Promise.all([
+  const [businesses, initialOpenSpots, initialPinnedIds] = await Promise.all([
     getBusinesses(),
     fetchOpenSpots({
       city: initialCity !== 'anywhere' ? initialCity : null,
       category: initialCategory,
       when: initialWhen,
     }),
+    getPinnedIds(),
   ]);
 
   return (
@@ -73,6 +87,7 @@ export default async function ExplorePage({
           initialCity={initialCity}
           initialCategory={initialCategory}
           initialWhen={initialWhen}
+          initialPinnedIds={initialPinnedIds}
         />
       </Suspense>
       <BottomTabBar />

@@ -2,40 +2,60 @@
 
 import Link from 'next/link';
 import { Compass, Wallet, UserRound } from 'lucide-react';
-import type { LucideIcon } from 'lucide-react';
+import type { ComponentType, SVGProps } from 'react';
+import { OpenBookMark } from './OpenBookMark';
+import { haptics } from '@/lib/haptics';
 
-type SystemKind = 'discover' | 'wallet' | 'me';
+type SystemKind = 'discover' | 'wallet' | 'me' | 'assistant';
+
+type SystemGlyph = ComponentType<
+  SVGProps<SVGSVGElement> & { strokeWidth?: number; size?: number }
+>;
 
 const SYSTEM_APPS: Record<
   SystemKind,
   {
     href: string;
     label: string;
-    Icon: LucideIcon;
+    Icon: SystemGlyph;
     gradient: { highlight: string; base: string; shadow: string };
     glyphColour: string;
+    /** Override the default light haptic on tap. */
+    hapticPreset?: 'tap' | 'longPress';
   }
 > = {
   discover: {
     href: '/explore',
     label: 'Discover',
-    Icon: Compass,
+    Icon: Compass as SystemGlyph,
     gradient: { highlight: '#F6D77C', base: '#D4AF37', shadow: '#7A5418' },
     glyphColour: 'rgba(0,0,0,0.78)',
   },
   wallet: {
     href: '/wallet',
     label: 'Wallet',
-    Icon: Wallet,
+    Icon: Wallet as SystemGlyph,
     gradient: { highlight: '#2C2C30', base: '#141418', shadow: '#050507' },
     glyphColour: 'rgba(255,255,255,0.95)',
   },
   me: {
     href: '/me',
     label: 'Me',
-    Icon: UserRound,
+    Icon: UserRound as SystemGlyph,
     gradient: { highlight: '#4A4A50', base: '#2A2A30', shadow: '#131317' },
     glyphColour: 'rgba(255,255,255,0.95)',
+  },
+  // Ask AI — gold tile mirroring Discover's treatment but with the
+  // OpenBookMark glyph. Reverse contrast against the dark Wallet/Me tiles
+  // makes the AI tile read as "different" at a glance. Medium haptic on
+  // tap matches the existing AI hero button on Explore.
+  assistant: {
+    href: '/assistant',
+    label: 'Ask AI',
+    Icon: OpenBookMark as SystemGlyph,
+    gradient: { highlight: '#F6D77C', base: '#D4AF37', shadow: '#7A5418' },
+    glyphColour: '#080808',
+    hapticPreset: 'longPress',
   },
 };
 
@@ -53,8 +73,12 @@ export function SystemAppIcon({
   return (
     <Link
       href={cfg.href}
+      onClick={() => {
+        if (cfg.hapticPreset === 'longPress') haptics.longPress();
+        else haptics.tap();
+      }}
       className="group flex flex-col items-center transition-transform duration-300 active:scale-[0.88] hover:scale-[1.02]"
-      style={{ transitionTimingFunction: 'cubic-bezier(0.32, 0.72, 0, 1)' }}
+      style={{ transitionTimingFunction: 'var(--ease-apple)' }}
       aria-label={cfg.label}
     >
       <div

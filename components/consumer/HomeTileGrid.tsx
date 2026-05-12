@@ -1,37 +1,52 @@
 'use client';
 
+/**
+ * HomeTileGrid — the iPhone springboard for the consumer home. Renders
+ * the four fixed system tiles (Discover / Wallet / Me / Ask AI) on the
+ * top row, then the customer's pinned businesses below, ordered by
+ * pinned_at DESC.
+ *
+ * Long-press a pinned business → TilePeek opens with the management
+ * menu (View / Book / Notifications toggle / Share / Remove).
+ *
+ * Empty state (zero pins) shows a gentle prompt linking to Explore;
+ * the system tiles carry the screen until the customer adds a pin.
+ */
+
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import { Info, X } from 'lucide-react';
+import { useState, type ReactNode } from 'react';
+import {
+  ArrowRight,
+  Bell,
+  Building2,
+  CalendarPlus,
+  Share2,
+  Trash2,
+} from 'lucide-react';
+import Link from 'next/link';
 import { Tile } from '@/components/Tile';
 import { TilePeek, type TilePeekAction } from '@/components/TilePeek';
 import { SystemAppIcon } from '@/components/consumer/SystemAppIcon';
 import { PullToRefresh } from '@/components/PullToRefresh';
-import {
-  getBusinessOpenness,
-  type BusinessHourRow,
-} from '@/lib/business-hours';
-import type { Business } from '@/lib/supabase';
+import { haptics } from '@/lib/haptics';
+import type { HomePinWithBusiness } from '@/lib/home-pins';
 
-export interface HomeBusiness extends Business {
-  business_hours?: BusinessHourRow[] | null;
-  business_closures?: string[] | null;
-}
+const TILE_SIZE = 72;
+const COLUMN_GAP = 16;
+const ROW_GAP = 28;
 
-export function HomeTileGrid({ businesses }: { businesses: HomeBusiness[] }) {
+export function HomeTileGrid({ pins: initialPins }: { pins: HomePinWithBusiness[] }) {
   const router = useRouter();
-  const [showHint, setShowHint] = useState(false);
+  const [pins, setPins] = useState<HomePinWithBusiness[]>(initialPins);
+  const [peekState, setPeekState] = useState<{
+    pin: HomePinWithBusiness;
+    rect: DOMRect;
+  } | null>(null);
 
   async function refresh() {
-    // router.refresh() re-runs the server component and refetches data.
-    // Await a microtask so PullToRefresh's min-display-time still applies.
     router.refresh();
     await new Promise((r) => setTimeout(r, 400));
   }
-  const [peekState, setPeekState] = useState<{
-    business: HomeBusiness;
-    rect: DOMRect;
-  } | null>(null);
 
   function navigate(href: string, rect?: DOMRect) {
     const run = () => router.push(href);
@@ -43,168 +58,192 @@ export function HomeTileGrid({ businesses }: { businesses: HomeBusiness[] }) {
     }
   }
 
-  // Sort businesses alphabetically by name so the grid is predictable.
-  // The DB query already orders by name, but resort defensively (and guard
-  // against null names) in case upstream changes break that ordering.
-  const sortedBusinesses = [...businesses].sort((a, b) =>
-    (a.name ?? '').localeCompare(b.name ?? '', undefined, {
-      sensitivity: 'base',
-    })
-  );
-
-  useEffect(() => {
-    if (sortedBusinesses.length === 0) return;
-    if (window.localStorage.getItem('ob_home_hint_dismissed') === 'true') return;
-    setShowHint(true);
-  }, [sortedBusinesses.length]);
-
-  function dismissHint() {
-    window.localStorage.setItem('ob_home_hint_dismissed', 'true');
-    setShowHint(false);
+  async function patchNotifications(businessId: string, value: boolean) {
+    setPins((curr) =>
+      curr.map((p) =>
+        p.business_id === businessId
+          ? { ...p, notifications_enabled: value }
+          : p,
+      ),
+    );
+    try {
+      const res = await fetch(`/api/home-pins/${businessId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ notifications_enabled: value }),
+      });
+      if (!res.ok) throw new Error('patch failed');
+    } catch (err) {
+      console.error('[home-pins PATCH] failed', err);
+      // Revert
+      setPins((curr) =>
+        curr.map((p) =>
+          p.business_id === businessId
+            ? { ...p, notifications_enabled: !value }
+            : p,
+        ),
+      );
+      haptics.error();
+    }
   }
+
+  async function removePin(businessId: string) {
+    haptics.warning();
+    const previous = pins;
+    setPins((curr) => curr.filter((p) => p.business_id !== businessId));
+    try {
+      const res = await fetch(`/api/home-pins/${businessId}`, {
+        method: 'DELETE',
+      });
+      if (!res.ok && res.status !== 204) throw new Error('delete failed');
+    } catch (err) {
+      console.error('[home-pins DELETE] failed', err);
+      setPins(previous);
+      haptics.error();
+    }
+  }
+
+  function shareBusiness(slug: string, name: string) {
+    const url = `https://openbook.ie/${slug}`;
+    if (typeof navigator !== 'undefined' && navigator.share) {
+      navigator.share({ url, title: name }).catch(() => {
+        // User dismissed the share sheet — not an error.
+      });
+    } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      navigator.clipboard.writeText(url).catch(() => undefined);
+      haptics.tap();
+    }
+  }
+
+  function buildActions(pin: HomePinWithBusiness): TilePeekAction[] {
+    const { business } = pin;
+    return [
+      {
+        kind: 'action',
+        label: 'View Business',
+        icon: <Building2 className="h-[18px] w-[18px]" strokeWidth={1.8} />,
+        onSelect: () => navigate(`/business/${business.slug}`),
+      },
+      {
+        kind: 'action',
+        label: 'Book a Service',
+        icon: <CalendarPlus className="h-[18px] w-[18px]" strokeWidth={1.8} />,
+        // MVP: route to the business page. Bottom-sheet quick-book is
+        // deferred to a follow-up PR.
+        onSelect: () => navigate(`/business/${business.slug}`),
+      },
+      {
+        kind: 'toggle',
+        label: 'Notifications',
+        icon: <Bell className="h-[18px] w-[18px]" strokeWidth={1.8} />,
+        value: pin.notifications_enabled,
+        onChange: (next) => patchNotifications(business.id, next),
+      },
+      {
+        kind: 'action',
+        label: 'Share Business',
+        icon: <Share2 className="h-[18px] w-[18px]" strokeWidth={1.8} />,
+        onSelect: () => shareBusiness(business.slug, business.name),
+      },
+      {
+        kind: 'action',
+        label: 'Remove from Home',
+        icon: <Trash2 className="h-[18px] w-[18px]" strokeWidth={1.8} />,
+        destructive: true,
+        onSelect: () => removePin(business.id),
+      },
+    ];
+  }
+
+  const systemTiles: { kind: 'discover' | 'wallet' | 'me' | 'assistant'; key: string }[] = [
+    { kind: 'discover', key: 'discover' },
+    { kind: 'wallet', key: 'wallet' },
+    { kind: 'me', key: 'me' },
+    { kind: 'assistant', key: 'assistant' },
+  ];
 
   return (
     <PullToRefresh onRefresh={refresh}>
-      {showHint && (
-        <div className="mx-auto mb-5 flex max-w-[312px] items-start gap-2.5 rounded-[20px] px-3.5 py-3 mat-glass-thin animate-reveal-up">
-          <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#D4AF37]" strokeWidth={2} />
-          <div className="min-w-0 flex-1">
-            <p className="text-[12.5px] font-semibold leading-snug text-white/90">
-              Tap a tile to book. Press and hold to peek.
-            </p>
-            <p className="mt-0.5 text-[11.5px] leading-snug text-white/45">
-              Your favourite local businesses live here like apps.
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={dismissHint}
-            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/[0.05] text-white/50 active:scale-95"
-            aria-label="Dismiss home tip"
-          >
-            <X className="h-3.5 w-3.5" strokeWidth={2.2} />
-          </button>
-        </div>
-      )}
-
-      {/* iPhone Springboard layout. Tracks are a *fixed* 72 px — the
-          iPhone icon size — rather than `1fr`, so the grid's intrinsic
-          width is exactly four tiles + three column gaps. The page-
-          level section already does `items-center justify-center`, so
-          a content-sized grid is automatically centred horizontally
-          and vertically inside the phone frame on every viewport. The
-          `mx-auto` here is belt-and-braces in case a future parent
-          changes its alignment. Inline styles ensure the 4-track
-          declaration can't be overridden by Tailwind utilities. */}
       <div
         className="mx-auto"
         style={{
           display: 'grid',
-          gridTemplateColumns: 'repeat(4, 72px)',
-          columnGap: 16,
-          rowGap: 28,
+          gridTemplateColumns: `repeat(4, ${TILE_SIZE}px)`,
+          columnGap: COLUMN_GAP,
+          rowGap: ROW_GAP,
           width: 'max-content',
           maxWidth: '100%',
           justifyContent: 'center',
         }}
       >
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <SystemAppIcon kind="discover" />
-        </div>
-        {sortedBusinesses.map((b, i) => {
-          const hours = b.business_hours ?? [];
-          const openness = getBusinessOpenness(hours, b.business_closures ?? []);
+        {systemTiles.map(({ kind, key }) => (
+          <GridSlot key={key}>
+            <SystemAppIcon kind={kind} size={TILE_SIZE} />
+          </GridSlot>
+        ))}
+
+        {pins.map((pin, i) => {
+          const { business } = pin;
           return (
-            <div
-              key={b.id}
-              style={{ display: 'flex', justifyContent: 'center' }}
-            >
+            <GridSlot key={pin.business_id}>
               <Tile
-                name={b.name}
-                colour={b.primary_colour}
-                logoUrl={b.processed_icon_url ?? b.logo_url ?? null}
-                logoIsProcessedIcon={Boolean(b.processed_icon_url)}
-                size={72}
-                status={openness.status}
-                animationDelay={i * 30}
-                viewTransitionName={`tile-${b.slug}`}
-                onTap={(rect) => navigate(`/business/${b.slug}`, rect)}
-                onLongPress={(rect) => setPeekState({ business: b, rect })}
+                name={business.name}
+                colour={business.primary_colour}
+                logoUrl={business.processed_icon_url ?? business.logo_url ?? null}
+                logoIsProcessedIcon={Boolean(business.processed_icon_url)}
+                size={TILE_SIZE}
+                animationDelay={(i + 4) * 30}
+                viewTransitionName={`tile-${business.slug}`}
+                onTap={(rect) => navigate(`/business/${business.slug}`, rect)}
+                onLongPress={(rect) => setPeekState({ pin, rect })}
               />
-            </div>
+            </GridSlot>
           );
         })}
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <SystemAppIcon kind="wallet" />
-        </div>
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <SystemAppIcon kind="me" />
-        </div>
       </div>
 
-      {sortedBusinesses.length === 0 && (
-        <div className="mx-auto mt-8 max-w-[300px] rounded-[22px] p-4 text-center mat-glass-thin">
-          <p className="text-[14px] font-semibold text-white/90">No live businesses yet</p>
-          <p className="mt-1 text-[12.5px] leading-snug text-white/50">
-            Explore is ready. As soon as a business goes live, its tile appears here.
-          </p>
-        </div>
-      )}
+      {pins.length === 0 && <EmptyState />}
 
       {peekState && (
-        <PeekForBusiness
-          business={peekState.business}
-          rect={peekState.rect}
+        <TilePeek
+          anchorRect={peekState.rect}
+          name={peekState.pin.business.name}
+          colour={peekState.pin.business.primary_colour}
+          logoUrl={
+            peekState.pin.business.processed_icon_url ??
+            peekState.pin.business.logo_url ??
+            null
+          }
+          logoIsProcessedIcon={Boolean(peekState.pin.business.processed_icon_url)}
+          subtitle={peekState.pin.business.category ?? undefined}
+          actions={buildActions(peekState.pin)}
           onClose={() => setPeekState(null)}
-          onNavigate={(href) => navigate(href)}
         />
       )}
     </PullToRefresh>
   );
 }
 
-function PeekForBusiness({
-  business,
-  rect,
-  onClose,
-  onNavigate,
-}: {
-  business: HomeBusiness;
-  rect: DOMRect;
-  onClose: () => void;
-  onNavigate: (href: string) => void;
-}) {
-  const hours = business.business_hours ?? [];
-  const openness = getBusinessOpenness(hours, business.business_closures ?? []);
-  const subtitle = hours.length > 0
-    ? openness.label
-    : business.category ?? 'Tap to open';
+function GridSlot({ children }: { children: ReactNode }) {
+  return <div style={{ display: 'flex', justifyContent: 'center' }}>{children}</div>;
+}
 
-  const actions: TilePeekAction[] = [
-    {
-      label: 'Book next available slot',
-      onSelect: () => onNavigate(`/business/${business.slug}?tab=book`),
-    },
-    {
-      label: 'View services',
-      onSelect: () => onNavigate(`/business/${business.slug}?tab=book`),
-    },
-    {
-      label: 'About this business',
-      onSelect: () => onNavigate(`/business/${business.slug}?tab=about`),
-    },
-  ];
-
+function EmptyState() {
   return (
-    <TilePeek
-      anchorRect={rect}
-      name={business.name}
-      colour={business.primary_colour}
-      logoUrl={business.processed_icon_url ?? business.logo_url ?? null}
-      logoIsProcessedIcon={Boolean(business.processed_icon_url)}
-      subtitle={subtitle}
-      actions={actions}
-      onClose={onClose}
-    />
+    <div className="mx-auto mt-10 max-w-[300px] rounded-[22px] p-4 text-center mat-glass-thin animate-reveal-up">
+      <p className="text-[14px] font-semibold text-white/90">
+        Your home screen is yours to curate.
+      </p>
+      <p className="mt-1 text-[12.5px] leading-snug text-white/50">
+        Tap the + on any business in Explore and it lands here.
+      </p>
+      <Link
+        href="/explore"
+        className="mt-3 inline-flex items-center gap-1.5 text-[13px] font-medium text-[#D4AF37] active:scale-95"
+      >
+        Find a place you love
+        <ArrowRight className="h-[14px] w-[14px]" strokeWidth={2.2} aria-hidden />
+      </Link>
+    </div>
   );
 }
