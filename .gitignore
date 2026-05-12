@@ -20,3 +20,8 @@ ios/App/build
 ios/App/output
 ios/DerivedData
 ios/App/App/public
+
+# Firebase iOS config — environment-specific, must be dropped in locally
+# by each developer (download from Firebase Console → Project Settings →
+# General → Your apps → iOS app → GoogleService-Info.plist).
+ios/App/App/GoogleService-Info.plist
