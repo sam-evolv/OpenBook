@@ -15,6 +15,7 @@ import { useCallback, useState } from 'react';
 import { Gift, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { formatEUR } from '@/lib/money';
+import { openCheckout } from '@/lib/native-browser';
 import { PaymentModePicker, type PaymentMode } from './PaymentModePicker';
 
 type Props = {
@@ -114,7 +115,7 @@ export function ConfirmSpotButton({
           checkout_url: string | null;
         };
         if (checkout_url) {
-          window.location.assign(checkout_url);
+          await openCheckout(checkout_url);
           return;
         }
         window.location.assign(`/booking/confirm?id=${booking_id}`);

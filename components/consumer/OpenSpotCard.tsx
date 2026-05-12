@@ -56,10 +56,10 @@ export function OpenSpotCard({ spot }: Props) {
 
       <div className="mt-4 flex items-end justify-between gap-3">
         <div className="flex items-baseline gap-2">
-          <span className="text-[28px] font-semibold leading-none text-[#D4AF37]">
+          <span className="font-sans text-[28px] font-semibold leading-none tracking-tight text-[#D4AF37]">
             {formatEUR(spot.sale_price_cents)}
           </span>
-          <span className="text-[16px] font-normal text-zinc-500 line-through">
+          <span className="font-sans text-[16px] font-normal text-zinc-500 line-through">
             {formatEUR(spot.original_price_cents)}
           </span>
         </div>

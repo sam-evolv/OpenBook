@@ -19,12 +19,17 @@ export function ConsumerHeader({
     else router.push('/home');
   };
 
+  // Note: globals.css applies `padding: env(safe-area-inset-top, ...) ...`
+  // to `body`, which already accounts for the iOS notch / Dynamic Island on
+  // every consumer page. Re-applying pt-safe here was double-padding and
+  // pushed the X button + page title meaningfully below the viewport top
+  // on iPhone (PR #169).
   if (!showClose) {
-    return <div className="pt-safe" />;
+    return null;
   }
 
   return (
-    <div className="pt-safe">
+    <div>
       <div className="relative flex items-center justify-between px-4 pt-3 pb-2">
         <button
           onClick={handleClose}
