@@ -26,6 +26,7 @@
     "chrono-node": "^2.9.1",
     "clsx": "^2.1.1",
     "date-fns": "^4.1.0",
+    "firebase-admin": "^13.9.0",
     "geist": "^1.7.0",
     "jose": "^6.2.3",
     "lucide-react": "^0.469.0",
