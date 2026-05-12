@@ -21,20 +21,31 @@ export function usePushNotifications(enabled: boolean = true): void {
   const initialised = useRef(false);
 
   useEffect(() => {
+    console.log('[push-client] hook mounted', {
+      enabled,
+      initialised: initialised.current,
+      hasWindow: typeof window !== 'undefined',
+    });
     if (!enabled || initialised.current) return;
     if (typeof window === 'undefined') return;
     initialised.current = true;
+    console.log('[push-client] calling initFirebaseMessaging');
     void initFirebaseMessaging();
   }, [enabled]);
 }
 
 async function initFirebaseMessaging(): Promise<void> {
   try {
+    console.log('[push-client] init starting');
     const capacitorCore = '@capacitor/core';
     const firebaseMessaging = '@capacitor-firebase/messaging';
 
     // @ts-ignore - dynamically imported
     const { Capacitor } = await import(/* webpackIgnore: true */ capacitorCore);
+    console.log('[push-client] Capacitor imported', {
+      isNative: Capacitor.isNativePlatform(),
+      platform: Capacitor.getPlatform(),
+    });
     if (!Capacitor.isNativePlatform()) return;
 
     // @ts-ignore - dynamically imported
