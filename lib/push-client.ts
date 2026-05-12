@@ -1,21 +1,16 @@
 'use client';
 
-/**
- * Initialise native push notifications on consumer-app boot.
- *
- * We use @capacitor-firebase/messaging so iOS yields an FCM token (not a
- * raw APNs token) — firebase-admin's send() requires FCM tokens, and the
- * bridge plugin transparently converts the APNs registration on device.
- *
- * @capacitor/push-notifications stays installed because its Phase 5
- * AppDelegate forwards (didRegisterForRemoteNotificationsWithDeviceToken
- * etc.) are still what surfaces the APNs token to the Firebase iOS SDK.
- *
- * Modules are dynamically imported via variable names so webpack doesn't
- * pull native-only code into the SSR/web bundle.
- */
-
 import { useEffect, useRef } from 'react';
+
+declare global {
+  interface Window {
+    Capacitor?: {
+      isNativePlatform: () => boolean;
+      getPlatform: () => string;
+      Plugins?: Record<string, unknown>;
+    };
+  }
+}
 
 export function usePushNotifications(enabled: boolean = true): void {
   const initialised = useRef(false);
@@ -35,21 +30,23 @@ export function usePushNotifications(enabled: boolean = true): void {
 }
 
 async function initFirebaseMessaging(): Promise<void> {
+  console.log('[push-client] init starting');
   try {
-    console.log('[push-client] init starting');
-    const capacitorCore = '@capacitor/core';
-    const firebaseMessaging = '@capacitor-firebase/messaging';
-
-    // @ts-ignore - dynamically imported
-    const { Capacitor } = await import(/* webpackIgnore: true */ capacitorCore);
-    console.log('[push-client] Capacitor imported', {
+    const Capacitor = window.Capacitor;
+    if (!Capacitor || !Capacitor.isNativePlatform()) {
+      console.log('[push-client] not running on native platform, skipping');
+      return;
+    }
+    console.log('[push-client] Capacitor available', {
       isNative: Capacitor.isNativePlatform(),
       platform: Capacitor.getPlatform(),
     });
-    if (!Capacitor.isNativePlatform()) return;
 
-    // @ts-ignore - dynamically imported
-    const { FirebaseMessaging } = await import(/* webpackIgnore: true */ firebaseMessaging);
+    const FirebaseMessaging = (Capacitor.Plugins as { FirebaseMessaging?: any })?.FirebaseMessaging;
+    if (!FirebaseMessaging) {
+      console.error('[push-client] FirebaseMessaging plugin not registered');
+      return;
+    }
 
     const perm = await FirebaseMessaging.requestPermissions();
     if (perm.receive !== 'granted') {
@@ -58,10 +55,10 @@ async function initFirebaseMessaging(): Promise<void> {
     }
 
     const rawPlatform = Capacitor.getPlatform();
-    const platform: 'ios' | 'android' =
-      rawPlatform === 'android' ? 'android' : 'ios';
+    const platform: 'ios' | 'android' = rawPlatform === 'android' ? 'android' : 'ios';
 
     const { token } = await FirebaseMessaging.getToken();
+    console.log('[push-client] token received', { length: token?.length });
     if (token) await registerWithServer(token, platform);
 
     await FirebaseMessaging.addListener('tokenReceived', async (event: { token?: string }) => {
@@ -98,6 +95,8 @@ async function registerWithServer(
     });
     if (!res.ok) {
       console.error('[push-client] register-device failed', res.status);
+    } else {
+      console.log('[push-client] register-device succeeded');
     }
   } catch (err) {
     console.error('[push-client] register-device network error', err);
