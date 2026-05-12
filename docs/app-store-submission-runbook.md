@@ -8,6 +8,7 @@ Run these from the repo root before opening Xcode:
 
 ```bash
 npm run verify:launch
+npm run verify:app-store-metadata -- --network
 npm run build:ios
 npm run verify:launch-env
 npm run verify:demo -- --slug=evolv-performance
@@ -17,8 +18,9 @@ Expected result:
 
 - Tests pass.
 - Production Next build passes.
-- `npm audit --audit-level=moderate` reports `0 vulnerabilities`.
+- `npm audit --audit-level=moderate` reports no moderate-or-higher vulnerabilities.
 - iOS plist/privacy verification passes.
+- App Store metadata length, reviewer path, and public URLs pass.
 - Capacitor sync finishes without errors.
 - Production environment variables are present and launch-safe.
 - The App Review demo business has a bookable reviewer-safe path.
@@ -108,6 +110,7 @@ Before submission, reconcile:
 - Terms URL.
 - App category.
 - Review notes.
+- Listing metadata in `docs/app-store-metadata.json`.
 - Screenshots taken from the TestFlight build, not from a browser preview.
 
 ## 6. Stop-Ship Conditions

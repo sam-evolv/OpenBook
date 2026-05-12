@@ -120,12 +120,13 @@ bridge plugin requests permissions.
 
 ### Entitlements
 
-`ios/App/App/App.entitlements` declares `aps-environment = development`.
-For TestFlight and App Store builds, change to `production` (or use a
-separate `App.Release.entitlements` and wire it via the Release build
-configuration's `CODE_SIGN_ENTITLEMENTS` setting). The current single-
-entitlement-file setup is sufficient for first-device verification;
-revisit before the first TestFlight upload.
+`ios/App/App/App.entitlements` declares `aps-environment = development`
+for local device builds. Before uploading to TestFlight or App Store
+Connect, confirm the signed archive is using a distribution provisioning
+profile with the production APNs entitlement. If Xcode reports an
+entitlement mismatch, create a separate `App.Release.entitlements` with
+`aps-environment = production` and wire it via the Release build
+configuration's `CODE_SIGN_ENTITLEMENTS` setting.
 
 The Push Notifications capability must also be enabled on the App ID
 in the Apple Developer Portal (Identifiers → `ie.openbook.app` →

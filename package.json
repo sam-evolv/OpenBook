@@ -9,9 +9,10 @@
     "build:ios": "next build && npx cap sync ios",
     "test": "vitest run",
     "verify:ios-plists": "node scripts/verify-ios-plists.mjs",
+    "verify:app-store-metadata": "node scripts/verify-app-store-metadata.mjs",
     "verify:launch-env": "node scripts/verify-launch-env.mjs --strict --production",
     "verify:demo": "node scripts/verify-demo-readiness.mjs --strict",
-    "verify:launch": "npm test && npm run build && npm audit --audit-level=moderate && npm run verify:ios-plists"
+    "verify:launch": "npm test && npm run build && npm audit --audit-level=moderate && npm run verify:ios-plists && npm run verify:app-store-metadata"
   },
   "dependencies": {
     "@capacitor-firebase/messaging": "^8.2.0",

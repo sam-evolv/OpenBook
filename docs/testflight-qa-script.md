@@ -24,6 +24,14 @@ Run this on the exact signed TestFlight build intended for App Review. Use a phy
 10. Me: sign in, edit profile, open privacy/support links, sign out, sign in again.
 11. Account deletion: use a disposable account and confirm deletion completes without a dead end.
 
+## Notification Pass
+
+1. Fresh install: grant notification permission when prompted and confirm the device registers without an error.
+2. Foreground: trigger a reviewer-safe booking notification and confirm it does not interrupt the current flow.
+3. Background: lock the phone or background the app, send a booking notification, then tap it and confirm OpenBook opens to a useful signed-in state.
+4. Permission denied: reinstall or reset notification permission, deny the prompt, and confirm booking still works without a dead end.
+5. Sign out and sign in again, then confirm the same device does not create duplicate customer-facing alerts.
+
 ## Booking Pass
 
 1. Book the reviewer-safe free or in-person service.
@@ -53,6 +61,7 @@ Run this on the exact signed TestFlight build intended for App Review. Use a phy
 - The bottom nav blocks chat or booking controls.
 - Account deletion fails or leaves the user signed in.
 - App Store privacy answers differ from `PrivacyInfo.xcprivacy`.
+- Push notification permission, registration, or tapped-notification recovery breaks the booking path.
 - Production points at a Vercel preview URL.
 
 ## Evidence To Keep

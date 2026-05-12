@@ -1,0 +1,30 @@
+{
+  "appName": "OpenBook",
+  "subtitle": "Book local businesses",
+  "promotionalText": "Find trainers, salons, saunas, barbers, and local services, then book in a few taps.",
+  "description": "OpenBook is a phone-first booking app for local businesses. Discover trusted services nearby, open a business's own app-like storefront, choose a service, and book without the usual back-and-forth.\n\nFor customers, OpenBook makes local booking feel simple: explore businesses, use AI to find the right option, manage upcoming bookings, and keep everything in one place.\n\nFor businesses, OpenBook turns a booking page into a polished storefront inside the OpenBook app. Each business can shape its own identity with custom colours, logos, images, services, opening hours, and booking rules while OpenBook keeps the experience fast, dependable, and beautiful for customers.\n\nUse OpenBook to book personal training, barber appointments, salon services, sauna sessions, yoga classes, consultations, and other local experiences.",
+  "keywords": "booking,local,appointments,barber,salon,gym,sauna,yoga,trainer,ireland",
+  "primaryCategory": "Lifestyle",
+  "secondaryCategory": "Productivity",
+  "supportUrl": "https://openbook.ie",
+  "marketingUrl": "https://openbook.ie",
+  "privacyPolicyUrl": "https://openbook.ie/privacy",
+  "termsUrl": "https://openbook.ie/terms",
+  "reviewNotes": "OpenBook is a phone-first booking app that gives each local business an app-like storefront inside OpenBook. Please use the reviewer-safe demo business with a free or in-person service so review can complete without a live card payment. Test sign-in, business discovery, the assistant, booking, cancellation, profile management, and account deletion.",
+  "demoInstructions": [
+    "Install the submitted iPhone build and open OpenBook.",
+    "Sign in with the reviewer account supplied in App Store Connect.",
+    "Open the demo business and book the free or in-person reviewer-safe service.",
+    "Cancel the booking from the customer booking detail.",
+    "Open Me, confirm Privacy Policy/Terms/Support links, then test account deletion with the disposable reviewer account."
+  ],
+  "screenshotPlan": [
+    "Home screen with business tiles aligned and legible.",
+    "Explore/Open Spots showing live local availability.",
+    "Premium business profile with hero, logo, services, gallery, and booking action.",
+    "Booking flow confirmation for the reviewer-safe service.",
+    "OpenBook Assistant with input clear of the bottom navigation.",
+    "Bookings screen showing an upcoming booking.",
+    "Me screen with account, support, privacy, and deletion access."
+  ]
+}

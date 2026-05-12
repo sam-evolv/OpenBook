@@ -5,6 +5,7 @@ import { join } from 'node:path';
 const root = process.cwd();
 const infoPlistPath = join(root, 'ios/App/App/Info.plist');
 const privacyPath = join(root, 'ios/App/App/PrivacyInfo.xcprivacy');
+const entitlementsPath = join(root, 'ios/App/App/App.entitlements');
 const projectPath = join(root, 'ios/App/App.xcodeproj/project.pbxproj');
 
 function fail(message) {
@@ -29,9 +30,11 @@ function expect(condition, message) {
 
 lintPlist(infoPlistPath);
 lintPlist(privacyPath);
+lintPlist(entitlementsPath);
 
 const info = readPlistJson(infoPlistPath);
 const privacy = readPlistJson(privacyPath);
+const entitlements = readPlistJson(entitlementsPath);
 const project = readFileSync(projectPath, 'utf8');
 
 expect(info.CFBundleDisplayName === 'OpenBook', 'CFBundleDisplayName must be OpenBook.');
@@ -55,6 +58,18 @@ expect(
   'Do not declare location permission until native location access is actually shipped.',
 );
 expect(
+  Array.isArray(info.UIBackgroundModes) && info.UIBackgroundModes.includes('remote-notification'),
+  'UIBackgroundModes must include remote-notification for push notification delivery.',
+);
+expect(
+  ['development', 'production'].includes(entitlements['aps-environment']),
+  'App.entitlements must declare aps-environment for push notifications.',
+);
+expect(
+  (project.match(/CODE_SIGN_ENTITLEMENTS = App\/App\.entitlements;/g) ?? []).length >= 2,
+  'Xcode target should wire App/App.entitlements for both build configurations.',
+);
+expect(
   (project.match(/TARGETED_DEVICE_FAMILY = 1;/g) ?? []).length >= 2,
   'Xcode target should be iPhone-only until the iPad experience is fully QAed.',
 );
@@ -74,6 +89,7 @@ for (const dataType of [
   'NSPrivacyCollectedDataTypePhoneNumber',
   'NSPrivacyCollectedDataTypePhotosorVideos',
   'NSPrivacyCollectedDataTypePurchaseHistory',
+  'NSPrivacyCollectedDataTypeDeviceID',
 ]) {
   expect(collectedTypes.has(dataType), `Privacy manifest must include ${dataType}.`);
 }
