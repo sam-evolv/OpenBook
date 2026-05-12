@@ -5,11 +5,31 @@ import { Tile } from './Tile';
 import { haptics } from '@/lib/haptics';
 import type { TileColourSlug } from '@/lib/tile-palette';
 
-export interface TilePeekAction {
+/**
+ * TilePeekAction is a discriminated union: an `action` row fires a single
+ * callback and dismisses the menu; a `toggle` row renders an iOS-style
+ * switch, fires `onChange` on tap of the whole row, and does NOT dismiss.
+ *
+ * `kind` defaults to 'action' so existing call sites continue to work
+ * without modification.
+ */
+export type TilePeekAction = TilePeekActionItem | TilePeekToggleItem;
+
+export interface TilePeekActionItem {
+  kind?: 'action';
   label: string;
   icon?: React.ReactNode;
   onSelect: () => void;
   destructive?: boolean;
+  disabled?: boolean;
+}
+
+export interface TilePeekToggleItem {
+  kind: 'toggle';
+  label: string;
+  icon?: React.ReactNode;
+  value: boolean;
+  onChange: (next: boolean) => void;
   disabled?: boolean;
 }
 
@@ -145,57 +165,27 @@ export function TilePeek({
             overflow: 'hidden',
           }}
         >
-          {actions.map((action, i) => (
-            <button
-              key={action.label}
-              type="button"
-              role="menuitem"
-              disabled={action.disabled}
-              onClick={() => {
-                if (action.disabled) return;
-                haptics.tap();
-                action.onSelect();
-                onClose();
-              }}
-              style={{
-                width: '100%',
-                padding: '14px 18px',
-                background: 'transparent',
-                border: 'none',
-                borderTop: i === 0 ? 'none' : '0.5px solid rgba(255,255,255,0.08)',
-                color: action.destructive
-                  ? '#FF6B6B'
-                  : action.disabled
-                  ? 'rgba(255,255,255,0.3)'
-                  : 'rgba(255,255,255,0.95)',
-                fontSize: 16,
-                fontWeight: 400,
-                textAlign: 'left',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 12,
-                cursor: action.disabled ? 'default' : 'pointer',
-                WebkitTapHighlightColor: 'transparent',
-              }}
-            >
-              {action.icon && (
-                <span
-                  aria-hidden
-                  style={{
-                    width: 22,
-                    height: 22,
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    opacity: 0.9,
-                  }}
-                >
-                  {action.icon}
-                </span>
-              )}
-              <span style={{ flex: 1 }}>{action.label}</span>
-            </button>
-          ))}
+          {actions.map((action, i) =>
+            action.kind === 'toggle' ? (
+              <ToggleRow
+                key={action.label}
+                action={action}
+                isFirst={i === 0}
+              />
+            ) : (
+              <ActionRow
+                key={action.label}
+                action={action}
+                isFirst={i === 0}
+                onSelect={() => {
+                  if (action.disabled) return;
+                  haptics.tap();
+                  action.onSelect();
+                  onClose();
+                }}
+              />
+            ),
+          )}
         </div>
       </div>
 
@@ -209,6 +199,157 @@ export function TilePeek({
           100% { opacity: 1; transform: scale(1); }
         }
       `}</style>
+    </div>
+  );
+}
+
+function ActionRow({
+  action,
+  isFirst,
+  onSelect,
+}: {
+  action: TilePeekActionItem;
+  isFirst: boolean;
+  onSelect: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      disabled={action.disabled}
+      onClick={onSelect}
+      style={{
+        width: '100%',
+        padding: '14px 18px',
+        background: 'transparent',
+        border: 'none',
+        borderTop: isFirst ? 'none' : '0.5px solid rgba(255,255,255,0.08)',
+        color: action.destructive
+          ? '#FF6B6B'
+          : action.disabled
+            ? 'rgba(255,255,255,0.3)'
+            : 'rgba(255,255,255,0.95)',
+        fontSize: 16,
+        fontWeight: 400,
+        textAlign: 'left',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        cursor: action.disabled ? 'default' : 'pointer',
+        WebkitTapHighlightColor: 'transparent',
+      }}
+    >
+      {action.icon && (
+        <span
+          aria-hidden
+          style={{
+            width: 22,
+            height: 22,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: 0.9,
+          }}
+        >
+          {action.icon}
+        </span>
+      )}
+      <span style={{ flex: 1 }}>{action.label}</span>
+    </button>
+  );
+}
+
+function ToggleRow({
+  action,
+  isFirst,
+}: {
+  action: TilePeekToggleItem;
+  isFirst: boolean;
+}) {
+  // Full-row hit target: tapping anywhere on the row fires onChange.
+  // The switch on the right is purely visual — its own click handler stops
+  // propagation but defers to the same callback, so screen readers also
+  // see a single coherent control.
+  const handleToggle = () => {
+    if (action.disabled) return;
+    haptics.tap();
+    action.onChange(!action.value);
+  };
+
+  return (
+    <div
+      role="switch"
+      aria-checked={action.value}
+      aria-disabled={action.disabled}
+      tabIndex={action.disabled ? -1 : 0}
+      onClick={handleToggle}
+      onKeyDown={(e) => {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          handleToggle();
+        }
+      }}
+      style={{
+        width: '100%',
+        padding: '14px 18px',
+        background: 'transparent',
+        borderTop: isFirst ? 'none' : '0.5px solid rgba(255,255,255,0.08)',
+        color: action.disabled
+          ? 'rgba(255,255,255,0.3)'
+          : 'rgba(255,255,255,0.95)',
+        fontSize: 16,
+        fontWeight: 400,
+        textAlign: 'left',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 12,
+        cursor: action.disabled ? 'default' : 'pointer',
+        WebkitTapHighlightColor: 'transparent',
+      }}
+    >
+      {action.icon && (
+        <span
+          aria-hidden
+          style={{
+            width: 22,
+            height: 22,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: 0.9,
+          }}
+        >
+          {action.icon}
+        </span>
+      )}
+      <span style={{ flex: 1 }}>{action.label}</span>
+      <span
+        aria-hidden
+        style={{
+          width: 51,
+          height: 31,
+          borderRadius: 15.5,
+          padding: 2,
+          background: action.value ? '#D4AF37' : 'rgba(120,120,128,0.32)',
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: action.value ? 'flex-end' : 'flex-start',
+          transition: 'background 220ms var(--ease-apple)',
+          flexShrink: 0,
+        }}
+      >
+        <span
+          style={{
+            width: 27,
+            height: 27,
+            borderRadius: '50%',
+            background: '#FFFFFF',
+            boxShadow:
+              '0 3px 8px rgba(0,0,0,0.15), 0 3px 1px rgba(0,0,0,0.06)',
+            transition: 'transform 220ms var(--ease-apple)',
+          }}
+        />
+      </span>
     </div>
   );
 }

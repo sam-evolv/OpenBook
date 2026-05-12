@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { z } from 'zod';
 import { supabaseAdmin } from '@/lib/supabase';
 import { checkRateLimit, RateLimitError } from '@/lib/rate-limit';
+import { autoPinAfterBooking } from '@/lib/home-pins';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -124,6 +125,28 @@ export async function POST(
         path: '/',
         maxAge: 60 * 60 * 24 * 365,
       });
+    }
+
+    // Auto-pin the business so a return visit lands at it. RPC returns
+    // only the booking id, so we read business_id off the new booking
+    // row. Best-effort — wrapped in try/catch and isolated from the
+    // success response. A network blip on this lookup, or a Supabase
+    // chain that doesn't accept the call signature in tests, must not
+    // turn a successful claim into a 500.
+    try {
+      const { data: bookingRow } = await sb
+        .from('bookings')
+        .select('business_id')
+        .eq('id', bookingId)
+        .maybeSingle();
+      if (bookingRow?.business_id) {
+        await autoPinAfterBooking(sb, {
+          customerId,
+          businessId: bookingRow.business_id as string,
+        });
+      }
+    } catch (err) {
+      console.warn('[open-spots.claim] auto-pin lookup failed (claim continues):', err);
     }
 
     return NextResponse.json({ booking_id: bookingId }, { status: 200 });

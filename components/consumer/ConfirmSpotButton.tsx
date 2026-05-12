@@ -15,6 +15,7 @@ import { useCallback, useState } from 'react';
 import { Gift, ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { formatEUR } from '@/lib/money';
+import { haptics } from '@/lib/haptics';
 import { openCheckout } from '@/lib/native-browser';
 import { PaymentModePicker, type PaymentMode } from './PaymentModePicker';
 
@@ -65,9 +66,7 @@ export function ConfirmSpotButton({
 
   const onClaim = useCallback(async () => {
     console.log('[confirm-cta] tap', { saleId, mode, state: status });
-    if (typeof window !== 'undefined') {
-      window.navigator.vibrate?.(8);
-    }
+    haptics.tap();
     setStatus('submitting');
 
     try {

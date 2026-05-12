@@ -18,14 +18,27 @@ export class RateLimitError extends Error {
 }
 
 const WINDOW_MS = 60_000;
-const MAX_REQUESTS = 3;
+const DEFAULT_MAX_REQUESTS = 3;
 
 const buckets = new Map<string, number[]>();
 
-export function checkRateLimit(key: string): void {
+/**
+ * Throws RateLimitError if the caller has exceeded `max` requests in the
+ * trailing 60 second window. Each call is recorded on success.
+ *
+ * Buckets are keyed independently, so different routes can share `key`
+ * (e.g. customerId) at different `max` values without interfering — the
+ * limit applies per call site as long as the key string is unique to that
+ * limiter. For separate limiters on the same key, prefix the key
+ * (e.g. `home-pins:${customerId}` vs `claim:${customerId}`).
+ */
+export function checkRateLimit(
+  key: string,
+  max: number = DEFAULT_MAX_REQUESTS,
+): void {
   const now = Date.now();
   const recent = (buckets.get(key) ?? []).filter((t) => now - t < WINDOW_MS);
-  if (recent.length >= MAX_REQUESTS) {
+  if (recent.length >= max) {
     const oldest = recent[0];
     const retryAfterSeconds = Math.max(
       1,

@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase';
 import { addMinutes } from '@/lib/time';
 import { sendBookingConfirmation } from '@/lib/email';
+import { autoPinAfterBooking } from '@/lib/home-pins';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -137,6 +138,12 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     }
+
+    // Auto-pin: silently add this business to the customer's home screen
+    // so a return visit lands them straight at the business they just
+    // booked. Idempotent — re-booking the same business is a no-op.
+    // Never throws — booking is the critical path; the pin is best-effort.
+    await autoPinAfterBooking(sb, { customerId, businessId });
 
     // Cash/free path: booking is already confirmed, fire the customer +
     // business emails. Paid path bookings (status='awaiting_payment') are

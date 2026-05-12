@@ -19,6 +19,7 @@ import type {
 import { ExploreClient } from './ExploreClient';
 import { SegmentedTabs, type TabId } from '@/components/consumer/SegmentedTabs';
 import { OpenSpotsList } from '@/components/consumer/OpenSpotsList';
+import { PinPromptBanner } from '@/components/consumer/PinPromptBanner';
 import type { CityValue } from '@/components/consumer/LocationChip';
 
 type Props = {
@@ -27,6 +28,7 @@ type Props = {
   initialCity: CityValue;
   initialCategory: CategoryFilter;
   initialWhen: WhenFilter;
+  initialPinnedIds?: Set<string>;
 };
 
 const VALID_TABS: ReadonlyArray<TabId> = ['discover', 'open-spots', 'favourites'];
@@ -41,6 +43,7 @@ export function ExploreShell({
   initialCity,
   initialCategory,
   initialWhen,
+  initialPinnedIds,
 }: Props) {
   const [tab, setTab] = useState<TabId>('discover');
 
@@ -66,9 +69,16 @@ export function ExploreShell({
         </h1>
       </div>
 
+      <PinPromptBanner pinsCount={initialPinnedIds?.size ?? 0} />
+
       <SegmentedTabs value={tab} onChange={setTab} />
 
-      {tab === 'discover' && <ExploreClient businesses={businesses} />}
+      {tab === 'discover' && (
+        <ExploreClient
+          businesses={businesses}
+          initialPinnedIds={initialPinnedIds}
+        />
+      )}
       {tab === 'open-spots' && (
         <OpenSpotsList
           initialSpots={initialOpenSpots}
