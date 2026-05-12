@@ -77,8 +77,73 @@ Do not switch back to universal (`1,2`) until the iPad dashboard, customer app, 
 
 - `NSCameraUsageDescription` — add only if the app captures photos/video.
 - `NSLocationWhenInUseUsageDescription` — not used; do not add.
-- `UIBackgroundModes` — none required.
 - `ITSAppUsesNonExemptEncryption` is `false` because the current app only uses standard HTTPS/TLS encryption.
+
+`UIBackgroundModes` is set to `remote-notification` so APNs can wake the
+app silently when a push includes `content-available: 1`. Required by
+PR 4a (push notifications).
+
+## Push Notifications (PR 4a)
+
+The app uses `@capacitor-firebase/messaging` to acquire **FCM tokens**
+and relays them to the server via `POST /api/notifications/register-device`.
+The server uses `firebase-admin` to send through FCM, which forwards to
+APNs.
+
+### Token flow
+
+`firebase-admin.send()` requires FCM registration tokens, not raw APNs
+device tokens. The `@capacitor-firebase/messaging` plugin wraps the
+Firebase iOS SDK, which registers with APNs under the hood and then
+exchanges the APNs token for an FCM token before surfacing it to JS via
+`FirebaseMessaging.getToken()`. We post that FCM token to
+`/api/notifications/register-device` so the stored row matches what
+`firebase-admin.send()` expects.
+
+`@capacitor/push-notifications` stays installed because its Phase 5
+`AppDelegate` forwards
+(`didRegisterForRemoteNotificationsWithDeviceToken`,
+`didFailToRegisterForRemoteNotificationsWithError`) are what hand the
+APNs registration over to the Firebase iOS SDK. `AppDelegate.swift`
+calls `FirebaseApp.configure()` in
+`didFinishLaunchingWithOptions` so the SDK is initialised before the
+bridge plugin requests permissions.
+
+### Required local files (NOT committed)
+
+- `ios/App/App/GoogleService-Info.plist` — download from Firebase
+  Console → Project Settings → General → Your apps → iOS app →
+  `GoogleService-Info.plist`. Drag the file into the `App` group in
+  Xcode (check "Copy items if needed" and add to the `App` target) so
+  Xcode adds it to the build's Copy Bundle Resources phase. The file
+  is git-ignored.
+
+### Entitlements
+
+`ios/App/App/App.entitlements` declares `aps-environment = development`.
+For TestFlight and App Store builds, change to `production` (or use a
+separate `App.Release.entitlements` and wire it via the Release build
+configuration's `CODE_SIGN_ENTITLEMENTS` setting). The current single-
+entitlement-file setup is sufficient for first-device verification;
+revisit before the first TestFlight upload.
+
+The Push Notifications capability must also be enabled on the App ID
+in the Apple Developer Portal (Identifiers → `ie.openbook.app` →
+Capabilities → Push Notifications).
+
+### Firebase Cloud Messaging (server-side)
+
+The server needs `FIREBASE_SERVICE_ACCOUNT` (the entire service-account
+JSON as a single-line string) in Vercel and `.env.local`. Generate via
+Firebase Console → Project Settings → Service accounts → Generate new
+private key. See `.env.local.example` for the required variable names.
+
+### APNs Auth Key in Firebase
+
+The APNs Auth Key (`.p8`) must be uploaded to Firebase Console →
+Project Settings → Cloud Messaging → Apple app configuration →
+APNs Authentication Key, along with the Key ID and Apple Team ID
+(`FZXRCW547P`). Without this, FCM cannot deliver to APNs.
 
 ## Notes
 

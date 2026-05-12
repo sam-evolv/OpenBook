@@ -14,9 +14,11 @@
     "verify:launch": "npm test && npm run build && npm audit --audit-level=moderate && npm run verify:ios-plists"
   },
   "dependencies": {
+    "@capacitor-firebase/messaging": "^8.2.0",
     "@capacitor/cli": "^8.3.1",
     "@capacitor/core": "^8.3.1",
     "@capacitor/ios": "^8.3.1",
+    "@capacitor/push-notifications": "^8.0.4",
     "@react-email/components": "^1.0.12",
     "@react-email/render": "^2.0.8",
     "@stripe/react-stripe-js": "^6.3.0",
