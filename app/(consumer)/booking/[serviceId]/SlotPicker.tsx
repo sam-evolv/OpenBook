@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, Check } from 'lucide-react';
 import { addDays, dayLabel, friendlyDate, timeLabel } from '@/lib/time';
+import { openCheckout } from '@/lib/native-browser';
 
 interface SlotPickerProps {
   serviceId: string;
@@ -119,8 +120,10 @@ export function SlotPicker({
       };
 
       if (checkoutData.checkout_url) {
-        // Full redirect — Stripe is a separate domain, not an SPA route.
-        window.location.href = checkoutData.checkout_url;
+        // Open Stripe Checkout in-app via SFSafariViewController on native
+        // (Capacitor Browser plugin), or full-redirect on web. Stripe is a
+        // separate origin so we deliberately leave the SPA when on web.
+        await openCheckout(checkoutData.checkout_url);
         return;
       }
 
