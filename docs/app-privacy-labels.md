@@ -29,11 +29,18 @@ Purpose: App Functionality.
 
 Purpose: App Functionality.
 
+### Identifiers
+
+- Device ID: APNs and Firebase Cloud Messaging registration tokens used to register a device for booking reminders and account notifications.
+
+Purpose: App Functionality.
+
 ## Data That May Be Processed By Vendors
 
 - Supabase: auth, database, storage, sessions.
 - Stripe: payment processing and connected-account onboarding.
 - Resend/email provider: transactional booking and business notification emails.
+- Apple Push Notification service and Firebase Cloud Messaging: push notification delivery and device-token routing.
 - OpenAI: assistant responses when users interact with AI features.
 - Vercel: application hosting and request logs.
 
@@ -41,7 +48,7 @@ Confirm the production privacy policy names these processors before submission.
 
 ## Current Native Permission Position
 
-The native iOS shell does not request camera, microphone, contacts, location, photo library, calendar, Bluetooth, health, or background permissions.
+The native iOS shell does not request camera, microphone, contacts, location, photo library, calendar, Bluetooth, or health permissions. It does register for push notifications after permission is granted.
 
 Business image uploads happen through the web upload surface. If future native capture/gallery permissions are added, update both:
 

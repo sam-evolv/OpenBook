@@ -33,6 +33,23 @@ npm run verify:launch-env
 node scripts/verify-launch-env.mjs --strict --production --network
 ```
 
+## verify-ios-plists.mjs
+
+Checks the native iOS plist, privacy manifest, and push notification entitlement wiring.
+
+```bash
+npm run verify:ios-plists
+```
+
+## verify-app-store-metadata.mjs
+
+Checks App Store listing copy limits, reviewer instructions, screenshot plan coverage, and public App Store URLs.
+
+```bash
+npm run verify:app-store-metadata
+npm run verify:app-store-metadata -- --network
+```
+
 ## verify-demo-readiness.mjs
 
 Checks the App Review demo business has a live storefront and a bookable service.
