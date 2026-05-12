@@ -85,10 +85,29 @@ PR 4a (push notifications).
 
 ## Push Notifications (PR 4a)
 
-The app uses `@capacitor/push-notifications` to acquire APNs tokens and
-relays them to the server via `POST /api/notifications/register-device`.
+The app uses `@capacitor-firebase/messaging` to acquire **FCM tokens**
+and relays them to the server via `POST /api/notifications/register-device`.
 The server uses `firebase-admin` to send through FCM, which forwards to
 APNs.
+
+### Token flow
+
+`firebase-admin.send()` requires FCM registration tokens, not raw APNs
+device tokens. The `@capacitor-firebase/messaging` plugin wraps the
+Firebase iOS SDK, which registers with APNs under the hood and then
+exchanges the APNs token for an FCM token before surfacing it to JS via
+`FirebaseMessaging.getToken()`. We post that FCM token to
+`/api/notifications/register-device` so the stored row matches what
+`firebase-admin.send()` expects.
+
+`@capacitor/push-notifications` stays installed because its Phase 5
+`AppDelegate` forwards
+(`didRegisterForRemoteNotificationsWithDeviceToken`,
+`didFailToRegisterForRemoteNotificationsWithError`) are what hand the
+APNs registration over to the Firebase iOS SDK. `AppDelegate.swift`
+calls `FirebaseApp.configure()` in
+`didFinishLaunchingWithOptions` so the SDK is initialised before the
+bridge plugin requests permissions.
 
 ### Required local files (NOT committed)
 
