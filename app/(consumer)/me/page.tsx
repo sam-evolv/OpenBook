@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { supabaseAdmin } from '@/lib/supabase';
 import { BottomTabBar } from '@/components/consumer/BottomTabBar';
+import { AlertsList, type AlertSlot } from '@/components/consumer/AlertsList';
 import { DeleteAccountButton } from './DeleteAccountButton';
 
 export const dynamic = 'force-dynamic';
@@ -29,6 +30,19 @@ async function getCustomer() {
   return data;
 }
 
+async function getAlertsForCustomer(customerId: string | null): Promise<AlertSlot[]> {
+  if (!customerId) return [];
+  const sb = supabaseAdmin();
+  const { data } = await sb
+    .from('standing_slots')
+    .select(
+      'id, business_id, category, city, max_price_cents, day_mask, time_start, time_end, active, paused_until, businesses:business_id(id, name, slug)',
+    )
+    .eq('customer_id', customerId)
+    .order('created_at', { ascending: false });
+  return (data ?? []) as unknown as AlertSlot[];
+}
+
 const ACCOUNT_ITEMS = [
   { href: '/consumer-bookings', icon: Calendar, label: 'My bookings' },
   { href: '/wallet', icon: Wallet, label: 'Wallet & credits' },
@@ -42,6 +56,7 @@ const SUPPORT_ITEMS = [
 
 export default async function MePage() {
   const customer = await getCustomer();
+  const alerts = await getAlertsForCustomer(customer?.id ?? null);
   const name = customer?.full_name ?? 'Guest';
   const email = customer?.email ?? 'Sign in to sync your bookings';
   const initial = name[0]?.toUpperCase() ?? '?';
@@ -171,6 +186,13 @@ export default async function MePage() {
             <MenuRow key={item.href} {...item} />
           ))}
         </Section>
+
+        {/* Your alerts */}
+        {customer && (
+          <Section title="Your alerts">
+            <AlertsList initialAlerts={alerts} />
+          </Section>
+        )}
 
         {/* Support */}
         <Section title="Support">

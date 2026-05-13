@@ -19,6 +19,8 @@ export interface TilePeekActionItem {
   kind?: 'action';
   label: string;
   icon?: React.ReactNode;
+  /** Right-edge affordance — typically a chevron to signal "opens another sheet". */
+  trailingIcon?: React.ReactNode;
   onSelect: () => void;
   destructive?: boolean;
   disabled?: boolean;
@@ -255,6 +257,21 @@ function ActionRow({
         </span>
       )}
       <span style={{ flex: 1 }}>{action.label}</span>
+      {action.trailingIcon && (
+        <span
+          aria-hidden
+          style={{
+            width: 14,
+            height: 14,
+            display: 'inline-flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: 0.4,
+          }}
+        >
+          {action.trailingIcon}
+        </span>
+      )}
     </button>
   );
 }

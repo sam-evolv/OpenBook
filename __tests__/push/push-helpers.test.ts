@@ -118,7 +118,7 @@ describe('sendPush', () => {
       'cust-1',
       'bad-token',
       { title: 'hi', body: 'there' },
-      'standing_match',
+      'standing_slot_match',
     );
 
     expect(out.success).toBe(false);
@@ -190,7 +190,7 @@ describe('sendPush', () => {
 
 describe('sendPushBatch', () => {
   it('returns zeros for an empty token list without calling FCM', async () => {
-    const out = await push.sendPushBatch([], { title: 'hi', body: 'there' }, 'standing_match');
+    const out = await push.sendPushBatch([], { title: 'hi', body: 'there' }, 'standing_slot_match');
     expect(out).toEqual({ success: 0, failure: 0, invalidTokens: [] });
     expect(sendEachForMulticastMock).not.toHaveBeenCalled();
   });
@@ -213,7 +213,7 @@ describe('sendPushBatch', () => {
       token: `t-${i}`,
     }));
 
-    const out = await push.sendPushBatch(tokens, { title: 'hi', body: 'there' }, 'standing_match');
+    const out = await push.sendPushBatch(tokens, { title: 'hi', body: 'there' }, 'standing_slot_match');
 
     expect(out).toEqual({ success: 750, failure: 0, invalidTokens: [] });
     expect(sendEachForMulticastMock).toHaveBeenCalledTimes(2);
@@ -304,7 +304,7 @@ describe('sendPushBatch', () => {
       { customerId: 'b', token: 't-b' },
     ];
 
-    const out = await push.sendPushBatch(tokens, { title: 'hi', body: 'there' }, 'standing_match');
+    const out = await push.sendPushBatch(tokens, { title: 'hi', body: 'there' }, 'standing_slot_match');
 
     expect(out).toEqual({ success: 0, failure: 2, invalidTokens: [] });
     expect(sendEachForMulticastMock).not.toHaveBeenCalled();

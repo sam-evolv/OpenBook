@@ -106,6 +106,88 @@ export type Database = {
           },
         ]
       }
+      ai_tool_calls: {
+        Row: {
+          args: Json | null
+          conversation_id: string | null
+          created_at: string | null
+          customer_id: string | null
+          id: string
+          latency_ms: number | null
+          result: Json | null
+          tool_name: string
+        }
+        Insert: {
+          args?: Json | null
+          conversation_id?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          id?: string
+          latency_ms?: number | null
+          result?: Json | null
+          tool_name: string
+        }
+        Update: {
+          args?: Json | null
+          conversation_id?: string | null
+          created_at?: string | null
+          customer_id?: string | null
+          id?: string
+          latency_ms?: number | null
+          result?: Json | null
+          tool_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_tool_calls_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      booking_feedback: {
+        Row: {
+          booking_id: string
+          created_at: string | null
+          id: string
+          inferred_rating: number | null
+          showed_up: boolean | null
+          source_assistant: string | null
+          verbatim: string | null
+          would_rebook: boolean | null
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string | null
+          id?: string
+          inferred_rating?: number | null
+          showed_up?: boolean | null
+          source_assistant?: string | null
+          verbatim?: string | null
+          would_rebook?: boolean | null
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string | null
+          id?: string
+          inferred_rating?: number | null
+          showed_up?: boolean | null
+          source_assistant?: string | null
+          verbatim?: string | null
+          would_rebook?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "booking_feedback_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       bookings: {
         Row: {
           business_id: string
@@ -113,15 +195,21 @@ export type Database = {
           cancelled_by: string | null
           created_at: string | null
           customer_id: string | null
+          customer_phone: string | null
           ends_at: string
           flash_sale_id: string | null
+          hold_expires_at: string | null
           id: string
           notes: string | null
+          outcome: string | null
+          payment_mode: string | null
+          polling_token_hash: string | null
           price_cents: number
           reminder_24h_sent: boolean | null
           reminder_2h_sent: boolean | null
           service_id: string
           source: string | null
+          source_assistant: string | null
           staff_id: string | null
           starts_at: string
           status: string | null
@@ -133,15 +221,21 @@ export type Database = {
           cancelled_by?: string | null
           created_at?: string | null
           customer_id?: string | null
+          customer_phone?: string | null
           ends_at: string
           flash_sale_id?: string | null
+          hold_expires_at?: string | null
           id?: string
           notes?: string | null
+          outcome?: string | null
+          payment_mode?: string | null
+          polling_token_hash?: string | null
           price_cents: number
           reminder_24h_sent?: boolean | null
           reminder_2h_sent?: boolean | null
           service_id: string
           source?: string | null
+          source_assistant?: string | null
           staff_id?: string | null
           starts_at: string
           status?: string | null
@@ -152,16 +246,22 @@ export type Database = {
           cancelled_at?: string | null
           cancelled_by?: string | null
           created_at?: string | null
-          customer_id?: string
+          customer_id?: string | null
+          customer_phone?: string | null
           ends_at?: string
           flash_sale_id?: string | null
+          hold_expires_at?: string | null
           id?: string
           notes?: string | null
+          outcome?: string | null
+          payment_mode?: string | null
+          polling_token_hash?: string | null
           price_cents?: number
           reminder_24h_sent?: boolean | null
           reminder_2h_sent?: boolean | null
           service_id?: string
           source?: string | null
+          source_assistant?: string | null
           staff_id?: string | null
           starts_at?: string
           status?: string | null
@@ -246,6 +346,7 @@ export type Database = {
           is_closed: boolean | null
           is_open: boolean | null
           open_time: string | null
+          updated_at: string
         }
         Insert: {
           business_id: string
@@ -255,6 +356,7 @@ export type Database = {
           is_closed?: boolean | null
           is_open?: boolean | null
           open_time?: string | null
+          updated_at?: string
         }
         Update: {
           business_id?: string
@@ -264,6 +366,7 @@ export type Database = {
           is_closed?: boolean | null
           is_open?: boolean | null
           open_time?: string | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -275,11 +378,51 @@ export type Database = {
           },
         ]
       }
+      business_media: {
+        Row: {
+          business_id: string
+          caption: string | null
+          created_at: string | null
+          id: string
+          kind: string
+          sort_order: number | null
+          url: string
+        }
+        Insert: {
+          business_id: string
+          caption?: string | null
+          created_at?: string | null
+          id?: string
+          kind: string
+          sort_order?: number | null
+          url: string
+        }
+        Update: {
+          business_id?: string
+          caption?: string | null
+          created_at?: string | null
+          id?: string
+          kind?: string
+          sort_order?: number | null
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "business_media_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       businesses: {
         Row: {
           about_long: string | null
+          accessibility_notes: string | null
           address: string | null
           address_line: string | null
+          amenities: string[] | null
           automations: Json
           buffer_minutes: number | null
           category: string
@@ -299,34 +442,42 @@ export type Database = {
           logo_url: string | null
           monthly_revenue_goal: number | null
           name: string
+          nearest_landmark: string | null
           offers: Json | null
           owner_id: string
+          parking_info: string | null
           phone: string | null
           plan: string
           price_tier: number | null
           primary_colour: string | null
           processed_icon_url: string | null
+          public_transport_info: string | null
           rating: number | null
           secondary_colour: string | null
           slug: string
           socials: Json | null
+          space_description: string | null
           stripe_account_id: string | null
           stripe_charges_enabled: boolean | null
           stripe_onboarding_completed: boolean | null
           tagline: string | null
           team: Json | null
           testimonials: Json | null
+          updated_at: string
           website: string | null
           whatsapp_display_name: string | null
           whatsapp_enabled: boolean | null
           whatsapp_number: string | null
           whatsapp_phone_number: string | null
+          whatsapp_phone_number_id: string | null
           year_founded: number | null
         }
         Insert: {
           about_long?: string | null
+          accessibility_notes?: string | null
           address?: string | null
           address_line?: string | null
+          amenities?: string[] | null
           automations?: Json
           buffer_minutes?: number | null
           category: string
@@ -346,34 +497,42 @@ export type Database = {
           logo_url?: string | null
           monthly_revenue_goal?: number | null
           name: string
+          nearest_landmark?: string | null
           offers?: Json | null
           owner_id: string
+          parking_info?: string | null
           phone?: string | null
           plan?: string
           price_tier?: number | null
           primary_colour?: string | null
           processed_icon_url?: string | null
+          public_transport_info?: string | null
           rating?: number | null
           secondary_colour?: string | null
           slug: string
           socials?: Json | null
+          space_description?: string | null
           stripe_account_id?: string | null
           stripe_charges_enabled?: boolean | null
           stripe_onboarding_completed?: boolean | null
           tagline?: string | null
           team?: Json | null
           testimonials?: Json | null
+          updated_at?: string
           website?: string | null
           whatsapp_display_name?: string | null
           whatsapp_enabled?: boolean | null
           whatsapp_number?: string | null
           whatsapp_phone_number?: string | null
+          whatsapp_phone_number_id?: string | null
           year_founded?: number | null
         }
         Update: {
           about_long?: string | null
+          accessibility_notes?: string | null
           address?: string | null
           address_line?: string | null
+          amenities?: string[] | null
           automations?: Json
           buffer_minutes?: number | null
           category?: string
@@ -393,31 +552,69 @@ export type Database = {
           logo_url?: string | null
           monthly_revenue_goal?: number | null
           name?: string
+          nearest_landmark?: string | null
           offers?: Json | null
           owner_id?: string
+          parking_info?: string | null
           phone?: string | null
           plan?: string
           price_tier?: number | null
           primary_colour?: string | null
           processed_icon_url?: string | null
+          public_transport_info?: string | null
           rating?: number | null
           secondary_colour?: string | null
           slug?: string
           socials?: Json | null
+          space_description?: string | null
           stripe_account_id?: string | null
           stripe_charges_enabled?: boolean | null
           stripe_onboarding_completed?: boolean | null
           tagline?: string | null
           team?: Json | null
           testimonials?: Json | null
+          updated_at?: string
           website?: string | null
           whatsapp_display_name?: string | null
           whatsapp_enabled?: boolean | null
           whatsapp_number?: string | null
           whatsapp_phone_number?: string | null
+          whatsapp_phone_number_id?: string | null
           year_founded?: number | null
         }
         Relationships: []
+      }
+      cancellation_reasons: {
+        Row: {
+          booking_id: string
+          created_at: string
+          id: string
+          note: string | null
+          reason: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          reason: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cancellation_reasons_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: true
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       customer_businesses: {
         Row: {
@@ -640,14 +837,17 @@ export type Database = {
           business_id: string | null
           created_at: string | null
           discount_percent: number
+          duration_minutes: number
           expires_at: string
           id: string
+          listed_at: string
           max_bookings: number | null
           message: string | null
           original_price_cents: number
           sale_price_cents: number
           service_id: string | null
           slot_time: string
+          source: string
           status: string | null
         }
         Insert: {
@@ -655,14 +855,17 @@ export type Database = {
           business_id?: string | null
           created_at?: string | null
           discount_percent: number
+          duration_minutes: number
           expires_at: string
           id?: string
+          listed_at?: string
           max_bookings?: number | null
           message?: string | null
           original_price_cents: number
           sale_price_cents: number
           service_id?: string | null
           slot_time: string
+          source?: string
           status?: string | null
         }
         Update: {
@@ -670,14 +873,17 @@ export type Database = {
           business_id?: string | null
           created_at?: string | null
           discount_percent?: number
+          duration_minutes?: number
           expires_at?: string
           id?: string
+          listed_at?: string
           max_bookings?: number | null
           message?: string | null
           original_price_cents?: number
           sale_price_cents?: number
           service_id?: string | null
           slot_time?: string
+          source?: string
           status?: string | null
         }
         Relationships: [
@@ -693,6 +899,106 @@ export type Database = {
             columns: ["service_id"]
             isOneToOne: false
             referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      gift_redemptions: {
+        Row: {
+          booking_id: string
+          claim_expires_at: string
+          claim_token: string
+          claimed_at: string | null
+          claimed_by_customer_id: string | null
+          created_at: string
+          gift_message: string | null
+          gifter_customer_id: string
+          id: string
+          recipient_name: string | null
+          recipient_phone: string
+        }
+        Insert: {
+          booking_id: string
+          claim_expires_at: string
+          claim_token: string
+          claimed_at?: string | null
+          claimed_by_customer_id?: string | null
+          created_at?: string
+          gift_message?: string | null
+          gifter_customer_id: string
+          id?: string
+          recipient_name?: string | null
+          recipient_phone: string
+        }
+        Update: {
+          booking_id?: string
+          claim_expires_at?: string
+          claim_token?: string
+          claimed_at?: string | null
+          claimed_by_customer_id?: string | null
+          created_at?: string
+          gift_message?: string | null
+          gifter_customer_id?: string
+          id?: string
+          recipient_name?: string | null
+          recipient_phone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gift_redemptions_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gift_redemptions_claimed_by_customer_id_fkey"
+            columns: ["claimed_by_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gift_redemptions_gifter_customer_id_fkey"
+            columns: ["gifter_customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      home_pins: {
+        Row: {
+          business_id: string
+          customer_id: string
+          notifications_enabled: boolean
+          pinned_at: string
+        }
+        Insert: {
+          business_id: string
+          customer_id: string
+          notifications_enabled?: boolean
+          pinned_at?: string
+        }
+        Update: {
+          business_id?: string
+          customer_id?: string
+          notifications_enabled?: boolean
+          pinned_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "home_pins_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "home_pins_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
             referencedColumns: ["id"]
           },
         ]
@@ -737,6 +1043,376 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mcp_holds: {
+        Row: {
+          booking_id: string | null
+          business_id: string
+          created_at: string | null
+          customer_hints: Json | null
+          end_at: string
+          expires_at: string
+          id: string
+          service_id: string
+          source_assistant: string | null
+          start_at: string
+          status: string
+          updated_at: string | null
+        }
+        Insert: {
+          booking_id?: string | null
+          business_id: string
+          created_at?: string | null
+          customer_hints?: Json | null
+          end_at: string
+          expires_at: string
+          id?: string
+          service_id: string
+          source_assistant?: string | null
+          start_at: string
+          status: string
+          updated_at?: string | null
+        }
+        Update: {
+          booking_id?: string | null
+          business_id?: string
+          created_at?: string | null
+          customer_hints?: Json | null
+          end_at?: string
+          expires_at?: string
+          id?: string
+          service_id?: string
+          source_assistant?: string | null
+          start_at?: string
+          status?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_holds_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mcp_holds_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mcp_holds_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mcp_intent_cache: {
+        Row: {
+          cache_key: string
+          classification: Json
+          created_at: string | null
+          expires_at: string
+        }
+        Insert: {
+          cache_key: string
+          classification: Json
+          created_at?: string | null
+          expires_at: string
+        }
+        Update: {
+          cache_key?: string
+          classification?: Json
+          created_at?: string | null
+          expires_at?: string
+        }
+        Relationships: []
+      }
+      mcp_promoted_slots: {
+        Row: {
+          business_id: string
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          kind: string
+          message: string | null
+          original_price_eur: number
+          promoted_price_eur: number
+          service_id: string
+          slot_end: string
+          slot_start: string
+        }
+        Insert: {
+          business_id: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          kind: string
+          message?: string | null
+          original_price_eur: number
+          promoted_price_eur: number
+          service_id: string
+          slot_end: string
+          slot_start: string
+        }
+        Update: {
+          business_id?: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          kind?: string
+          message?: string | null
+          original_price_eur?: number
+          promoted_price_eur?: number
+          service_id?: string
+          slot_end?: string
+          slot_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_promoted_slots_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mcp_promoted_slots_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mcp_query_log: {
+        Row: {
+          created_at: string | null
+          customer_context: Json | null
+          id: string
+          intent_text: string | null
+          led_to_booking: boolean | null
+          led_to_hold: boolean | null
+          led_to_waitlist: boolean | null
+          parsed_category: string | null
+          parsed_location: string | null
+          parsed_when: string | null
+          query_id: string
+          result_business_ids: string[] | null
+          result_count: number | null
+          source_assistant: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          customer_context?: Json | null
+          id?: string
+          intent_text?: string | null
+          led_to_booking?: boolean | null
+          led_to_hold?: boolean | null
+          led_to_waitlist?: boolean | null
+          parsed_category?: string | null
+          parsed_location?: string | null
+          parsed_when?: string | null
+          query_id: string
+          result_business_ids?: string[] | null
+          result_count?: number | null
+          source_assistant?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          customer_context?: Json | null
+          id?: string
+          intent_text?: string | null
+          led_to_booking?: boolean | null
+          led_to_hold?: boolean | null
+          led_to_waitlist?: boolean | null
+          parsed_category?: string | null
+          parsed_location?: string | null
+          parsed_when?: string | null
+          query_id?: string
+          result_business_ids?: string[] | null
+          result_count?: number | null
+          source_assistant?: string | null
+        }
+        Relationships: []
+      }
+      mcp_rate_limit: {
+        Row: {
+          bucket: string
+          count: number
+          window_start: string
+        }
+        Insert: {
+          bucket: string
+          count?: number
+          window_start: string
+        }
+        Update: {
+          bucket?: string
+          count?: number
+          window_start?: string
+        }
+        Relationships: []
+      }
+      mcp_tool_calls: {
+        Row: {
+          arguments: Json
+          created_at: string | null
+          error: Json | null
+          id: string
+          latency_ms: number | null
+          request_id: string | null
+          result: Json | null
+          source_assistant: string | null
+          source_ip: unknown
+          tool_name: string
+        }
+        Insert: {
+          arguments: Json
+          created_at?: string | null
+          error?: Json | null
+          id?: string
+          latency_ms?: number | null
+          request_id?: string | null
+          result?: Json | null
+          source_assistant?: string | null
+          source_ip?: unknown
+          tool_name: string
+        }
+        Update: {
+          arguments?: Json
+          created_at?: string | null
+          error?: Json | null
+          id?: string
+          latency_ms?: number | null
+          request_id?: string | null
+          result?: Json | null
+          source_assistant?: string | null
+          source_ip?: unknown
+          tool_name?: string
+        }
+        Relationships: []
+      }
+      mcp_waitlist: {
+        Row: {
+          business_id: string
+          contact_email: string | null
+          contact_phone: string | null
+          created_at: string | null
+          customer_hints: Json | null
+          expires_at: string
+          id: string
+          notified_at: string | null
+          preferred_window_end: string
+          preferred_window_start: string
+          service_id: string | null
+          source_assistant: string | null
+          status: string
+        }
+        Insert: {
+          business_id: string
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          customer_hints?: Json | null
+          expires_at: string
+          id?: string
+          notified_at?: string | null
+          preferred_window_end: string
+          preferred_window_start: string
+          service_id?: string | null
+          source_assistant?: string | null
+          status?: string
+        }
+        Update: {
+          business_id?: string
+          contact_email?: string | null
+          contact_phone?: string | null
+          created_at?: string | null
+          customer_hints?: Json | null
+          expires_at?: string
+          id?: string
+          notified_at?: string | null
+          preferred_window_end?: string
+          preferred_window_start?: string
+          service_id?: string | null
+          source_assistant?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_waitlist_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mcp_waitlist_service_id_fkey"
+            columns: ["service_id"]
+            isOneToOne: false
+            referencedRelation: "services"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      mcp_waitlist_notifications: {
+        Row: {
+          attempted_at: string | null
+          booking_id: string | null
+          created_at: string | null
+          error_message: string | null
+          id: string
+          slot_end: string
+          slot_start: string
+          status: string
+          waitlist_id: string
+        }
+        Insert: {
+          attempted_at?: string | null
+          booking_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          slot_end: string
+          slot_start: string
+          status?: string
+          waitlist_id: string
+        }
+        Update: {
+          attempted_at?: string | null
+          booking_id?: string | null
+          created_at?: string | null
+          error_message?: string | null
+          id?: string
+          slot_end?: string
+          slot_start?: string
+          status?: string
+          waitlist_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mcp_waitlist_notifications_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mcp_waitlist_notifications_waitlist_id_fkey"
+            columns: ["waitlist_id"]
+            isOneToOne: false
+            referencedRelation: "mcp_waitlist"
             referencedColumns: ["id"]
           },
         ]
@@ -843,6 +1519,139 @@ export type Database = {
           },
         ]
       }
+      pending_reminders: {
+        Row: {
+          attempt_count: number
+          block_reason: string | null
+          booking_id: string
+          created_at: string
+          error: string | null
+          id: string
+          kind: string
+          scheduled_for: string
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          attempt_count?: number
+          block_reason?: string | null
+          booking_id: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind: string
+          scheduled_for: string
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          attempt_count?: number
+          block_reason?: string | null
+          booking_id?: string
+          created_at?: string
+          error?: string | null
+          id?: string
+          kind?: string
+          scheduled_for?: string
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pending_reminders_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      push_device_tokens: {
+        Row: {
+          created_at: string
+          customer_id: string
+          id: string
+          is_active: boolean
+          last_seen_at: string
+          platform: string
+          token: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_id: string
+          id?: string
+          is_active?: boolean
+          last_seen_at?: string
+          platform: string
+          token: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_id?: string
+          id?: string
+          is_active?: boolean
+          last_seen_at?: string
+          platform?: string
+          token?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_device_tokens_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      push_log: {
+        Row: {
+          customer_id: string
+          delivered: boolean | null
+          error: string | null
+          id: string
+          kind: string
+          sale_id: string | null
+          sent_at: string
+        }
+        Insert: {
+          customer_id: string
+          delivered?: boolean | null
+          error?: string | null
+          id?: string
+          kind: string
+          sale_id?: string | null
+          sent_at?: string
+        }
+        Update: {
+          customer_id?: string
+          delivered?: boolean | null
+          error?: string | null
+          id?: string
+          kind?: string
+          sale_id?: string | null
+          sent_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "push_log_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "push_log_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "flash_sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews: {
         Row: {
           booking_id: string | null
@@ -939,6 +1748,7 @@ export type Database = {
           name: string
           price_cents: number
           sort_order: number | null
+          updated_at: string
         }
         Insert: {
           business_id: string
@@ -951,6 +1761,7 @@ export type Database = {
           name: string
           price_cents: number
           sort_order?: number | null
+          updated_at?: string
         }
         Update: {
           business_id?: string
@@ -963,6 +1774,7 @@ export type Database = {
           name?: string
           price_cents?: number
           sort_order?: number | null
+          updated_at?: string
         }
         Relationships: [
           {
@@ -1023,6 +1835,75 @@ export type Database = {
             columns: ["business_id"]
             isOneToOne: false
             referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      standing_slots: {
+        Row: {
+          active: boolean
+          business_id: string | null
+          category: string | null
+          city: string | null
+          created_at: string
+          customer_id: string
+          day_mask: number
+          id: string
+          last_notified_at: string | null
+          matched_count: number
+          max_price_cents: number
+          paused_until: string | null
+          radius_km: number
+          time_end: string
+          time_start: string
+        }
+        Insert: {
+          active?: boolean
+          business_id?: string | null
+          category?: string | null
+          city?: string | null
+          created_at?: string
+          customer_id: string
+          day_mask?: number
+          id?: string
+          last_notified_at?: string | null
+          matched_count?: number
+          max_price_cents: number
+          paused_until?: string | null
+          radius_km?: number
+          time_end?: string
+          time_start?: string
+        }
+        Update: {
+          active?: boolean
+          business_id?: string | null
+          category?: string | null
+          city?: string | null
+          created_at?: string
+          customer_id?: string
+          day_mask?: number
+          id?: string
+          last_notified_at?: string | null
+          matched_count?: number
+          max_price_cents?: number
+          paused_until?: string | null
+          radius_km?: number
+          time_end?: string
+          time_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "standing_slots_business_id_fkey"
+            columns: ["business_id"]
+            isOneToOne: false
+            referencedRelation: "businesses"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "standing_slots_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
             referencedColumns: ["id"]
           },
         ]
@@ -1236,7 +2117,163 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      _sweep_expired_holds: { Args: never; Returns: undefined }
+      auth_customer_id: { Args: never; Returns: string }
+      cancel_hold_for_ai: {
+        Args: { p_booking_id: string }
+        Returns: {
+          business_id: string
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string | null
+          customer_id: string | null
+          customer_phone: string | null
+          ends_at: string
+          flash_sale_id: string | null
+          hold_expires_at: string | null
+          id: string
+          notes: string | null
+          outcome: string | null
+          payment_mode: string | null
+          polling_token_hash: string | null
+          price_cents: number
+          reminder_24h_sent: boolean | null
+          reminder_2h_sent: boolean | null
+          service_id: string
+          source: string | null
+          source_assistant: string | null
+          staff_id: string | null
+          starts_at: string
+          status: string | null
+          stripe_payment_intent_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      claim_flash_sale_spot: {
+        Args: {
+          p_customer_id: string
+          p_payment_mode?: string
+          p_sale_id: string
+        }
+        Returns: string
+      }
+      confirm_booking_for_ai: {
+        Args: { p_booking_id: string; p_stripe_payment_intent_id?: string }
+        Returns: {
+          business_id: string
+          cancelled_at: string | null
+          cancelled_by: string | null
+          created_at: string | null
+          customer_id: string | null
+          customer_phone: string | null
+          ends_at: string
+          flash_sale_id: string | null
+          hold_expires_at: string | null
+          id: string
+          notes: string | null
+          outcome: string | null
+          payment_mode: string | null
+          polling_token_hash: string | null
+          price_cents: number
+          reminder_24h_sent: boolean | null
+          reminder_2h_sent: boolean | null
+          service_id: string
+          source: string | null
+          source_assistant: string | null
+          staff_id: string | null
+          starts_at: string
+          status: string | null
+          stripe_payment_intent_id: string | null
+        }
+        SetofOptions: {
+          from: "*"
+          to: "bookings"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+      create_mcp_hold_atomically: {
+        Args: {
+          p_business_id: string
+          p_customer_hints: Json
+          p_end_at: string
+          p_expires_at: string
+          p_service_id: string
+          p_source_assistant: string
+          p_start_at: string
+        }
+        Returns: {
+          booking_id: string
+          conflict_reason: string
+          hold_id: string
+        }[]
+      }
+      fire_waitlist_notifications: {
+        Args: {
+          p_business_id: string
+          p_service_id: string
+          p_slot_end: string
+          p_slot_start: string
+        }
+        Returns: undefined
+      }
+      get_availability_for_ai: {
+        Args: { p_business_id: string; p_date: string; p_service_id: string }
+        Returns: {
+          slot_end: string
+          slot_start: string
+        }[]
+      }
+      hold_slot_for_ai: {
+        Args: { p_service_id: string; p_slot_start: string }
+        Returns: {
+          booking_id: string
+          expires_at: string
+          price_cents: number
+          requires_payment: boolean
+        }[]
+      }
+      increment_mcp_rate_limit: {
+        Args: { p_bucket: string; p_window_start: string }
+        Returns: number
+      }
+      list_services_for_ai: {
+        Args: { p_business_id: string }
+        Returns: {
+          capacity: number
+          duration_minutes: number
+          name: string
+          price_cents: number
+          service_id: string
+        }[]
+      }
+      match_standing_slots_to_sale: {
+        Args: { p_sale_id: string }
+        Returns: {
+          customer_id: string
+          platform: string
+          push_token: string
+        }[]
+      }
+      run_drain: { Args: never; Returns: Json }
+      search_businesses_for_ai: {
+        Args: { category?: string; location?: string; query_text: string }
+        Returns: {
+          address: string
+          business_id: string
+          category: string
+          is_live: boolean
+          name: string
+          primary_colour: string
+          rating: number
+          slug: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never
