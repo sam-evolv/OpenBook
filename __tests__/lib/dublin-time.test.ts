@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import {
+  formatBookingTimeDublin,
   formatDayLabel,
   formatFullDate,
+  formatShortSlotDublin,
   formatTimeRange,
 } from '../../lib/dublin-time';
 
@@ -58,5 +60,32 @@ describe('formatFullDate', () => {
   it('formats as "day Mon yyyy" in Dublin', () => {
     const d = new Date('2026-05-12T12:00:00Z');
     expect(formatFullDate(d)).toBe('12 May 2026');
+  });
+});
+
+describe('formatShortSlotDublin', () => {
+  it('drops :00 minutes for on-the-hour slots', () => {
+    // 2026-05-12 (Tue) 18:00 Dublin == 17:00 UTC (BST)
+    const d = new Date('2026-05-12T17:00:00Z');
+    expect(formatShortSlotDublin(d)).toBe('Tue 6pm');
+  });
+
+  it('renders half-hour slots with minutes', () => {
+    const d = new Date('2026-05-12T17:30:00Z'); // Tue 18:30 Dublin
+    expect(formatShortSlotDublin(d)).toBe('Tue 6:30pm');
+  });
+});
+
+describe('formatBookingTimeDublin', () => {
+  it('renders "Tomorrow at <time>" for a slot 24h out', () => {
+    const now = new Date('2026-05-12T10:00:00Z'); // Tue 11:00 Dublin (BST)
+    const tomorrow = new Date('2026-05-13T10:00:00Z'); // Wed 11:00 Dublin
+    expect(formatBookingTimeDublin(tomorrow, now)).toBe('Tomorrow at 11:00am');
+  });
+
+  it('renders "Today at <time>" for a same-day slot', () => {
+    const now = new Date('2026-05-12T09:00:00Z'); // Tue 10:00 Dublin (BST)
+    const later = new Date('2026-05-12T17:30:00Z'); // Tue 18:30 Dublin
+    expect(formatBookingTimeDublin(later, now)).toBe('Today at 6:30pm');
   });
 });

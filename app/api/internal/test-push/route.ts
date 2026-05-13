@@ -17,18 +17,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sendPush } from '@/lib/push';
 import { supabaseAdmin } from '@/lib/supabase';
+import { checkInternalAuth } from '@/lib/internal-auth';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: NextRequest) {
-  const expected = process.env.CRON_SECRET;
-  if (!expected) {
-    return NextResponse.json({ error: 'cron_secret_unconfigured' }, { status: 503 });
-  }
-  if (req.headers.get('authorization') !== `Bearer ${expected}`) {
-    return NextResponse.json({ error: 'unauthorized' }, { status: 401 });
-  }
+  const authError = checkInternalAuth(req);
+  if (authError) return authError;
 
   let customerId: string | undefined;
   try {

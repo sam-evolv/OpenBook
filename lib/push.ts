@@ -63,7 +63,13 @@ async function getFirebaseAdmin(): Promise<FirebaseAdminModule | null> {
   }
 }
 
-export type PushKind = 'standing_match' | 'favourite' | 'wider' | 'test';
+export type PushKind =
+  | 'standing_slot_match'
+  | 'booking_reminder_24h'
+  | 'booking_reminder_2h'
+  | 'favourite'
+  | 'wider'
+  | 'test';
 
 export interface PushPayload {
   title: string;

@@ -74,3 +74,51 @@ export function formatTimeRange(start: Date, durationMinutes: number): string {
 export function formatFullDate(d: Date): string {
   return FULL_DATE_FMT.format(d);
 }
+
+const SHORT_WEEKDAY_FMT = new Intl.DateTimeFormat('en-IE', {
+  timeZone: DUBLIN,
+  weekday: 'short',
+});
+
+const SHORT_HOUR_FMT = new Intl.DateTimeFormat('en-US', {
+  timeZone: DUBLIN,
+  hour: 'numeric',
+  hour12: true,
+});
+
+const SHORT_HOUR_MINUTE_FMT = new Intl.DateTimeFormat('en-US', {
+  timeZone: DUBLIN,
+  hour: 'numeric',
+  minute: '2-digit',
+  hour12: true,
+});
+
+/**
+ * Push-payload-friendly slot label, e.g. "Tue 6pm" for an on-the-hour
+ * slot or "Tue 6:30pm" otherwise. Always Dublin time.
+ */
+export function formatShortSlotDublin(d: Date): string {
+  const weekday = SHORT_WEEKDAY_FMT.format(d);
+  const minutesInDublin = Number(
+    new Intl.DateTimeFormat('en-US', {
+      timeZone: DUBLIN,
+      minute: '2-digit',
+    }).format(d),
+  );
+  const time = (minutesInDublin === 0 ? SHORT_HOUR_FMT : SHORT_HOUR_MINUTE_FMT)
+    .format(d)
+    .replace(' ', '')
+    .toLowerCase();
+  return `${weekday} ${time}`;
+}
+
+/**
+ * Push-payload-friendly booking time, e.g. "Tomorrow at 6:30pm" or
+ * "Friday at 9am" depending on how far out the booking sits. Always
+ * Dublin time.
+ */
+export function formatBookingTimeDublin(d: Date, now: Date = new Date()): string {
+  const time = SHORT_HOUR_MINUTE_FMT.format(d).replace(' ', '').toLowerCase();
+  const dayLabel = formatDayLabel(d, now);
+  return `${dayLabel} at ${time}`;
+}

@@ -18,8 +18,10 @@ import { useState, type ReactNode } from 'react';
 import {
   ArrowRight,
   Bell,
+  BellRing,
   Building2,
   CalendarPlus,
+  ChevronRight,
   Share2,
   Trash2,
 } from 'lucide-react';
@@ -27,6 +29,7 @@ import Link from 'next/link';
 import { Tile } from '@/components/Tile';
 import { TilePeek, type TilePeekAction } from '@/components/TilePeek';
 import { SystemAppIcon } from '@/components/consumer/SystemAppIcon';
+import { AlertSheet } from '@/components/consumer/AlertSheet';
 import { PullToRefresh } from '@/components/PullToRefresh';
 import { haptics } from '@/lib/haptics';
 import type { HomePinWithBusiness } from '@/lib/home-pins';
@@ -42,6 +45,11 @@ export function HomeTileGrid({ pins: initialPins }: { pins: HomePinWithBusiness[
     pin: HomePinWithBusiness;
     rect: DOMRect;
   } | null>(null);
+  const [alertSheetBusiness, setAlertSheetBusiness] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
 
   async function refresh() {
     router.refresh();
@@ -141,6 +149,13 @@ export function HomeTileGrid({ pins: initialPins }: { pins: HomePinWithBusiness[
       },
       {
         kind: 'action',
+        label: 'Set up alerts',
+        icon: <BellRing className="h-[18px] w-[18px]" strokeWidth={1.8} />,
+        trailingIcon: <ChevronRight className="h-[14px] w-[14px]" strokeWidth={2} />,
+        onSelect: () => setAlertSheetBusiness({ id: business.id, name: business.name }),
+      },
+      {
+        kind: 'action',
         label: 'Share Business',
         icon: <Share2 className="h-[18px] w-[18px]" strokeWidth={1.8} />,
         onSelect: () => shareBusiness(business.slug, business.name),
@@ -220,6 +235,52 @@ export function HomeTileGrid({ pins: initialPins }: { pins: HomePinWithBusiness[
           onClose={() => setPeekState(null)}
         />
       )}
+
+      {alertSheetBusiness && (
+        <AlertSheet
+          business={alertSheetBusiness}
+          onClose={() => setAlertSheetBusiness(null)}
+          onSaved={() => {
+            setAlertSheetBusiness(null);
+            setToast("We'll let you know.");
+            window.setTimeout(() => setToast(null), 3000);
+          }}
+        />
+      )}
+
+      {toast && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: 'fixed',
+            bottom: 'calc(env(safe-area-inset-bottom) + 92px)',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            zIndex: 200,
+            padding: '12px 22px',
+            borderRadius: 999,
+            background: 'rgba(20,20,22,0.92)',
+            backdropFilter: 'blur(20px) saturate(180%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(180%)',
+            border: '0.5px solid rgba(255,255,255,0.12)',
+            color: 'rgba(255,255,255,0.95)',
+            fontSize: 14,
+            fontWeight: 500,
+            boxShadow: '0 18px 48px rgba(0,0,0,0.42)',
+            animation: 'ob-toast-pop 240ms cubic-bezier(0.2, 0.9, 0.3, 1) both',
+          }}
+        >
+          {toast}
+        </div>
+      )}
+
+      <style jsx>{`
+        @keyframes ob-toast-pop {
+          0% { opacity: 0; transform: translate(-50%, 12px); }
+          100% { opacity: 1; transform: translate(-50%, 0); }
+        }
+      `}</style>
     </PullToRefresh>
   );
 }
