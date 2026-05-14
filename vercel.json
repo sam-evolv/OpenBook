@@ -1,9 +1,6 @@
 {
   "framework": "nextjs",
   "regions": ["dub1"],
-  "crons": [
-    { "path": "/api/cron/post-visit-recap", "schedule": "*/15 * * * *" }
-  ],
   "headers": [
     {
       "source": "/(.*)",

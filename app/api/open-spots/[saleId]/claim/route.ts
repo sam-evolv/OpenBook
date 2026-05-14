@@ -127,16 +127,17 @@ export async function POST(
       });
     }
 
-    // Auto-pin the business so a return visit lands at it. RPC returns
-    // only the booking id, so we read business_id off the new booking
-    // row. Best-effort — wrapped in try/catch and isolated from the
-    // success response. A network blip on this lookup, or a Supabase
+    // Auto-pin the business so a return visit lands at it, and queue the
+    // post-visit recap. RPC returns only the booking id, so we read
+    // business_id + ends_at off the new booking row in one go. Both side
+    // effects are best-effort — wrapped in try/catch and isolated from
+    // the success response. A network blip on this lookup, or a Supabase
     // chain that doesn't accept the call signature in tests, must not
     // turn a successful claim into a 500.
     try {
       const { data: bookingRow } = await sb
         .from('bookings')
-        .select('business_id')
+        .select('business_id, ends_at')
         .eq('id', bookingId)
         .maybeSingle();
       if (bookingRow?.business_id) {
@@ -145,8 +146,18 @@ export async function POST(
           businessId: bookingRow.business_id as string,
         });
       }
+      if (bookingRow?.ends_at) {
+        const recapAt = new Date(
+          new Date(bookingRow.ends_at as string).getTime() + 3 * 60 * 60 * 1000,
+        );
+        await sb.from('pending_reminders').insert({
+          booking_id: bookingId,
+          kind: 'recap_3h',
+          scheduled_for: recapAt.toISOString(),
+        });
+      }
     } catch (err) {
-      console.warn('[open-spots.claim] auto-pin lookup failed (claim continues):', err);
+      console.warn('[open-spots.claim] post-claim side effects failed (claim continues):', err);
     }
 
     return NextResponse.json({ booking_id: bookingId }, { status: 200 });

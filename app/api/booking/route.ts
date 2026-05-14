@@ -145,6 +145,25 @@ export async function POST(req: NextRequest) {
     // Never throws — booking is the critical path; the pin is best-effort.
     await autoPinAfterBooking(sb, { customerId, businessId });
 
+    // Queue the post-visit recap. The pg_cron drain (run_drain) leases
+    // and dispatches this row to /api/internal/send-recap once
+    // scheduled_for has elapsed and we're outside Dublin quiet hours.
+    // Best-effort — the booking is already in the DB, a queue insert
+    // failure must not propagate to the user.
+    try {
+      const recapAt = new Date(end.getTime() + 3 * 60 * 60 * 1000);
+      await sb.from('pending_reminders').insert({
+        booking_id: booking.id,
+        kind: 'recap_3h',
+        scheduled_for: recapAt.toISOString(),
+      });
+    } catch (err) {
+      console.error('[booking] recap enqueue failed:', {
+        bookingId: booking.id,
+        err,
+      });
+    }
+
     // Cash/free path: booking is already confirmed, fire the customer +
     // business emails. Paid path bookings (status='awaiting_payment') are
     // owned by the Stripe webhook — it sends emails when the session
