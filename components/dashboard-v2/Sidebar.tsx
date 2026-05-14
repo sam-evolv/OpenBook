@@ -18,6 +18,7 @@ import {
   MonitorSmartphone,
   BadgePercent,
   UserRound,
+  Globe,
   type LucideIcon,
 } from 'lucide-react';
 import { useTheme } from './ThemeProvider';
@@ -46,6 +47,7 @@ const navItems: NavItem[] = [
   { id: 'finance', label: 'Finance', href: '/dashboard/finance', icon: Wallet },
   { id: 'team', label: 'Team', href: '/dashboard/team', icon: UserRound },
   { id: 'hours', label: 'Hours', href: '/dashboard/hours', icon: Clock },
+  { id: 'website', label: 'Website', href: '/dashboard/website', icon: Globe },
   { id: 'settings', label: 'Settings', href: '/dashboard/settings', icon: Settings },
 ];
 

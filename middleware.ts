@@ -28,6 +28,20 @@ const DASHBOARD_HOST = 'dash.openbook.ie';
 const MCP_HOST = 'mcp.openbook.ie';
 const COOKIE_DOMAIN = '.openbook.ie';
 
+/* Subdomain labels that are reserved for OpenBook infrastructure and
+   therefore are NOT business slugs. Any other label under
+   .openbook.ie gets rewritten to the marketing site. */
+const RESERVED_SUBDOMAINS = new Set([
+  'app',
+  'dash',
+  'www',
+  'api',
+  'mcp',
+  'openbook',
+  'open-book',
+  'localhost',
+]);
+
 // mcp.openbook.ie/anything → /api/mcp
 // any-other-host/anything → unchanged
 
@@ -50,6 +64,24 @@ export async function middleware(req: NextRequest) {
     }
     url.pathname = '/api/mcp';
     return NextResponse.rewrite(url);
+  }
+
+  /* Marketing subdomain: [slug].openbook.ie → /sites/[slug]/*. Done
+     before the Supabase cookie refresh so anonymous visitors to a
+     business website never trigger a session lookup, and so the
+     rewrite carries no auth-affecting side effects. The route
+     itself reads the session when it needs to (e.g. ?preview=true
+     for the owner). The check intentionally matches only real
+     openbook.ie subdomains — Vercel preview hosts
+     (open-book-*.vercel.app) fail the .openbook.ie suffix and fall
+     through to the existing app/dash logic. */
+  if (host.endsWith('.openbook.ie')) {
+    const subdomain = host.split('.')[0]!;
+    if (!RESERVED_SUBDOMAINS.has(subdomain)) {
+      const rest = pathname === '/' ? '' : pathname;
+      url.pathname = `/sites/${subdomain}${rest}`;
+      return NextResponse.rewrite(url);
+    }
   }
 
   let response = NextResponse.next({ request: { headers: req.headers } });
