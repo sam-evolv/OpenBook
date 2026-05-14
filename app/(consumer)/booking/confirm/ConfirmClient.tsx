@@ -1,8 +1,9 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Calendar, Loader2, Share2 } from 'lucide-react';
+import { Calendar, Loader2, RefreshCcw, Share2 } from 'lucide-react';
 import { ShareableConfirmationCard } from '@/components/consumer/ShareableConfirmationCard';
 import { BookingShareModal } from '@/components/consumer/BookingShareModal';
 import { buildBookingIcs, downloadIcs } from '@/lib/calendar';
@@ -287,6 +288,31 @@ export function ConfirmClient({
           last
         />
       </div>
+
+      <Link
+        href={`/booking/${booking.serviceId}?business=${booking.businessSlug}`}
+        prefetch={false}
+        style={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 8,
+          marginTop: -8,
+          padding: '10px 18px',
+          borderRadius: 999,
+          border: '0.5px solid rgba(255,255,255,0.10)',
+          background: 'transparent',
+          color: 'rgba(255,255,255,0.78)',
+          fontSize: 13,
+          fontWeight: 500,
+          letterSpacing: '-0.005em',
+          textDecoration: 'none',
+          WebkitTapHighlightColor: 'transparent',
+        }}
+      >
+        <RefreshCcw size={14} strokeWidth={2.2} />
+        <span>Book again</span>
+      </Link>
 
       <BookingShareModal
         open={shareOpen}

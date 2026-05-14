@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, Check } from 'lucide-react';
+import { Loader2, Check, Clock } from 'lucide-react';
 import { addDays, dayLabel, friendlyDate, timeLabel } from '@/lib/time';
 import { openCheckout } from '@/lib/native-browser';
 
@@ -284,20 +284,22 @@ export function SlotPicker({
         )}
       </div>
 
-      {/* Sticky confirm */}
+      {/* Sticky confirm — blurred backdrop so slots scroll cleanly behind it. */}
       <div
         className="pointer-events-none fixed left-0 right-0 z-40 px-2 pt-10"
         style={{ bottom: 'calc(138px + env(safe-area-inset-bottom))' }}
       >
         <div
           aria-hidden
-          className="absolute inset-x-0 bottom-0 top-0"
+          className="absolute inset-x-0 bottom-0 top-0 backdrop-blur-2xl"
           style={{
             background:
-              'linear-gradient(180deg, transparent 0%, rgba(2,2,2,0.86) 40%, rgba(2,2,2,0.98) 100%)',
+              'linear-gradient(180deg, rgba(2,2,2,0) 0%, rgba(2,2,2,0.78) 38%, rgba(2,2,2,0.96) 100%)',
+            WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+            backdropFilter: 'blur(20px) saturate(160%)',
           }}
         />
-        <div className="pointer-events-auto mx-auto max-w-[432px]">
+        <div className="pointer-events-auto mx-auto max-w-[432px] relative">
           {error && (
             <p className="mb-2 text-center text-[12px] text-red-400">{error}</p>
           )}
@@ -319,12 +321,15 @@ export function SlotPicker({
           >
             {submitting ? (
               <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
+            ) : selectedSlot ? (
               <>
                 <Check className="w-5 h-5" strokeWidth={2.5} />
-                {selectedSlot
-                  ? `Confirm for ${timeLabel(new Date(selectedSlot))}`
-                  : 'Select a time'}
+                {`Confirm for ${timeLabel(new Date(selectedSlot))}`}
+              </>
+            ) : (
+              <>
+                <Clock className="w-5 h-5" strokeWidth={2.4} />
+                Select a time
               </>
             )}
           </button>

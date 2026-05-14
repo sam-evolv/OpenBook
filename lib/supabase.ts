@@ -92,6 +92,16 @@ export function formatPrice(cents: number): string {
   return `€${euros.toFixed(euros % 1 === 0 ? 0 : 2)}`;
 }
 
+/**
+ * Service / booking price label. Renders "Free" when the price is exactly
+ * zero so we never show "€0" anywhere a customer reads a price. Use this
+ * (not `formatPrice`) anywhere a service or booking total is shown.
+ */
+export function formatServicePrice(cents: number): string {
+  if (cents === 0) return 'Free';
+  return formatPrice(cents);
+}
+
 export function formatDuration(minutes: number): string {
   if (minutes < 60) return `${minutes} min`;
   const h = Math.floor(minutes / 60);

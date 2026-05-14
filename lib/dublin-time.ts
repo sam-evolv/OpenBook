@@ -127,11 +127,11 @@ import { formatInTimeZone } from 'date-fns-tz';
 import { enIE } from 'date-fns/locale';
 
 /**
- * Confirmation-card hero label, e.g. "Friday, 16 May · 7:30 PM".
+ * Confirmation-card hero label, e.g. "Friday, 16 May · 17:00".
  * Uses date-fns-tz so the formatting is identical on the Vercel host
  * (UTC) and any developer laptop, and on the share-image route which
  * runs in the same nodejs runtime as everything else.
  */
 export function formatConfirmationDateTimeDublin(d: Date): string {
-  return formatInTimeZone(d, DUBLIN, "EEEE, d MMMM '·' h:mm a", { locale: enIE });
+  return formatInTimeZone(d, DUBLIN, "EEEE, d MMMM '·' HH:mm", { locale: enIE });
 }

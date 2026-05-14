@@ -42,6 +42,11 @@
   /* Motion curves — Apple's standard is a custom spring */
   --ease-apple: cubic-bezier(0.32, 0.72, 0, 1);
   --ease-apple-bounce: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /* Consumer dock — height of the floating BottomTabBar plus safe-area
+     inset plus a small breathing gap. Pages that scroll under the dock
+     pad their bottom by var(--dock-height) so the last row clears it. */
+  --dock-height: calc(160px + env(safe-area-inset-bottom));
 }
 
 /* Floor on html only so body stays transparent — fixed/-z wallpapers
@@ -145,6 +150,12 @@ html {
   .pb-safe { padding-bottom: env(safe-area-inset-bottom, 0px); }
   .no-scrollbar::-webkit-scrollbar { display: none; }
   .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+  /* Floating consumer dock (BottomTabBar) — its visual height is ~108px tile
+     + ~14px label + ~24px outer padding ≈ 146px. Pages that scroll under
+     the dock add `.with-dock` to their inner column so their last row
+     clears the dock instead of being covered by it. */
+  .with-dock { padding-bottom: var(--dock-height); }
 
   .sidebar-scroll { scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.08) transparent; }
   .sidebar-scroll::-webkit-scrollbar { width: 6px; }

@@ -1,9 +1,14 @@
+import { Suspense } from 'react';
 import { cookies } from 'next/headers';
 import { supabaseAdmin } from '@/lib/supabase';
 import { BottomTabBar } from '@/components/consumer/BottomTabBar';
 import { HomeWallpaper } from '@/components/consumer/HomeWallpaper';
-import { HomeTileGrid } from '@/components/consumer/HomeTileGrid';
-import { fetchHomePins, type HomePinWithBusiness } from '@/lib/home-pins';
+import { HomeSystemTilesRow } from '@/components/consumer/HomeSystemTilesRow';
+import {
+  HomePinnedTiles,
+  HomePinnedTilesSkeleton,
+} from '@/components/consumer/HomePinnedTiles';
+import { fetchHomePins } from '@/lib/home-pins';
 import {
   firstNameFrom,
   formatGreeting,
@@ -13,13 +18,6 @@ import {
 
 export const dynamic = 'force-dynamic';
 export const revalidate = 0;
-
-async function getPins(): Promise<HomePinWithBusiness[]> {
-  const customerId = (await cookies()).get('ob_customer_id')?.value;
-  if (!customerId) return [];
-  const sb = supabaseAdmin();
-  return fetchHomePins(sb, customerId);
-}
 
 async function getCustomerFirstName(): Promise<string | null> {
   const customerId = (await cookies()).get('ob_customer_id')?.value;
@@ -33,11 +31,18 @@ async function getCustomerFirstName(): Promise<string | null> {
   return firstNameFrom(data?.full_name as string | null | undefined);
 }
 
+async function PinnedTilesSection() {
+  const customerId = (await cookies()).get('ob_customer_id')?.value;
+  if (!customerId) {
+    return <HomePinnedTiles pins={[]} />;
+  }
+  const sb = supabaseAdmin();
+  const pins = await fetchHomePins(sb, customerId);
+  return <HomePinnedTiles pins={pins} />;
+}
+
 export default async function HomePage() {
-  const [pins, firstName] = await Promise.all([
-    getPins(),
-    getCustomerFirstName(),
-  ]);
+  const firstName = await getCustomerFirstName();
   const greeting = formatGreeting(
     getGreetingBucket(getDublinHour(new Date())),
     firstName,
@@ -53,8 +58,8 @@ export default async function HomePage() {
       {/* iPhone-shaped frame. The whole consumer surface is capped at
           max-w-md (~448 px, just wider than an iPhone Pro Max) and centred,
           so on desktop the page reads as an iPhone home screen. The inner
-          column is a flex layout that fills 100dvh: greeting → grid
-          (anchored top) → empty space, with BottomTabBar fixed outside. */}
+          column is a flex layout that fills 100dvh: greeting → system tiles
+          → pinned tiles (suspended), with BottomTabBar fixed outside. */}
       <div className="relative mx-auto flex h-full w-full max-w-md flex-col">
         <header className="mx-auto w-[336px] max-w-[calc(100%-40px)] px-0 pt-7 pb-1 mb-8 animate-reveal-up">
           <h1
@@ -66,10 +71,13 @@ export default async function HomePage() {
         </header>
 
         <section
-          className="flex flex-1 flex-col items-center justify-start px-5 pb-36 animate-reveal-up"
-          style={{ animationDelay: '60ms' }}
+          className="flex flex-1 flex-col items-center justify-start px-5 with-dock animate-reveal-up"
+          style={{ animationDelay: '60ms', gap: 28 }}
         >
-          <HomeTileGrid pins={pins} />
+          <HomeSystemTilesRow />
+          <Suspense fallback={<HomePinnedTilesSkeleton />}>
+            <PinnedTilesSection />
+          </Suspense>
         </section>
       </div>
 

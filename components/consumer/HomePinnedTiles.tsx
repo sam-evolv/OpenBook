@@ -1,16 +1,13 @@
 'use client';
 
 /**
- * HomeTileGrid — the iPhone springboard for the consumer home. Renders
- * the four fixed system tiles (Discover / Wallet / Me / Ask AI) on the
- * top row, then the customer's pinned businesses below, ordered by
- * pinned_at DESC.
+ * HomePinnedTiles — interactive pinned-businesses portion of the home
+ * springboard. Split out of HomeTileGrid so the static system tiles
+ * (Discover / Wallet / Me / Ask AI) can render synchronously while the
+ * pinned-business grid streams in via Suspense.
  *
- * Long-press a pinned business → TilePeek opens with the management
- * menu (View / Book / Notifications toggle / Share / Remove).
- *
- * Empty state (zero pins) shows a gentle prompt linking to Explore;
- * the system tiles carry the screen until the customer adds a pin.
+ * Long-press a pin → TilePeek opens with the management menu (View /
+ * Book / Notifications toggle / Share / Remove).
  */
 
 import { useRouter } from 'next/navigation';
@@ -28,7 +25,6 @@ import {
 import Link from 'next/link';
 import { Tile } from '@/components/Tile';
 import { TilePeek, type TilePeekAction } from '@/components/TilePeek';
-import { SystemAppIcon } from '@/components/consumer/SystemAppIcon';
 import { AlertSheet } from '@/components/consumer/AlertSheet';
 import { PullToRefresh } from '@/components/PullToRefresh';
 import { haptics } from '@/lib/haptics';
@@ -38,7 +34,7 @@ const TILE_SIZE = 72;
 const COLUMN_GAP = 16;
 const ROW_GAP = 28;
 
-export function HomeTileGrid({ pins: initialPins }: { pins: HomePinWithBusiness[] }) {
+export function HomePinnedTiles({ pins: initialPins }: { pins: HomePinWithBusiness[] }) {
   const router = useRouter();
   const [pins, setPins] = useState<HomePinWithBusiness[]>(initialPins);
   const [peekState, setPeekState] = useState<{
@@ -83,7 +79,6 @@ export function HomeTileGrid({ pins: initialPins }: { pins: HomePinWithBusiness[
       if (!res.ok) throw new Error('patch failed');
     } catch (err) {
       console.error('[home-pins PATCH] failed', err);
-      // Revert
       setPins((curr) =>
         curr.map((p) =>
           p.business_id === businessId
@@ -114,9 +109,7 @@ export function HomeTileGrid({ pins: initialPins }: { pins: HomePinWithBusiness[
   function shareBusiness(slug: string, name: string) {
     const url = `https://openbook.ie/${slug}`;
     if (typeof navigator !== 'undefined' && navigator.share) {
-      navigator.share({ url, title: name }).catch(() => {
-        // User dismissed the share sheet — not an error.
-      });
+      navigator.share({ url, title: name }).catch(() => {});
     } else if (typeof navigator !== 'undefined' && navigator.clipboard) {
       navigator.clipboard.writeText(url).catch(() => undefined);
       haptics.tap();
@@ -136,8 +129,6 @@ export function HomeTileGrid({ pins: initialPins }: { pins: HomePinWithBusiness[
         kind: 'action',
         label: 'Book a Service',
         icon: <CalendarPlus className="h-[18px] w-[18px]" strokeWidth={1.8} />,
-        // MVP: route to the business page. Bottom-sheet quick-book is
-        // deferred to a follow-up PR.
         onSelect: () => navigate(`/business/${business.slug}`),
       },
       {
@@ -170,52 +161,41 @@ export function HomeTileGrid({ pins: initialPins }: { pins: HomePinWithBusiness[
     ];
   }
 
-  const systemTiles: { kind: 'discover' | 'wallet' | 'me' | 'assistant'; key: string }[] = [
-    { kind: 'discover', key: 'discover' },
-    { kind: 'wallet', key: 'wallet' },
-    { kind: 'me', key: 'me' },
-    { kind: 'assistant', key: 'assistant' },
-  ];
-
   return (
     <PullToRefresh onRefresh={refresh}>
-      <div
-        className="mx-auto"
-        style={{
-          display: 'grid',
-          gridTemplateColumns: `repeat(4, ${TILE_SIZE}px)`,
-          columnGap: COLUMN_GAP,
-          rowGap: ROW_GAP,
-          width: 'max-content',
-          maxWidth: '100%',
-          justifyContent: 'center',
-        }}
-      >
-        {systemTiles.map(({ kind, key }) => (
-          <GridSlot key={key}>
-            <SystemAppIcon kind={kind} size={TILE_SIZE} />
-          </GridSlot>
-        ))}
-
-        {pins.map((pin, i) => {
-          const { business } = pin;
-          return (
-            <GridSlot key={pin.business_id}>
-              <Tile
-                name={business.name}
-                colour={business.primary_colour}
-                logoUrl={business.processed_icon_url ?? business.logo_url ?? null}
-                logoIsProcessedIcon={Boolean(business.processed_icon_url)}
-                size={TILE_SIZE}
-                animationDelay={(i + 4) * 30}
-                viewTransitionName={`tile-${business.slug}`}
-                onTap={(rect) => navigate(`/business/${business.slug}`, rect)}
-                onLongPress={(rect) => setPeekState({ pin, rect })}
-              />
-            </GridSlot>
-          );
-        })}
-      </div>
+      {pins.length > 0 && (
+        <div
+          className="mx-auto"
+          style={{
+            display: 'grid',
+            gridTemplateColumns: `repeat(4, ${TILE_SIZE}px)`,
+            columnGap: COLUMN_GAP,
+            rowGap: ROW_GAP,
+            width: 'max-content',
+            maxWidth: '100%',
+            justifyContent: 'center',
+          }}
+        >
+          {pins.map((pin, i) => {
+            const { business } = pin;
+            return (
+              <GridSlot key={pin.business_id}>
+                <Tile
+                  name={business.name}
+                  colour={business.primary_colour}
+                  logoUrl={business.processed_icon_url ?? business.logo_url ?? null}
+                  logoIsProcessedIcon={Boolean(business.processed_icon_url)}
+                  size={TILE_SIZE}
+                  animationDelay={(i + 4) * 30}
+                  viewTransitionName={`tile-${business.slug}`}
+                  onTap={(rect) => navigate(`/business/${business.slug}`, rect)}
+                  onLongPress={(rect) => setPeekState({ pin, rect })}
+                />
+              </GridSlot>
+            );
+          })}
+        </div>
+      )}
 
       {pins.length === 0 && <EmptyState />}
 
@@ -291,7 +271,7 @@ function GridSlot({ children }: { children: ReactNode }) {
 
 function EmptyState() {
   return (
-    <div className="mx-auto mt-10 max-w-[300px] rounded-[22px] p-4 text-center mat-glass-thin animate-reveal-up">
+    <div className="mx-auto mt-2 max-w-[300px] rounded-[22px] p-4 text-center mat-glass-thin animate-reveal-up">
       <p className="text-[14px] font-semibold text-white/90">
         Your home screen is yours to curate.
       </p>
@@ -305,6 +285,65 @@ function EmptyState() {
         Find a place you love
         <ArrowRight className="h-[14px] w-[14px]" strokeWidth={2.2} aria-hidden />
       </Link>
+    </div>
+  );
+}
+
+export function HomePinnedTilesSkeleton() {
+  return (
+    <div
+      aria-hidden
+      className="mx-auto"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(4, ${TILE_SIZE}px)`,
+        columnGap: COLUMN_GAP,
+        rowGap: ROW_GAP,
+        width: 'max-content',
+        maxWidth: '100%',
+        justifyContent: 'center',
+      }}
+    >
+      {[0, 1, 2, 3].map((i) => (
+        <div
+          key={i}
+          style={{
+            width: TILE_SIZE,
+            height: TILE_SIZE + 28,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 6,
+          }}
+        >
+          <div
+            style={{
+              width: TILE_SIZE,
+              height: TILE_SIZE,
+              borderRadius: Math.round(TILE_SIZE * 0.25),
+              background:
+                'linear-gradient(180deg, rgba(255,255,255,0.06) 0%, rgba(255,255,255,0.025) 100%)',
+              border: '0.5px solid rgba(255,255,255,0.06)',
+              animation: 'ob-pulse 1.4s ease-in-out infinite',
+            }}
+          />
+          <div
+            style={{
+              width: 36,
+              height: 8,
+              borderRadius: 4,
+              background: 'rgba(255,255,255,0.06)',
+              animation: 'ob-pulse 1.4s ease-in-out infinite',
+            }}
+          />
+        </div>
+      ))}
+      <style>{`
+        @keyframes ob-pulse {
+          0%, 100% { opacity: 0.8; }
+          50% { opacity: 0.4; }
+        }
+      `}</style>
     </div>
   );
 }

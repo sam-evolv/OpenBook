@@ -2,9 +2,10 @@ import { cookies } from 'next/headers';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { ChevronLeft, Calendar, Clock, MapPin, User, Receipt, CheckCircle2, XCircle } from 'lucide-react';
-import { supabaseAdmin, formatPrice, formatDuration } from '@/lib/supabase';
+import { supabaseAdmin, formatServicePrice, formatDuration } from '@/lib/supabase';
 import { createSupabaseServerClient } from '@/lib/supabase-server';
-import { friendlyDate, timeLabel } from '@/lib/time';
+import { friendlyDate } from '@/lib/time';
+import { formatBookingTime } from '@/lib/format-time';
 import { getTileColour } from '@/lib/tile-palette';
 import { BookingDetailActions } from './BookingDetailActions';
 
@@ -178,7 +179,7 @@ export default async function BookingDetailPage({ params }: Props) {
         </div>
       </header>
 
-      <div className="px-5 pb-[calc(48px+env(safe-area-inset-bottom))] pt-4 flex flex-col gap-5">
+      <div className="px-5 with-dock pt-4 flex flex-col gap-5">
         {/* Hero status card */}
         <section
           className="rounded-3xl p-5 backdrop-blur-2xl"
@@ -204,7 +205,7 @@ export default async function BookingDetailPage({ params }: Props) {
           </div>
 
           <h1 className="mt-3 font-serif text-[28px] font-semibold leading-tight tracking-[-0.01em]">
-            {friendlyDate(start)} at {timeLabel(start)}
+            {friendlyDate(start)} at {formatBookingTime(start)}
           </h1>
           <p className="mt-1 text-[13px] text-white/60">
             {formatDuration(booking.services.duration_minutes)}
@@ -228,7 +229,7 @@ export default async function BookingDetailPage({ params }: Props) {
           <DetailRow
             icon={<Receipt className="h-4 w-4" style={{ color: colour }} strokeWidth={2.2} />}
             label="Price"
-            value={booking.price_cents === 0 ? 'Free' : formatPrice(booking.price_cents)}
+            value={formatServicePrice(booking.price_cents)}
           />
           {address && (
             <DetailRow

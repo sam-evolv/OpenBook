@@ -5,13 +5,14 @@
  * correctly regardless of server timezone (Vercel functions run UTC).
  * BST/IST shifts are handled by Intl.DateTimeFormat automatically.
  *
- *   05:00 – 11:59 Dublin → Good Morning
- *   12:00 – 17:59 Dublin → Good Afternoon
- *   18:00 – 21:59 Dublin → Good Evening
+ *   05:00 – 11:59 Dublin → Good morning
+ *   12:00 – 17:59 Dublin → Good afternoon
+ *   18:00 – 21:59 Dublin → Good evening
  *   22:00 – 04:59 Dublin → Hello
  *
- * "Hello" is used in place of "Good Night" so the late-night/early-morning
- * bucket doesn't read like a goodbye.
+ * "Hello" is used in place of "Good night" so the late-night/early-morning
+ * bucket doesn't read like a goodbye. Phrasing is sentence case to match
+ * the dashboard greeting and the rest of the consumer copy.
  */
 
 export type GreetingBucket = 'morning' | 'afternoon' | 'evening' | 'hello';
@@ -37,12 +38,12 @@ export function formatGreeting(
   firstName: string | null,
 ): string {
   const phrase = ({
-    morning: 'Good Morning',
-    afternoon: 'Good Afternoon',
-    evening: 'Good Evening',
+    morning: 'Good morning',
+    afternoon: 'Good afternoon',
+    evening: 'Good evening',
     hello: 'Hello',
   } as const)[bucket];
-  return firstName ? `${phrase}, ${firstName}.` : `${phrase}.`;
+  return firstName ? `${phrase}, ${firstName}` : `${phrase}, Guest`;
 }
 
 /**

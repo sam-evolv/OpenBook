@@ -4,8 +4,9 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Calendar, ArrowRight } from 'lucide-react';
-import { type BookingWithDetails, formatPrice } from '@/lib/supabase';
-import { friendlyDate, timeLabel } from '@/lib/time';
+import { type BookingWithDetails, formatServicePrice } from '@/lib/supabase';
+import { friendlyDate } from '@/lib/time';
+import { formatBookingDayTime } from '@/lib/format-time';
 import { getTileColour } from '@/lib/tile-palette';
 import { EmptyState, CalendarEmptyIcon } from '@/components/EmptyState';
 import { BusinessIcon } from '@/components/consumer/BusinessIcon';
@@ -163,7 +164,7 @@ function BookingCard({ booking }: { booking: BookingWithDetails }) {
             strokeWidth={2.2}
           />
           <span className={isPast ? 'text-white/45' : 'text-white/75'}>
-            {friendlyDate(start)} · {timeLabel(start)}
+            {formatBookingDayTime(start)}
           </span>
         </div>
       </div>
@@ -173,7 +174,7 @@ function BookingCard({ booking }: { booking: BookingWithDetails }) {
           className="text-[13px] font-semibold"
           style={{ color: colour }}
         >
-          {formatPrice(booking.price_cents)}
+          {formatServicePrice(booking.price_cents)}
         </span>
         <ArrowRight className="w-4 h-4 text-white/30" strokeWidth={2} />
       </div>
