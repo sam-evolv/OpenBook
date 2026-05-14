@@ -141,6 +141,12 @@ export async function generateMetadata({
   const titleParts = [business.name, business.category, business.city].filter(Boolean);
   const description = stripMarkdown(business.about_long).slice(0, 160) || undefined;
   const ogImage = business.hero_image_url ?? undefined;
+
+  // Marketing subdomains belong to the business — its own logo (or a
+  // coloured-initials fallback) replaces OpenBook's OB monogram in the
+  // browser tab. The fallback is served by /api/sites/[slug]/favicon.
+  const faviconUrl = business.logo_url ?? `/api/sites/${slug}/favicon`;
+
   return {
     title: titleParts.join(' — '),
     description,
@@ -155,6 +161,11 @@ export async function generateMetadata({
       title: titleParts.join(' — '),
       description,
       images: ogImage ? [ogImage] : undefined,
+    },
+    icons: {
+      icon: [{ url: faviconUrl, type: 'image/png' }],
+      apple: faviconUrl,
+      shortcut: faviconUrl,
     },
   };
 }
