@@ -1,10 +1,12 @@
 'use client';
 
-import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
-import { BookingConfirmation } from '@/components/BookingConfirmation';
+import { Calendar, Loader2, Share2 } from 'lucide-react';
+import { ShareableConfirmationCard } from '@/components/consumer/ShareableConfirmationCard';
+import { BookingShareModal } from '@/components/consumer/BookingShareModal';
+import { buildBookingIcs, downloadIcs } from '@/lib/calendar';
+import { haptics } from '@/lib/haptics';
 
 interface BookingView {
   id: string;
@@ -12,15 +14,19 @@ interface BookingView {
   serviceId: string;
   businessSlug: string;
   businessName: string;
-  businessCoverUrl: string | null;
+  businessCategory: string | null;
+  businessLogoUrl: string | null;
+  businessProcessedIconUrl: string | null;
+  businessCity: string | null;
   serviceName: string;
   startIso: string;
   endIso: string;
   priceLabel: string;
   durationLabel: string;
-  dateLabel: string;
-  timeLabel: string;
-  tileColour: string;
+  /** "Friday, 16 May · 7:30 PM" */
+  dateTimeLabel: string;
+  /** Hex like '#D4AF37'. */
+  primaryColourHex: string;
 }
 
 const POLL_INTERVAL_MS = 2000;
@@ -35,6 +41,25 @@ export function ConfirmClient({
 }) {
   const router = useRouter();
   const [stuck, setStuck] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
+  const [shareUrl, setShareUrl] = useState('https://app.openbook.ie');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setShareUrl(window.location.origin);
+    }
+  }, []);
+
+  // Mirror the success haptic the previous BookingConfirmation
+  // wrapper fired — we removed that wrapper but want to keep the
+  // tactile cue at the same moment in the animation (after the
+  // card fades in).
+  const isSuccess = booking.status === 'confirmed' || booking.status === 'completed';
+  useEffect(() => {
+    if (!isSuccess) return;
+    const timer = window.setTimeout(() => haptics.success(), 320);
+    return () => window.clearTimeout(timer);
+  }, [isSuccess]);
 
   // Poll while the booking is awaiting payment so the success view
   // appears as soon as the webhook flips status to 'confirmed'.
@@ -58,16 +83,17 @@ export function ConfirmClient({
   }, [booking.status, stuck, router]);
 
   function addToCalendar() {
-    const ics = buildIcs(booking);
-    const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `openbook-${booking.id.slice(0, 8)}.ics`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    haptics.tap();
+    const ics = buildBookingIcs({
+      id: booking.id,
+      startsAt: booking.startIso,
+      endsAt: booking.endIso,
+      summary: `${booking.serviceName} — ${booking.businessName}`,
+      description: `Booking with ${booking.businessName} via OpenBook.`,
+      location: booking.businessCity ?? undefined,
+      url: `${shareUrl}/business/${booking.businessSlug}`,
+    });
+    downloadIcs(`openbook-${booking.id.slice(0, 8)}.ics`, ics);
   }
 
   // Customer hit "back" from Stripe Checkout. The booking row will
@@ -139,93 +165,146 @@ export function ConfirmClient({
   }
 
   // status === 'confirmed' or 'completed' — celebratory success view.
+  // The card itself is the screenshot zone; CTAs and receipt sit
+  // outside that zone, below the natural iPhone fold.
   return (
-    <BookingConfirmation
-      title="You're booked in"
-      subtitle={`${booking.businessName} · ${booking.dateLabel} at ${booking.timeLabel}`}
-      actions={[
-        { label: 'Add to calendar', onClick: addToCalendar },
-        {
-          label: 'View your bookings',
-          primary: true,
-          onClick: () => router.push('/consumer-bookings'),
-        },
-      ]}
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        padding: '8px 16px 120px',
+        gap: 24,
+        maxWidth: 460,
+        margin: '0 auto',
+      }}
     >
       <div
+        data-screenshot-zone
         style={{
-          borderRadius: 18,
-          border: '0.5px solid rgba(255,255,255,0.08)',
-          background: 'rgba(255,255,255,0.03)',
-          overflow: 'hidden',
+          width: '100%',
+          opacity: 0,
+          animation: 'ob-card-fade 520ms cubic-bezier(0.2, 0.9, 0.3, 1) 80ms forwards',
         }}
       >
-        <div
+        <ShareableConfirmationCard
+          businessName={booking.businessName}
+          businessSlug={booking.businessSlug}
+          businessCategory={booking.businessCategory}
+          businessLogoUrl={booking.businessLogoUrl}
+          businessProcessedIconUrl={booking.businessProcessedIconUrl}
+          primaryColourHex={booking.primaryColourHex}
+          serviceName={booking.serviceName}
+          dateTimeLabel={booking.dateTimeLabel}
+        />
+      </div>
+
+      <div
+        style={{
+          width: '100%',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
+          gap: 10,
+          opacity: 0,
+          animation: 'ob-card-fade 420ms cubic-bezier(0.2, 0.9, 0.3, 1) 320ms forwards',
+        }}
+      >
+        <button
+          type="button"
+          onClick={addToCalendar}
           style={{
             display: 'flex',
             alignItems: 'center',
-            gap: 12,
-            padding: 16,
-            borderBottom: '0.5px solid rgba(255,255,255,0.06)',
+            justifyContent: 'center',
+            gap: 8,
+            padding: '16px 18px',
+            borderRadius: 14,
+            border: '0.5px solid rgba(255,255,255,0.14)',
+            background: 'rgba(255,255,255,0.04)',
+            color: 'rgba(255,255,255,0.92)',
+            fontSize: 15,
+            fontWeight: 500,
+            letterSpacing: '-0.01em',
+            cursor: 'pointer',
+            WebkitTapHighlightColor: 'transparent',
           }}
         >
-          <div
-            style={{
-              position: 'relative',
-              width: 44,
-              height: 44,
-              borderRadius: 12,
-              overflow: 'hidden',
-              flexShrink: 0,
-              background: `linear-gradient(145deg, ${booking.tileColour} 0%, ${booking.tileColour}55 100%)`,
-            }}
-          >
-            {booking.businessCoverUrl && (
-              <Image
-                src={booking.businessCoverUrl}
-                alt={booking.businessName}
-                fill
-                sizes="44px"
-                style={{ objectFit: 'cover' }}
-              />
-            )}
-          </div>
-          <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
-            <p
-              style={{
-                margin: 0,
-                fontSize: 12,
-                color: 'rgba(255,255,255,0.55)',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {booking.businessName}
-            </p>
-            <h2
-              style={{
-                margin: 0,
-                fontSize: 15,
-                fontWeight: 600,
-                letterSpacing: '-0.01em',
-                color: 'rgba(255,255,255,0.95)',
-                whiteSpace: 'nowrap',
-                overflow: 'hidden',
-                textOverflow: 'ellipsis',
-              }}
-            >
-              {booking.serviceName}
-            </h2>
-          </div>
-        </div>
-
-        <DetailRow label="Date" value={booking.dateLabel} />
-        <DetailRow label="Time" value={booking.timeLabel} />
-        <DetailRow label="Duration" value={booking.durationLabel} />
-        <DetailRow label="Total" value={booking.priceLabel} valueColour={booking.tileColour} last />
+          <Calendar size={16} strokeWidth={2} />
+          <span>Add to Calendar</span>
+        </button>
+        <button
+          type="button"
+          onClick={() => {
+            haptics.tap();
+            setShareOpen(true);
+          }}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            padding: '16px 18px',
+            borderRadius: 14,
+            border: 'none',
+            background: '#D4AF37',
+            color: '#080808',
+            fontSize: 15,
+            fontWeight: 600,
+            letterSpacing: '-0.01em',
+            cursor: 'pointer',
+            WebkitTapHighlightColor: 'transparent',
+          }}
+        >
+          <Share2 size={16} strokeWidth={2.2} />
+          <span>Share</span>
+        </button>
       </div>
-    </BookingConfirmation>
+
+      <div
+        style={{
+          width: '100%',
+          marginTop: 8,
+          borderRadius: 18,
+          border: '0.5px solid rgba(255,255,255,0.07)',
+          background: 'rgba(255,255,255,0.02)',
+          overflow: 'hidden',
+          opacity: 0,
+          animation: 'ob-card-fade 420ms cubic-bezier(0.2, 0.9, 0.3, 1) 480ms forwards',
+        }}
+      >
+        <DetailRow label="Date & time" value={booking.dateTimeLabel} />
+        <DetailRow label="Duration" value={booking.durationLabel} />
+        {booking.businessCity && <DetailRow label="Location" value={booking.businessCity} />}
+        <DetailRow
+          label="Total"
+          value={booking.priceLabel}
+          valueColour={booking.primaryColourHex}
+        />
+        <DetailRow
+          label="Cancellation"
+          value="Free up to 24h before"
+          subdued
+          last
+        />
+      </div>
+
+      <BookingShareModal
+        open={shareOpen}
+        onClose={() => setShareOpen(false)}
+        bookingId={booking.id}
+        shareTitle={`${booking.businessName} · ${booking.dateTimeLabel}`}
+        shareText={`I'm booked in for ${booking.serviceName} at ${booking.businessName}.`}
+        shareUrl={shareUrl}
+        primaryColourHex={booking.primaryColourHex}
+      />
+
+      <style jsx global>{`
+        @keyframes ob-card-fade {
+          from { opacity: 0; transform: translateY(8px); }
+          to   { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
+    </div>
   );
 }
 
@@ -320,11 +399,13 @@ function DetailRow({
   label,
   value,
   valueColour,
+  subdued,
   last,
 }: {
   label: string;
   value: string;
   valueColour?: string;
+  subdued?: boolean;
   last?: boolean;
 }) {
   return (
@@ -341,46 +422,15 @@ function DetailRow({
       <span
         style={{
           fontSize: 13,
-          fontWeight: 600,
+          fontWeight: subdued ? 400 : 600,
           letterSpacing: '-0.01em',
-          color: valueColour ?? 'rgba(255,255,255,0.95)',
+          color:
+            valueColour ??
+            (subdued ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.95)'),
         }}
       >
         {value}
       </span>
     </div>
   );
-}
-
-function buildIcs(b: BookingView): string {
-  const dtstamp = toIcsDate(new Date());
-  const dtstart = toIcsDate(new Date(b.startIso));
-  const dtend = toIcsDate(new Date(b.endIso));
-  const uid = `${b.id}@openbook.ie`;
-  const summary = icsEscape(`${b.serviceName} — ${b.businessName}`);
-  const description = icsEscape(`Booking with ${b.businessName} via OpenBook.`);
-  return [
-    'BEGIN:VCALENDAR',
-    'VERSION:2.0',
-    'PRODID:-//OpenBook//EN',
-    'CALSCALE:GREGORIAN',
-    'METHOD:PUBLISH',
-    'BEGIN:VEVENT',
-    `UID:${uid}`,
-    `DTSTAMP:${dtstamp}`,
-    `DTSTART:${dtstart}`,
-    `DTEND:${dtend}`,
-    `SUMMARY:${summary}`,
-    `DESCRIPTION:${description}`,
-    'END:VEVENT',
-    'END:VCALENDAR',
-  ].join('\r\n');
-}
-
-function toIcsDate(d: Date): string {
-  return d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-}
-
-function icsEscape(s: string): string {
-  return s.replace(/\\/g, '\\\\').replace(/\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, '\\;');
 }

@@ -9,6 +9,9 @@ import { friendlyDate, timeLabel } from '@/lib/time';
 import { getTileColour } from '@/lib/tile-palette';
 import { EmptyState, CalendarEmptyIcon } from '@/components/EmptyState';
 import { BusinessIcon } from '@/components/consumer/BusinessIcon';
+import { RecapCard } from '@/components/consumer/RecapCard';
+
+const RECAP_WINDOW_MS = 7 * 24 * 60 * 60 * 1000;
 
 export function BookingsList({
   bookings,
@@ -38,10 +41,40 @@ export function BookingsList({
     return { upcoming: up, past: pa };
   }, [bookings, now]);
 
+  // Most recent recap-eligible booking — surfaces a single card so the
+  // section doesn't become a wall of recaps when the user is a regular.
+  const recapBooking = useMemo(() => {
+    return bookings
+      .filter((b) => {
+        if (!b.recap_sent_at) return false;
+        if (b.status === 'cancelled') return false;
+        const created = new Date(b.created_at).getTime();
+        return now - created <= RECAP_WINDOW_MS;
+      })
+      .sort(
+        (a, b) =>
+          new Date(b.recap_sent_at!).getTime() - new Date(a.recap_sent_at!).getTime(),
+      )[0];
+  }, [bookings, now]);
+
   const list = tab === 'upcoming' ? upcoming : past;
 
   return (
     <>
+      {recapBooking && tab === 'upcoming' && (
+        <RecapCard
+          bookingId={recapBooking.id}
+          serviceId={recapBooking.service_id}
+          businessName={recapBooking.businesses.name}
+          businessSlug={recapBooking.businesses.slug}
+          businessCategory={recapBooking.businesses.category ?? null}
+          businessLogoUrl={recapBooking.businesses.logo_url ?? null}
+          businessProcessedIconUrl={recapBooking.businesses.processed_icon_url ?? null}
+          primaryColourHex={getTileColour(recapBooking.businesses.primary_colour).mid}
+          serviceName={recapBooking.services.name}
+          visitedLabel={friendlyDate(new Date(recapBooking.starts_at))}
+        />
+      )}
       <div className="inline-flex p-1 rounded-full bg-white/[0.04] border border-white/[0.06]">
         {(['upcoming', 'past'] as const).map((t) => (
           <button
