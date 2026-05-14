@@ -57,6 +57,7 @@ export function MetricsGrid({ data, businessSlug }: MetricsGridProps) {
         value={data.revenueToday.toLocaleString()}
         delta={data.revenueTodayDelta ?? undefined}
         deltaLabel="vs yesterday"
+        zeroLabel="No revenue yet today"
         sparkline={data.revenueTodaySparkline}
         accent
       />
@@ -65,6 +66,7 @@ export function MetricsGrid({ data, businessSlug }: MetricsGridProps) {
         value={data.bookingsToday}
         delta={data.bookingsTodayDelta ?? undefined}
         deltaLabel="vs yesterday"
+        zeroLabel="No bookings yet today"
         sparkline={data.bookingsTodaySparkline}
       />
       <Metric
@@ -72,6 +74,7 @@ export function MetricsGrid({ data, businessSlug }: MetricsGridProps) {
         prefix="€"
         value={data.revenueThisWeek.toLocaleString()}
         delta={data.revenueThisWeekDelta ?? undefined}
+        zeroLabel="No revenue yet this week"
         sparkline={data.revenueThisWeekSparkline}
       />
       <Metric
@@ -79,6 +82,7 @@ export function MetricsGrid({ data, businessSlug }: MetricsGridProps) {
         value={data.activeCustomers}
         delta={data.activeCustomersDelta ?? undefined}
         deltaLabel="vs prior 30d"
+        zeroLabel="No active customers yet"
         sparkline={data.activeCustomersSparkline}
       />
     </div>

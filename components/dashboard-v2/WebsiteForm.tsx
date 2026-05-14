@@ -527,13 +527,18 @@ function HeroUploader({
   }
 
   async function remove() {
+    setError(null);
     setUploading(true);
     try {
       const params = new URLSearchParams({ businessId, kind: 'hero' });
-      await fetch(`/api/upload-image?${params.toString()}`, { method: 'DELETE' });
+      const res = await fetch(`/api/upload-image?${params.toString()}`, { method: 'DELETE' });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(body?.error ?? 'Failed to remove image.');
+      }
       onChange(null);
-    } catch {
-      /* silent — UI state still cleared if the user re-uploads */
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to remove image.');
     } finally {
       setUploading(false);
     }
@@ -599,7 +604,22 @@ function HeroUploader({
           {heroUrl ? 'Replace' : 'Upload'}
         </Button>
         {error && (
-          <p className="text-[11.5px] text-red-500 dark:text-red-400">{error}</p>
+          <div
+            role="alert"
+            className="flex items-center gap-2 text-[11.5px] text-red-500 dark:text-red-400"
+          >
+            <span>{error}</span>
+            <button
+              type="button"
+              onClick={() => {
+                setError(null);
+                inputRef.current?.click();
+              }}
+              className="font-semibold underline underline-offset-2 hover:no-underline"
+            >
+              Try again
+            </button>
+          </div>
         )}
       </div>
     </div>
@@ -754,7 +774,24 @@ function GalleryEditor({
         Up to {GALLERY_MAX} photos. Drag to reorder. JPG or PNG, max 5MB each.
       </p>
 
-      {error && <p className="text-[11.5px] text-red-500 dark:text-red-400">{error}</p>}
+      {error && (
+        <div
+          role="alert"
+          className="flex items-center gap-2 text-[11.5px] text-red-500 dark:text-red-400"
+        >
+          <span>{error}</span>
+          <button
+            type="button"
+            onClick={() => {
+              setError(null);
+              inputRef.current?.click();
+            }}
+            className="font-semibold underline underline-offset-2 hover:no-underline"
+          >
+            Try again
+          </button>
+        </div>
+      )}
     </div>
   );
 }
