@@ -50,6 +50,10 @@ export function WelcomeScreen() {
     setLoading(null);
   }
 
+  // Intentionally dark regardless of the theme cookie: this is the
+  // marketing-style hero shown before sign-in, and the gold gradient on
+  // pure black is the brand's signed-out look. Dashboard surfaces honour
+  // the theme cookie; this screen does not.
   return (
     <main className="relative min-h-[100dvh] overflow-hidden text-white">
       {/* Background */}

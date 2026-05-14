@@ -15,7 +15,7 @@ export const maxDuration = 30;
  *   - file (required)
  *
  * Hero: single image, overwrites previous. Landscape 16:9 (1600x900).
- * Gallery: appended to array, max 6 total. Square 1:1 (1200x1200).
+ * Gallery: appended to array, max 8 total. Square 1:1 (1200x1200).
  *
  * DELETE /api/upload-image
  *
@@ -23,7 +23,9 @@ export const maxDuration = 30;
  *   - businessId, kind, index (for gallery, 0-based)
  */
 
-const GALLERY_LIMIT = 6;
+// Must stay in sync with GALLERY_MAX in components/dashboard-v2/WebsiteForm.tsx
+// and app/(dashboard)/dashboard/website/actions.ts.
+const GALLERY_LIMIT = 8;
 const HERO_MAX_SIZE = 8 * 1024 * 1024;   // 8MB
 const GALLERY_MAX_SIZE = 5 * 1024 * 1024; // 5MB
 
