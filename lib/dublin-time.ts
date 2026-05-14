@@ -122,3 +122,16 @@ export function formatBookingTimeDublin(d: Date, now: Date = new Date()): string
   const dayLabel = formatDayLabel(d, now);
   return `${dayLabel} at ${time}`;
 }
+
+import { formatInTimeZone } from 'date-fns-tz';
+import { enIE } from 'date-fns/locale';
+
+/**
+ * Confirmation-card hero label, e.g. "Friday, 16 May · 7:30 PM".
+ * Uses date-fns-tz so the formatting is identical on the Vercel host
+ * (UTC) and any developer laptop, and on the share-image route which
+ * runs in the same nodejs runtime as everything else.
+ */
+export function formatConfirmationDateTimeDublin(d: Date): string {
+  return formatInTimeZone(d, DUBLIN, "EEEE, d MMMM '·' h:mm a", { locale: enIE });
+}

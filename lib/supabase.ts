@@ -58,6 +58,7 @@ export type Booking = {
   status: 'pending' | 'confirmed' | 'cancelled' | 'completed';
   price_cents: number;
   created_at: string;
+  recap_sent_at?: string | null;
 };
 
 export type BookingWithDetails = Booking & {
@@ -70,7 +71,9 @@ export type BookingWithDetails = Booking & {
     | 'city'
     | 'processed_icon_url'
     | 'logo_url'
-  >;
+  > & {
+    category?: string | null;
+  };
   services: Pick<Service, 'name' | 'duration_minutes' | 'price_cents'>;
 };
 

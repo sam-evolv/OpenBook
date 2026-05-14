@@ -8,6 +8,7 @@ import {
 import { ConsumerHeader } from '@/components/consumer/ConsumerHeader';
 import { BottomTabBar } from '@/components/consumer/BottomTabBar';
 import { getTileColour } from '@/lib/tile-palette';
+import { formatConfirmationDateTimeDublin } from '@/lib/dublin-time';
 import { ConfirmClient } from './ConfirmClient';
 
 export const dynamic = 'force-dynamic';
@@ -19,7 +20,7 @@ async function getBooking(id: string): Promise<BookingWithDetails | null> {
     .select(
       `
       *,
-      businesses (slug, name, primary_colour, cover_image_url, city),
+      businesses (slug, name, primary_colour, cover_image_url, city, category, processed_icon_url, logo_url),
       services (name, duration_minutes, price_cents)
     `
     )
@@ -38,19 +39,10 @@ export default async function ConfirmPage({
   const booking = await getBooking(sp.id);
   if (!booking) notFound();
 
-  const colour = getTileColour(booking.businesses.primary_colour).mid;
+  const tile = getTileColour(booking.businesses.primary_colour);
   const startAt = new Date(booking.starts_at);
   const endAt = new Date(booking.ends_at);
-  const dateLabel = startAt.toLocaleDateString('en-IE', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-  });
-  const timeLabel = startAt.toLocaleTimeString('en-IE', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: false,
-  });
+  const dateTimeLabel = formatConfirmationDateTimeDublin(startAt);
 
   return (
     <main className="relative min-h-[100dvh] text-white antialiased overflow-hidden">
@@ -59,7 +51,7 @@ export default async function ConfirmPage({
         className="fixed inset-0 -z-10"
         style={{
           background: `
-            radial-gradient(800px 500px at 50% 20%, ${colour}22 0%, transparent 55%),
+            radial-gradient(800px 500px at 50% 20%, ${tile.mid}22 0%, transparent 55%),
             linear-gradient(180deg, #060606 0%, #020202 100%)
           `,
         }}
@@ -74,15 +66,17 @@ export default async function ConfirmPage({
           serviceId: booking.service_id,
           businessSlug: booking.businesses.slug,
           businessName: booking.businesses.name,
-          businessCoverUrl: booking.businesses.cover_image_url ?? null,
+          businessCategory: booking.businesses.category ?? null,
+          businessLogoUrl: booking.businesses.logo_url ?? null,
+          businessProcessedIconUrl: booking.businesses.processed_icon_url ?? null,
+          businessCity: booking.businesses.city ?? null,
           serviceName: booking.services.name,
           startIso: startAt.toISOString(),
           endIso: endAt.toISOString(),
           priceLabel: formatPrice(booking.price_cents),
           durationLabel: formatDuration(booking.services.duration_minutes),
-          dateLabel,
-          timeLabel,
-          tileColour: colour,
+          dateTimeLabel,
+          primaryColourHex: tile.mid,
         }}
         cancelled={sp.cancelled === '1'}
       />
