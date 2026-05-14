@@ -84,7 +84,7 @@ export function ExploreClient({
   const showTrending = query.trim() === '' && category === 'all';
 
   return (
-    <div className="pb-40 pt-4">
+    <div className="with-dock pt-4">
       {/* Search */}
       <div className="px-5">
         <div

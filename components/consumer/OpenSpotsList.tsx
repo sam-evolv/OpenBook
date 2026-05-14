@@ -107,7 +107,7 @@ export function OpenSpotsList({
   }, [refetch]);
 
   return (
-    <div className="pb-40 pt-4">
+    <div className="with-dock pt-4">
       <div className="px-5 mb-3">
         <LocationChip value={city} onChange={setCity} />
       </div>

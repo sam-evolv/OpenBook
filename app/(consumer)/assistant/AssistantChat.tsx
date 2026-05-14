@@ -879,7 +879,10 @@ export function AssistantChat() {
       {hasMessages && (
         <div
           ref={scrollRef}
-          className="flex-1 overflow-y-auto px-4 pt-3 pb-[242px] space-y-3"
+          className="flex-1 overflow-y-auto px-4 pt-3 space-y-3"
+          style={{
+            paddingBottom: 'calc(var(--dock-height) + 110px)',
+          }}
         >
           {messages.map((m) => (
             <MessageRow
@@ -908,16 +911,20 @@ export function AssistantChat() {
         </div>
       )}
 
-      {/* Input bar — pinned just above tab bar */}
+      {/* Input bar — pinned just above tab bar with a blurred backdrop so
+          the message above scrolls cleanly behind both the disclaimer and
+          the composer rather than peeking through them. */}
       <div
-        className="pointer-events-none fixed left-0 right-0 z-40 px-2 pt-10"
+        className="pointer-events-none fixed left-0 right-0 z-40 px-2 pt-10 backdrop-blur-2xl"
         style={{
           bottom: 'calc(138px + env(safe-area-inset-bottom))',
           background:
-            'linear-gradient(180deg, transparent 0%, rgba(5,5,5,0.82) 38%, rgba(5,5,5,0.96) 100%)',
+            'linear-gradient(180deg, rgba(5,5,5,0) 0%, rgba(5,5,5,0.78) 38%, rgba(5,5,5,0.96) 100%)',
+          WebkitBackdropFilter: 'blur(20px) saturate(160%)',
+          backdropFilter: 'blur(20px) saturate(160%)',
         }}
       >
-        <div className="pointer-events-auto mx-auto max-w-[432px]">
+        <div className="pointer-events-auto mx-auto max-w-[432px] relative">
           <p className="mb-2 text-center text-[11px] text-white/35">
             Powered by AI · Information for reference only
           </p>

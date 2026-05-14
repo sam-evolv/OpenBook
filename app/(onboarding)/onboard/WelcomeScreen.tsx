@@ -213,15 +213,28 @@ export function WelcomeScreen() {
           )}
 
           <p
-            className="mt-6 text-center text-[11px] leading-relaxed"
+            className="mt-4 text-center text-[12px] leading-relaxed text-white/55"
+          >
+            Already have an account?{' '}
+            <button
+              type="button"
+              onClick={() => setMode('email')}
+              className="font-medium text-[#D4AF37] underline-offset-2 hover:underline"
+            >
+              Sign in
+            </button>
+          </p>
+
+          <p
+            className="mt-3 text-center text-[11px] leading-relaxed"
             style={{ color: 'var(--label-4)' }}
           >
             By continuing you agree to our{' '}
-            <a href="https://openbook.ie/terms" className="underline">
+            <a href="/terms" className="underline">
               Terms
             </a>{' '}
             and{' '}
-            <a href="https://openbook.ie/privacy" className="underline">
+            <a href="/privacy" className="underline">
               Privacy Policy
             </a>
             .

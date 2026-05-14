@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import Image from 'next/image';
-import { supabaseAdmin, formatPrice, formatDuration } from '@/lib/supabase';
+import { supabaseAdmin, formatServicePrice, formatDuration } from '@/lib/supabase';
 import { ConsumerHeader } from '@/components/consumer/ConsumerHeader';
 import { BottomTabBar } from '@/components/consumer/BottomTabBar';
 import { SlotPicker } from './SlotPicker';
@@ -62,7 +62,7 @@ export default async function BookingPage({
 
       <ConsumerHeader />
 
-      <div className="mx-auto max-w-md pb-44">
+      <div className="mx-auto max-w-md pb-[280px]">
         {/* Summary header */}
         <div className="px-5 pt-4">
           <div
@@ -105,7 +105,7 @@ export default async function BookingPage({
                 <p className="mt-1 text-[12.5px] text-white/58">
                   {formatDuration(service.duration_minutes)} ·{' '}
                   <span style={{ color: colour }} className="font-semibold">
-                    {formatPrice(service.price_cents)}
+                    {formatServicePrice(service.price_cents)}
                   </span>
                 </p>
               </div>

@@ -238,11 +238,14 @@ export function Tile({
               style={{
                 fontFamily: 'Georgia, "Times New Roman", serif',
                 fontSize: monogramFontSize,
-                fontWeight: 500,
+                fontWeight: 600,
                 lineHeight: 1,
                 color: textColour,
                 letterSpacing: '-0.02em',
-                textShadow: `0 1px 2px ${dropShadowColour}`,
+                textShadow:
+                  textColour === '#ffffff'
+                    ? '0 1px 2px rgba(0,0,0,0.55), 0 0 1px rgba(0,0,0,0.45)'
+                    : '0 1px 2px rgba(255,255,255,0.4)',
               }}
             >
               {monogram}

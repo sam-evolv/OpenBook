@@ -98,7 +98,7 @@ export function ExploreShell({
  */
 function FavouritesPlaceholder() {
   return (
-    <div className="pb-40 pt-[24vh] flex flex-col items-center text-center px-5">
+    <div className="with-dock pt-[24vh] flex flex-col items-center text-center px-5">
       <h3 className="font-serif text-[22px] font-medium text-white">
         Your favourites
       </h3>

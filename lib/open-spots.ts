@@ -68,21 +68,21 @@ const DAY = new Intl.DateTimeFormat('en-IE', {
 
 const TIME = new Intl.DateTimeFormat('en-IE', {
   timeZone: 'Europe/Dublin',
-  hour: 'numeric',
+  hour: '2-digit',
   minute: '2-digit',
-  hour12: true,
+  hour12: false,
 });
 
-/** "Today 3:00 PM" / "Tomorrow 9:30 AM" / "Tue 12 May, 3:00 PM". */
+/** "Today · 20:38" / "Tomorrow · 09:30" / "Tue 12 May · 15:00". */
 export function formatSlotTime(iso: string, now: Date = new Date()): string {
   const slot = new Date(iso);
   const today = dublinDateKey(now);
   const tomorrow = dublinDateKey(addDays(now, 1));
   const slotKey = dublinDateKey(slot);
   const time = TIME.format(slot);
-  if (slotKey === today) return `Today ${time}`;
-  if (slotKey === tomorrow) return `Tomorrow ${time}`;
-  return `${DAY.format(slot)}, ${time}`;
+  if (slotKey === today) return `Today · ${time}`;
+  if (slotKey === tomorrow) return `Tomorrow · ${time}`;
+  return `${DAY.format(slot)} · ${time}`;
 }
 
 export function formatSlotRange(iso: string, durationMinutes: number): string {

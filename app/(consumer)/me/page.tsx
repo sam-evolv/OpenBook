@@ -6,6 +6,7 @@ import {
   Wallet,
   HelpCircle,
   LogOut,
+  LogIn,
   ChevronRight,
   MessageSquare,
   Building2,
@@ -46,7 +47,7 @@ async function getAlertsForCustomer(customerId: string | null): Promise<AlertSlo
 const ACCOUNT_ITEMS = [
   { href: '/consumer-bookings', icon: Calendar, label: 'My bookings' },
   { href: '/wallet', icon: Wallet, label: 'Wallet & credits' },
-  { href: 'https://openbook.ie/privacy', icon: Shield, label: 'Privacy policy' },
+  { href: '/privacy', icon: Shield, label: 'Privacy policy' },
 ];
 
 const SUPPORT_ITEMS = [
@@ -80,7 +81,7 @@ export default async function MePage() {
         }}
       />
 
-      <div className="mx-auto max-w-md px-5 pb-40 pt-safe">
+      <div className="mx-auto max-w-md px-5 pt-safe with-dock">
         <div className="pt-8" />
 
         {/* Identity card */}
@@ -124,14 +125,14 @@ export default async function MePage() {
             {customer ? (
               <Link
                 href="/me/edit"
-                className="flex h-10 items-center rounded-full border border-white/[0.10] bg-white/[0.055] px-4 text-[12px] font-semibold text-white/90 transition hover:border-white/20 active:scale-95"
+                className="relative z-10 flex h-10 shrink-0 items-center rounded-full border border-white/[0.10] bg-white/[0.055] px-4 text-[12px] font-semibold text-white/90 transition hover:border-white/20 active:scale-95"
               >
                 Edit
               </Link>
             ) : (
               <Link
                 href="/login"
-                className="flex h-10 items-center rounded-full bg-[#D4AF37] px-4 text-[12px] font-semibold text-black shadow-[0_8px_20px_rgba(212,175,55,0.28)] transition active:scale-95"
+                className="relative z-10 flex h-10 shrink-0 items-center rounded-full bg-[#D4AF37] px-4 text-[12px] font-semibold text-black shadow-[0_8px_20px_rgba(212,175,55,0.28)] transition active:scale-95"
               >
                 Sign in
               </Link>
@@ -139,8 +140,8 @@ export default async function MePage() {
           </div>
           <div className="mt-5 grid grid-cols-2 gap-2">
             <ProfilePill
-              label={customer ? 'Bookings' : 'Sync'}
-              value={customer ? 'Synced' : 'Sign in'}
+              label="Bookings"
+              value={customer ? 'Synced' : '—'}
             />
             <ProfilePill
               label={customer ? 'Member since' : 'Status'}
@@ -199,6 +200,7 @@ export default async function MePage() {
           {SUPPORT_ITEMS.map((item) => (
             <MenuRow key={item.href} {...item} />
           ))}
+          {!customer && <MenuRow href="/login" icon={LogIn} label="Sign in" />}
         </Section>
 
         {customer && (
@@ -224,12 +226,12 @@ export default async function MePage() {
         )}
 
         <Section title="Data & privacy">
-          <MenuRow href="https://openbook.ie/terms" icon={Shield} label="Terms of service" />
+          <MenuRow href="/terms" icon={Shield} label="Terms of service" />
           <DeleteAccountButton hasCustomer={Boolean(customer)} />
         </Section>
 
         <p className="mt-8 text-center text-[11px] text-white/30">
-          OpenBook AI · A trading name of OpenHouse AI Limited
+          OpenBook · A trading name of OpenHouse AI Limited
         </p>
       </div>
 

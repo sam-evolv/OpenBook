@@ -6,7 +6,7 @@ import { supabaseAdmin, formatPrice } from '@/lib/supabase';
 import { ConsumerHeader } from '@/components/consumer/ConsumerHeader';
 import { BottomTabBar } from '@/components/consumer/BottomTabBar';
 import { getTileColour } from '@/lib/tile-palette';
-import { EmptyState, WalletEmptyIcon } from '@/components/EmptyState';
+import { WalletEmptyState } from './WalletEmptyState';
 
 export const dynamic = 'force-dynamic';
 
@@ -90,17 +90,13 @@ export default async function WalletPage() {
 
       <ConsumerHeader showClose={false} />
 
-      <div className="px-5 pt-4 pb-36">
+      <div className="px-5 pt-4 with-dock">
         <h1 className="text-[28px] font-bold tracking-tight leading-none">
           My <span className="text-[#D4AF37]">wallet</span>
         </h1>
 
         {walletIsEmpty ? (
-          <EmptyState
-            icon={<WalletEmptyIcon />}
-            title="Your wallet's ready when you are"
-            description="Credits and packages you buy from your favourite businesses show up here. Use them like cash."
-          />
+          <WalletEmptyState />
         ) : (
           <>
         {/* Balance hero */}

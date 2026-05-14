@@ -1,7 +1,7 @@
 import { notFound } from 'next/navigation';
 import {
   supabaseAdmin,
-  formatPrice,
+  formatServicePrice,
   formatDuration,
   type BookingWithDetails,
 } from '@/lib/supabase';
@@ -73,7 +73,7 @@ export default async function ConfirmPage({
           serviceName: booking.services.name,
           startIso: startAt.toISOString(),
           endIso: endAt.toISOString(),
-          priceLabel: formatPrice(booking.price_cents),
+          priceLabel: formatServicePrice(booking.price_cents),
           durationLabel: formatDuration(booking.services.duration_minutes),
           dateTimeLabel,
           primaryColourHex: tile.mid,

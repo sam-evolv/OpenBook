@@ -3,7 +3,8 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { CalendarPlus, MessageCircle, RefreshCcw, X, Star, Phone } from 'lucide-react';
-import { friendlyDate, timeLabel } from '@/lib/time';
+import { friendlyDate } from '@/lib/time';
+import { dayPreposition, formatBookingTime } from '@/lib/format-time';
 
 type DisplayStatus = 'confirmed' | 'cancelled' | 'completed' | 'pending';
 
@@ -174,6 +175,15 @@ export function BookingDetailActions(props: Props) {
         />
       )}
 
+      {(isCompleted || isCancelled) && (
+        <ActionButton
+          as="a"
+          href={`/booking/${serviceId}?business=${businessSlug}`}
+          icon={<RefreshCcw className="h-4 w-4" strokeWidth={2.2} />}
+          label="Book again"
+        />
+      )}
+
       {isCompleted && (
         <ActionButton
           as="a"
@@ -213,8 +223,8 @@ export function BookingDetailActions(props: Props) {
               Cancel this booking?
             </h2>
             <p className="mt-2 text-[14px] text-white/65 leading-relaxed">
-              {serviceName} on {friendlyDate(new Date(startsAtIso))} at{' '}
-              {timeLabel(new Date(startsAtIso))}.
+              {serviceName} {dayPreposition(friendlyDate(new Date(startsAtIso)))}{' '}
+              at {formatBookingTime(startsAtIso)}.
             </p>
             {error && (
               <p className="mt-3 text-[13px]" style={{ color: '#ff8a8a' }}>

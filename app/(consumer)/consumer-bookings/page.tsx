@@ -72,7 +72,7 @@ export default async function MyBookingsPage() {
 
       <ConsumerHeader showClose={false} />
 
-      <div className="px-5 pt-4 pb-36">
+      <div className="px-5 pt-4 with-dock">
         <h1 className="text-[28px] font-bold tracking-tight leading-none">
           My <span className="text-[#D4AF37]">bookings</span>
         </h1>

@@ -59,17 +59,17 @@ describe('getDublinHour', () => {
 });
 
 describe('formatGreeting', () => {
-  it('appends ", FirstName." when name provided', () => {
-    expect(formatGreeting('evening', 'Sam')).toBe('Good Evening, Sam.');
+  it('appends ", FirstName" (no period) when name provided', () => {
+    expect(formatGreeting('evening', 'Sam')).toBe('Good evening, Sam');
   });
 
-  it('ends with a period when no name', () => {
-    expect(formatGreeting('morning', null)).toBe('Good Morning.');
+  it('appends ", Guest" when no name', () => {
+    expect(formatGreeting('morning', null)).toBe('Good morning, Guest');
   });
 
   it('uses "Hello" for the late-night bucket', () => {
-    expect(formatGreeting('hello', null)).toBe('Hello.');
-    expect(formatGreeting('hello', 'Sam')).toBe('Hello, Sam.');
+    expect(formatGreeting('hello', null)).toBe('Hello, Guest');
+    expect(formatGreeting('hello', 'Sam')).toBe('Hello, Sam');
   });
 });
 
